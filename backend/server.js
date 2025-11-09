@@ -15,29 +15,37 @@ import { startCelebrationJob } from "./utils/celebrationJob.js";
 connectDB();
 
 const app = express();
+const configuredOrigins = (process.env.CLIENT_URLS || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  const normalizedOrigin = origin.replace(/\/$/, "");
+  if (configuredOrigins.includes(normalizedOrigin)) return true;
+  try {
+    const parsedOrigin = new URL(normalizedOrigin);
+    if (parsedOrigin.hostname === "localhost") return true;
+  } catch (err) {
+    return false;
+  }
+  return false;
+};
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: (process.env.CLIENT_URLS || "http://localhost:5173").split(","),
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"), false);
+    },
     credentials: true,
   },
 });
 app.use(express.json());
-const allowedOrigins = (process.env.CLIENT_URLS || "http://localhost:5173").split(",");
 app.use(cors({
-  origin: (origin, cb) => {
-    // Allow server-to-server or tools with no origin
-    if (!origin) return cb(null, true);
-    // Allow explicit configured origins
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    // For local development allow any localhost port (e.g. Vite sometimes uses 5173/5174/5175)
-    try {
-      const u = new URL(origin);
-      if (u.hostname === 'localhost') return cb(null, true);
-    } catch (err) {
-      // ignore invalid origin
-    }
-    return cb(new Error('Not allowed by CORS'));
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
   },
   credentials: true,
 }));
