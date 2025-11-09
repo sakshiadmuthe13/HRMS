@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+
 const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -25,7 +27,7 @@ const ResetPassword = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/auth/reset-password",
+        `${API_BASE}/auth/reset-password`,
         {
           email,
           otp,

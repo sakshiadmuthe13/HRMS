@@ -2,6 +2,9 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+const SOCKET_BASE = import.meta.env.VITE_SOCKET_BASE || API_BASE.replace(/\/api\/?$/, "");
+
 const NotificationContext = createContext();
 
 export const useNotifications = () => useContext(NotificationContext);
@@ -51,7 +54,7 @@ export const NotificationProvider = ({ children }) => {
     }
 
     // Connect to socket
-    const newSocket = io("http://localhost:5000");
+    const newSocket = io(SOCKET_BASE);
     setSocket(newSocket);
 
     // Fetch initial notifications
@@ -64,7 +67,7 @@ export const NotificationProvider = ({ children }) => {
         const userId = userPayload.id;
         const userRole = userPayload.role;
 
-        const res = await axios.get(`http://localhost:5000/api/notifications/${userId}`, {
+        const res = await axios.get(`${API_BASE}/notifications/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setNotifications(res.data);
@@ -123,7 +126,7 @@ export const NotificationProvider = ({ children }) => {
   const markAsRead = async (id) => {
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+      await axios.put(`${API_BASE}/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, readStatus: true } : n));

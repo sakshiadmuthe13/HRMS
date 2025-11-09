@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import NotificationDropdown from "../../components/NotificationDropdown";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+
 const tabIcons = {
   Dashboard: <Home size={18} />,
   Employees: <Users size={18} />,
@@ -43,7 +45,7 @@ const AdminSidebar = ({ tabs = [], active, onChange }) => {
   const doLogout = async () => {
     try {
       // attempt server-side logout if endpoint exists
-      await fetch((import.meta.env.VITE_API_BASE || "http://localhost:5000/api") + "/auth/logout", { method: "POST", credentials: "include" });
+      await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
     } catch {
       // ignore errors
     }
