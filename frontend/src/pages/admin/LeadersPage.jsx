@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -160,12 +161,16 @@ const LeadersPage = () => {
           <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn">
             <h3 className="text-2xl font-semibold mb-4 text-[var(--color-primary)]">{editing === "new" ? "Create New Leader" : "Edit Leader"}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {["name","email","password","phone","address","position","salary","dateOfBirth"].map(k => (
+              {["name","email","password","phone","address","position","salary"].map(k => (
                 <div key={k}>
                   <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
-                  <input type={k==="password"?"password":k==="dateOfBirth"?"date":"text"} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={`Enter ${k.replace(/([A-Z])/g, ' $1').toLowerCase()}`} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"/>
+                  <input type={k==="password"?"password":"text"} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={`Enter ${k.replace(/([A-Z])/g, ' $1').toLowerCase()}`} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"/>
                 </div>
               ))}
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Date of birth</label>
+                <DatePicker value={form.dateOfBirth||""} onChange={e=>setForm({...form,dateOfBirth:e})} placeholder="dd/mm/yyyy" />
+              </div>
               {/* Leave Allowance */}
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">

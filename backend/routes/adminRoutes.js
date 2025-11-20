@@ -27,7 +27,7 @@ import {
   deleteAdminAdmin,
 } from "../controllers/adminController.js";
 import { getAttendanceByDate } from "../controllers/adminController.js";
-import { getAllSalaries, creditSalary } from "../controllers/adminController.js";
+import { getAllSalaries, creditSalary, calculateSalary } from "../controllers/adminController.js";
 import { getAllTeams, createTeam, updateTeam, deleteTeam } from "../controllers/adminController.js";
 import { getAllProjects, createProject, updateProject, deleteProject } from "../controllers/adminController.js";
 import {
@@ -37,7 +37,7 @@ import {
   updateUserLeaveAllowance,
   getUserLeaveInfo,
 } from "../controllers/adminController.js";
-import { getEmployeesForVerification, verifyDocument } from "../controllers/adminController.js";
+import { getEmployeesForVerification, verifyDocument, unverifyDocument } from "../controllers/adminController.js";
 
 const router = express.Router();
 
@@ -72,6 +72,7 @@ router.delete("/holidays/:id", deleteHoliday);
 
 // Salary routes
 router.get("/salary", getAllSalaries);
+router.post("/salary/calculate", calculateSalary);
 router.post("/salary/credit", creditSalary);
 
 // Team management routes
@@ -98,6 +99,7 @@ router.get("/users/:id/leave-info", getUserLeaveInfo);
 // profile verification routes
 router.get("/verification/employees", getEmployeesForVerification);
 router.patch("/verification/:userId/document/:documentType", verifyDocument);
+router.patch("/verification/:userId/document/:documentType/unverify", unverifyDocument);
 
 // task delay notifications
 router.get("/delayed-tasks", getDelayedTasksAdmin);

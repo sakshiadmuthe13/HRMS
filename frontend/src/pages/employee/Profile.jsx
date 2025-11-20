@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { User, Upload, CheckCircle, XCircle, Eye, Download } from "lucide-react";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -15,6 +16,14 @@ const formatDateDMY = (value) => {
   const d = String(dd).padStart(2, "0");
   const m = String(mm).padStart(2, "0");
   return `${d}/${m}/${yyyy}`;
+};
+
+const convertDMYToYMD = (dateStr) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return dateStr;
+  const [dd, mm, yyyy] = parts;
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 };
 
 const Profile = () => {
@@ -66,13 +75,15 @@ const Profile = () => {
       const data = await response.json();
       if (response.ok) {
         setProfile(data);
+        const anniversaryYMD = data.marriageAnniversary ? data.marriageAnniversary.split("T")[0] : "";
+        const anniversaryDMY = anniversaryYMD ? formatDateDMY(anniversaryYMD) : "";
         setFormData({
           phone: data.phone || "",
           address: data.address || "",
           bankIFSC: data.documents?.bankIFSC || "",
           bankAccountNumber: data.documents?.bankAccountNumber || "",
           isMarried: !!data.isMarried,
-          marriageAnniversary: data.marriageAnniversary ? data.marriageAnniversary.split("T")[0] : "",
+          marriageAnniversary: anniversaryDMY,
         });
       } else {
         toast.error(data.message || "Failed to fetch profile");
@@ -105,7 +116,8 @@ const Profile = () => {
     data.append("bankAccountNumber", formData.bankAccountNumber);
     data.append("isMarried", String(formData.isMarried));
     if (formData.isMarried && formData.marriageAnniversary) {
-      data.append("marriageAnniversary", formData.marriageAnniversary);
+      const anniversaryYMD = convertDMYToYMD(formData.marriageAnniversary);
+      data.append("marriageAnniversary", anniversaryYMD);
     }
 
     Object.keys(files).forEach(field => {
@@ -335,18 +347,11 @@ const Profile = () => {
             {formData.isMarried && (
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Marriage Anniversary</label>
-                <input
-                  type="date"
-                  name="marriageAnniversary"
+                <DatePicker
                   value={formData.marriageAnniversary}
-                  onChange={(e) => setFormData(prev => ({ ...prev, marriageAnniversary: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  onChange={(val) => setFormData(prev => ({ ...prev, marriageAnniversary: val }))}
+                  placeholder="dd/mm/yyyy"
                 />
-                {formData.marriageAnniversary && (
-                  <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                    Selected: {formatDateDMY(formData.marriageAnniversary)}
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -354,20 +359,33 @@ const Profile = () => {
           {/* Document Uploads */}
           <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Upload Documents</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {Object.entries(documentLabels).map(([field, label]) => (
-              <div key={field} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">{label}</label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => handleFileChange(field, e.target.files[0])}
-                  className="w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)]/20 file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary)]/30"
-                />
-                {files[field] && (
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-1">Selected: {files[field].name}</p>
-                )}
-              </div>
-            ))}
+            {Object.entries(documentLabels).map(([field, label]) => {
+              const doc = profile?.documents?.[field];
+              const isVerified = doc?.verified;
+              return (
+                <div key={field} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">{label}</label>
+                  {isVerified ? (
+                    <div className="text-sm text-green-600 mb-2 flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Document Verified - Cannot be changed
+                    </div>
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => handleFileChange(field, e.target.files[0])}
+                        className="w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)]/20 file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary)]/30"
+                      />
+                      {files[field] && (
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-1">Selected: {files[field].name}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <button

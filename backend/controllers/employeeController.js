@@ -723,6 +723,9 @@ export const getMyProfile = async (req, res) => {
 export const updateMyProfile = async (req, res) => {
   try {
     const userId = req.user._id;
+    const existingUser = await User.findById(userId);
+    if (!existingUser) return res.status(404).json({ message: "User not found" });
+
     const updates = {};
     const allowedFields = ["phone", "address", "dateOfBirth"];
 
@@ -764,8 +767,23 @@ export const updateMyProfile = async (req, res) => {
     if (req.body.bankAccountNumber)
       updates["documents.bankAccountNumber"] = req.body.bankAccountNumber;
 
-    // Handle uploaded files
+    // Handle uploaded files - check if document is verified
     if (req.uploadedUrls) {
+      const verifiedDocuments = [];
+
+      for (const key of Object.keys(req.uploadedUrls)) {
+        if (existingUser.documents[key] && existingUser.documents[key].verified) {
+          verifiedDocuments.push(key);
+        }
+      }
+
+      if (verifiedDocuments.length > 0) {
+        return res.status(403).json({
+          message: `Cannot update verified document(s): ${verifiedDocuments.join(", ")}. Please contact admin to unverify the document(s) before updating.`,
+          verifiedDocuments
+        });
+      }
+
       Object.keys(req.uploadedUrls).forEach((key) => {
         updates[`documents.${key}.path`] = req.uploadedUrls[key];
         updates[`documents.${key}.verified`] = false; // Reset verification

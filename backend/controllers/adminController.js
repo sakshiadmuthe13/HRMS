@@ -1199,121 +1199,8 @@ export const rejectLeave = async (req, res) => {
 };
 
 // ---------------- Profile Verification ------------------
-// Fetch employees and leaders (excluding admins) for verification
-export const getEmployeesForVerification = async (req, res) => {
-  try {
-    const employees = await User.find({ role: { $ne: "admin" } }).select("name email role documents profileVerified isMarried marriageAnniversary");
-    res.status(200).json(employees);
-  } catch (error) {
-    console.error("getEmployeesForVerification error:", error);
-    res.status(500).json({ message: "Failed to fetch users for verification" });
-  }
-};
 
-export const verifyDocument = async (req, res) => {
-  try {
-    const { userId, documentType } = req.params;
-    const { verified } = req.body; // boolean
 
-    // Validate document type against allowed list
-    const ALLOWED_DOC_FIELDS = [
-      "passportPhoto",
-      "tenthMarksheet",
-      "twelthDiplomaMarksheet",
-      "graduationMarksheet",
-      "bankPassbookPhoto",
-      "aadharFront",
-      "aadharBack",
-      "panCard",
-      "cv",
-    ];
-    if (!ALLOWED_DOC_FIELDS.includes(documentType)) {
-      return res.status(400).json({ message: "Invalid document type" });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const doc = user.documents?.[documentType];
-    if (!doc || !doc.path) {
-      return res.status(400).json({ message: "Document not uploaded" });
-    }
-
-    user.documents[documentType].verified = !!verified;
-
-    // Only certain documents are required for overall profile verification
-    const REQUIRED_DOCS = ["passportPhoto", "aadharFront", "aadharBack", "panCard"]; // adjust as per policy
-    const allRequiredVerified = REQUIRED_DOCS.every((field) => {
-      const d = user.documents?.[field];
-      return d && !!d.path && d.verified === true;
-    });
-    user.profileVerified = allRequiredVerified;
-
-    await user.save();
-
-    if (allRequiredVerified) {
-      // Trigger notification
-      await createNotification({
-        message: "Your profile has been verified successfully.",
-        role: user.role,
-        triggeredBy: req.user._id,
-        recipient: user._id
-      });
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-          <title>Profile Verified</title>
-        </head>
-        <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f6fa; color:#333;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa; padding:20px 0;">
-            <tr>
-              <td align="center">
-                <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
-                  <tr>
-                    <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                      <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:30px 25px; text-align:center;">
-                      <p style="font-size:16px; color:#555; margin-bottom:20px;">
-                        Congratulations <strong>${user.name}</strong>!
-                      </p>
-                      <div style="background-color:#d4edda; padding:20px; border-radius:8px; margin:20px 0; text-align:left; border-left:4px solid #28a745;">
-                        <h3 style="margin:0 0 15px 0; color:#155724; font-size:18px;">Profile Verified</h3>
-                        <p style="margin:5px 0; font-size:14px; color:#155724;">All your required documents have been verified successfully.</p>
-                      </div>
-                      <p style="font-size:14px; color:#777; margin-top:20px;">
-                        You can now enjoy full access to all features.
-                      </p>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
-                      <p style="margin:0; font-size:12px; color:#999;">
-                        &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `;
-      await sendMail(user.email, "Profile Verified Successfully", "", htmlContent);
-    }
-
-    res.status(200).json({ message: "Document verification updated", user });
-  } catch (error) {
-    console.error("verifyDocument error:", error);
-    res.status(500).json({ message: "Failed to update document verification" });
-  }
-};
 
 // ---------------- Task Delay Notifications ----------------
 // Get tasks with delay count >= 3 for admin notifications
@@ -1345,6 +1232,147 @@ export const getDelayedTasksAdmin = async (req, res) => {
 };
 
 // ---------------- Salary Management ----------------
+
+// Helper function to calculate salary based on attendance
+const calculateSalaryDetails = async (userId, monthName, year) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+
+  const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  const monthIndex = months.indexOf(monthName.toLowerCase());
+  if (monthIndex === -1) throw new Error("Invalid month");
+  
+  const monthStart = new Date(year, monthIndex, 1);
+  monthStart.setHours(0, 0, 0, 0);
+  
+  const monthEnd = new Date(year, monthIndex + 1, 0);
+  monthEnd.setHours(23, 59, 59, 999);
+
+  const daysInMonth = monthEnd.getDate();
+
+  const attendances = await Attendance.find({
+    user: userId,
+    date: { $gte: monthStart, $lte: monthEnd }
+  }).lean();
+
+  const leaves = await Leave.find({
+    user: userId,
+    status: 'Approved',
+    fromDate: { $lte: monthEnd },
+    toDate: { $gte: monthStart }
+  }).lean();
+
+  const holidays = await Holiday.find({
+    date: { $gte: monthStart, $lte: monthEnd }
+  }).lean();
+
+  const holidaySet = new Set();
+  const weekendSet = new Set();
+  
+  let workingDays = 0;
+  for (let i = 1; i <= daysInMonth; i++) {
+    const date = new Date(year, monthIndex, i);
+    const dayOfWeek = date.getDay();
+    
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      weekendSet.add(i);
+    } else {
+      workingDays++;
+    }
+  }
+
+  holidays.forEach(holiday => {
+    const day = new Date(holiday.date).getDate();
+    if (!weekendSet.has(day)) {
+      holidaySet.add(day);
+      workingDays--;
+    }
+  });
+
+  let presentDays = 0;
+  let absentDays = 0;
+  let overtimeDays = 0;
+  
+  const attendanceMap = new Map(attendances.map(a => [new Date(a.date).getDate(), a]));
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    if (weekendSet.has(i) || holidaySet.has(i)) {
+      continue;
+    }
+
+    const att = attendanceMap.get(i);
+    if (att) {
+      if (att.status === 'Present') {
+        presentDays++;
+      } else if (att.status === 'Absent') {
+        absentDays++;
+      } else if (att.status === 'Over-time') {
+        overtimeDays++;
+        presentDays++;
+      } else if (att.status === 'Leave') {
+        // Handled separately
+      }
+    } else {
+      absentDays++;
+    }
+  }
+
+  let leaveDays = 0;
+  leaves.forEach(leave => {
+    const leaveStart = new Date(leave.fromDate);
+    const leaveEnd = new Date(leave.toDate);
+    
+    for (let d = new Date(leaveStart); d <= leaveEnd; d.setDate(d.getDate() + 1)) {
+      if (d.getMonth() === monthIndex && d.getFullYear() === year) {
+        const dayOfMonth = d.getDate();
+        if (!weekendSet.has(dayOfMonth) && !holidaySet.has(dayOfMonth)) {
+          leaveDays++;
+        }
+      }
+    }
+  });
+
+  const baseSalary = Number(user.salary) || 0;
+  const dailyRate = baseSalary / workingDays;
+  const calculatedSalary = Math.round(dailyRate * presentDays * 100) / 100;
+
+  return {
+    baseSalary,
+    daysInMonth,
+    workingDays,
+    presentDays,
+    absentDays,
+    leaveDays,
+    overtimeDays,
+    dailyRate: Math.round(dailyRate * 100) / 100,
+    calculatedSalary,
+    weekends: weekendSet.size,
+    holidays: holidaySet.size
+  };
+};
+
+// POST /api/admin/salary/calculate
+export const calculateSalary = async (req, res) => {
+  try {
+    const { userId, month, year } = req.body;
+
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+    if (!month) return res.status(400).json({ message: "month is required" });
+
+    const monthNormalized = String(month).trim().toLowerCase();
+    const numericYear = Number(year || new Date().getFullYear());
+
+    if (!numericYear || numericYear < 2000 || numericYear > 2100) {
+      return res.status(400).json({ message: "Invalid year" });
+    }
+
+    const details = await calculateSalaryDetails(userId, monthNormalized, numericYear);
+    res.json(details);
+  } catch (err) {
+    console.error("Error calculating salary:", err);
+    res.status(500).json({ message: "Failed to calculate salary", error: err.message });
+  }
+};
 
 // GET /api/admin/salary
 export const getAllSalaries = async (req, res) => {
@@ -1382,7 +1410,8 @@ export const creditSalary = async (req, res) => {
       return res.status(400).json({ message: "Salary already credited for this month and year" });
     }
 
-    const baseSalary = Number(user.salary) || 0;
+    const salaryDetails = await calculateSalaryDetails(userId, monthNormalized, numericYear);
+    const baseSalary = salaryDetails.calculatedSalary;
     const bonusNum = Number(bonus) || 0;
     const totalCredited = baseSalary + bonusNum;
 
@@ -1758,5 +1787,307 @@ export const getUserReportData = async (req, res) => {
   } catch (err) {
     console.error("Error fetching user report data:", err);
     res.status(500).json({ message: "Failed to fetch user report data" });
+  }
+};
+
+// Document Verification
+export const getEmployeesForVerification = async (req, res) => {
+  try {
+    const users = await User.find({ role: { $in: ["employee", "leader"] } })
+      .select("name email role documents profileVerified")
+      .lean();
+
+    const usersWithDocs = users.map((user) => {
+      const documentFields = [
+        "passportPhoto",
+        "tenthMarksheet",
+        "twelthDiplomaMarksheet",
+        "graduationMarksheet",
+        "bankPassbookPhoto",
+        "aadharFront",
+        "aadharBack",
+        "panCard",
+        "cv",
+      ];
+
+      const documents = {};
+      documentFields.forEach((field) => {
+        if (user.documents && user.documents[field] && user.documents[field].path) {
+          documents[field] = {
+            path: user.documents[field].path,
+            verified: user.documents[field].verified || false,
+            uploadedAt: user.documents[field].uploadedAt,
+          };
+        }
+      });
+
+      return {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        profileVerified: user.profileVerified,
+        documents,
+        hasDocuments: Object.keys(documents).length > 0,
+        hasPendingDocuments: Object.values(documents).some((doc) => !doc.verified),
+      };
+    });
+
+    const filteredUsers = usersWithDocs.filter((user) => user.hasDocuments);
+
+    res.status(200).json(filteredUsers);
+  } catch (error) {
+    console.error("Error fetching employees for verification:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch employees for verification" });
+  }
+};
+
+export const verifyDocument = async (req, res) => {
+  try {
+    const { userId, documentType } = req.params;
+    const { verified } = req.body;
+
+    if (!userId || !documentType) {
+      return res
+        .status(400)
+        .json({ message: "userId and documentType are required" });
+    }
+
+    if (verified === undefined) {
+      return res.status(400).json({ message: "verified status is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.documents[documentType]) {
+      return res.status(400).json({ message: "Document type not found" });
+    }
+
+    if (!user.documents[documentType].path) {
+      return res
+        .status(400)
+        .json({ message: "No document uploaded for this type" });
+    }
+
+    user.documents[documentType].verified = verified;
+    await user.save();
+
+    const docFields = [
+      "passportPhoto",
+      "tenthMarksheet",
+      "twelthDiplomaMarksheet",
+      "graduationMarksheet",
+      "bankPassbookPhoto",
+      "aadharFront",
+      "aadharBack",
+      "panCard",
+      "cv",
+    ];
+    const allVerified = docFields.every(
+      (field) => !user.documents[field].path || user.documents[field].verified
+    );
+    user.profileVerified = allVerified;
+    await user.save();
+
+    const statusMsg = verified ? "verified" : "unverified";
+
+    await createNotification({
+      message: `Your document "${documentType}" has been ${statusMsg} by admin.`,
+      role: user.role,
+      recipient: userId,
+      triggeredBy: req.user._id,
+    });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Document ${verified ? "Verified" : "Unverified"}</title>
+      </head>
+      <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f6fa; color:#333;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa; padding:20px 0;">
+          <tr>
+            <td align="center">
+              <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
+                    <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:30px 25px; text-align:center;">
+                    <p style="font-size:16px; color:#555; margin-bottom:20px;">
+                      Your document has been <strong>${statusMsg}</strong> by the admin.
+                    </p>
+                    <div style="background-color:#f9f9f9; padding:20px; border-radius:8px; margin:20px 0; text-align:left;">
+                      <h3 style="margin:0 0 15px 0; color:#0EA6F0; font-size:18px;">Document Details:</h3>
+                      <p style="margin:5px 0; font-size:14px;"><strong>Type:</strong> ${documentType}</p>
+                      <p style="margin:5px 0; font-size:14px;"><strong>Status:</strong> ${statusMsg.charAt(0).toUpperCase() + statusMsg.slice(1)}</p>
+                    </div>
+                    ${
+                      !verified
+                        ? '<p style="font-size:14px; color:#d9534f; margin-top:20px;"><strong>Note:</strong> You can now update this document. Please re-upload if needed.</p>'
+                        : ''
+                    }
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
+                    <p style="margin:0; font-size:12px; color:#999;">
+                      &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await sendMail(
+      user.email,
+      `Document ${verified ? "Verified" : "Unverified"}`,
+      "",
+      htmlContent
+    );
+
+    res.status(200).json({
+      message: `Document ${statusMsg} successfully`,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        profileVerified: user.profileVerified,
+      },
+    });
+  } catch (error) {
+    console.error("Error verifying document:", error);
+    res.status(500).json({ message: "Failed to verify document" });
+  }
+};
+
+export const unverifyDocument = async (req, res) => {
+  try {
+    const { userId, documentType } = req.params;
+
+    if (!userId || !documentType) {
+      return res
+        .status(400)
+        .json({ message: "userId and documentType are required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user.documents[documentType]) {
+      return res.status(400).json({ message: "Document type not found" });
+    }
+
+    if (!user.documents[documentType].path) {
+      return res
+        .status(400)
+        .json({ message: "No document uploaded for this type" });
+    }
+
+    if (!user.documents[documentType].verified) {
+      return res
+        .status(400)
+        .json({ message: "Document is already unverified" });
+    }
+
+    user.documents[documentType].verified = false;
+    await user.save();
+
+    const docFields = [
+      "passportPhoto",
+      "tenthMarksheet",
+      "twelthDiplomaMarksheet",
+      "graduationMarksheet",
+      "bankPassbookPhoto",
+      "aadharFront",
+      "aadharBack",
+      "panCard",
+      "cv",
+    ];
+    const allVerified = docFields.every(
+      (field) => !user.documents[field].path || user.documents[field].verified
+    );
+    user.profileVerified = allVerified;
+    await user.save();
+
+    await createNotification({
+      message: `Your document "${documentType}" has been unverified by admin. You can now update it.`,
+      role: user.role,
+      recipient: userId,
+      triggeredBy: req.user._id,
+    });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Document Unverified</title>
+      </head>
+      <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f6fa; color:#333;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa; padding:20px 0;">
+          <tr>
+            <td align="center">
+              <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
+                    <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:30px 25px; text-align:center;">
+                    <p style="font-size:16px; color:#555; margin-bottom:20px;">
+                      Your document has been <strong>unverified</strong> by the admin.
+                    </p>
+                    <div style="background-color:#f9f9f9; padding:20px; border-radius:8px; margin:20px 0; text-align:left;">
+                      <h3 style="margin:0 0 15px 0; color:#0EA6F0; font-size:18px;">Document Details:</h3>
+                      <p style="margin:5px 0; font-size:14px;"><strong>Type:</strong> ${documentType}</p>
+                      <p style="margin:5px 0; font-size:14px;"><strong>Status:</strong> Unverified</p>
+                    </div>
+                    <p style="font-size:14px; color:#d9534f; margin-top:20px;"><strong>Note:</strong> You can now update this document. Please re-upload if needed.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
+                    <p style="margin:0; font-size:12px; color:#999;">
+                      &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await sendMail(user.email, "Document Unverified - You Can Now Update", "", htmlContent);
+
+    res.status(200).json({
+      message: "Document unverified successfully",
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        profileVerified: user.profileVerified,
+      },
+    });
+  } catch (error) {
+    console.error("Error unverifying document:", error);
+    res.status(500).json({ message: "Failed to unverify document" });
   }
 };

@@ -40,15 +40,25 @@ const SalaryPage = () => {
   const [selected, setSelected] = useState(null);
   const [bonus, setBonus] = useState(0);
   const [salaryHistory, setSalaryHistory] = useState([]);
-  const [showSuccess, setShowSuccess] = useState(false); // ✅ Modal state
-  const [isCrediting, setIsCrediting] = useState(false); // Loading state
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isCrediting, setIsCrediting] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
+  const [salaryDetails, setSalaryDetails] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
     fetchUsers();
     fetchSalaryHistory();
   }, []);
+
+  useEffect(() => {
+    if (selected && selectedMonth && selectedYear) {
+      calculateSalaryDetails();
+    } else {
+      setSalaryDetails(null);
+    }
+  }, [selected, selectedMonth, selectedYear]);
 
   const fetchUsers = async () => {
     try {
@@ -66,6 +76,24 @@ const SalaryPage = () => {
       setSalaryHistory(history);
     } catch (e) {
       console.error("Error fetching salary history:", e);
+    }
+  };
+
+  const calculateSalaryDetails = async () => {
+    setIsCalculating(true);
+    try {
+      const yr = Number(selectedYear || new Date().getFullYear());
+      const details = await apiPost("/admin/salary/calculate", {
+        userId: selected._id,
+        month: selectedMonth.toLowerCase(),
+        year: yr,
+      });
+      setSalaryDetails(details);
+    } catch (e) {
+      console.error("Error calculating salary:", e);
+      setSalaryDetails(null);
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -170,7 +198,7 @@ const SalaryPage = () => {
         <div className="sm:col-span-2 flex justify-center">
           <button
             onClick={credit}
-            disabled={isCrediting}
+            disabled={isCrediting || !salaryDetails}
             className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isCrediting ? "Crediting..." : "Credit Salary"}
@@ -178,27 +206,108 @@ const SalaryPage = () => {
         </div>
       </div>
 
+      {isCalculating && (
+        <div className="mt-4 text-center text-[var(--color-text-secondary)]">
+          Calculating salary details...
+        </div>
+      )}
+
+      {salaryDetails && (
+        <div className="mt-6 card-glow p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <h3 className="text-xl font-semibold mb-4 text-[#0EA6F0]">Salary Breakdown</h3>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Days in Month:</span>
+              <span className="font-semibold">{salaryDetails.daysInMonth}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Weekends:</span>
+              <span className="font-semibold">{salaryDetails.weekends}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Holidays:</span>
+              <span className="font-semibold">{salaryDetails.holidays}</span>
+            </div>
+            <div className="flex justify-between border-t border-[var(--color-border)] pt-2 mt-2">
+              <span className="text-sm text-[var(--color-text-secondary)] font-semibold">Working Days:</span>
+              <span className="font-semibold">{salaryDetails.workingDays}</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between bg-green-500/10 p-2 rounded">
+              <span className="text-sm text-[var(--color-text-secondary)]">Present Days:</span>
+              <span className="font-semibold text-green-400">{salaryDetails.presentDays}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Absent Days:</span>
+              <span className="font-semibold">{salaryDetails.absentDays}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Leave Days:</span>
+              <span className="font-semibold">{salaryDetails.leaveDays}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Overtime Days:</span>
+              <span className="font-semibold text-blue-400">{salaryDetails.overtimeDays}</span>
+            </div>
+          </div>
+
+          <div className="sm:col-span-2 space-y-3 border-t border-[var(--color-border)] pt-4 mt-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Base Salary:</span>
+              <span className="font-semibold">₹{salaryDetails.baseSalary}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">Daily Rate:</span>
+              <span className="font-semibold">₹{salaryDetails.dailyRate}</span>
+            </div>
+            <div className="flex justify-between bg-blue-500/10 p-2 rounded">
+              <span className="text-sm text-[var(--color-text-secondary)] font-semibold">Calculated Salary (Present Days × Daily Rate):</span>
+              <span className="font-bold text-blue-400 text-lg">₹{salaryDetails.calculatedSalary}</span>
+            </div>
+            <div className="flex justify-between bg-purple-500/10 p-2 rounded">
+              <span className="text-sm text-[var(--color-text-secondary)] font-semibold">Total with Bonus:</span>
+              <span className="font-bold text-purple-400 text-lg">₹{salaryDetails.calculatedSalary + Number(bonus || 0)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ✅ Success Modal */}
-      {showSuccess && selected && (
+      {showSuccess && selected && salaryDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
+          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold mb-3 text-green-500">
               ✅ Salary Credited Successfully
             </h3>
             <p className="text-[var(--color-text-secondary)] mb-4">
               Salary for <span className="font-medium">{selected.name}</span>{" "}
-              has been credited successfully.
+              has been credited for {selectedMonth} {selectedYear}.
             </p>
-            <div className="text-sm mb-6 space-y-1">
+            <div className="text-sm mb-6 space-y-2 bg-[var(--color-border)]/20 p-3 rounded">
               <p>
-                Base Salary: <strong>₹{selected.salary}</strong>
+                <span className="text-[var(--color-text-secondary)]">Working Days:</span> <strong>{salaryDetails.workingDays}</strong>
               </p>
               <p>
-                Bonus: <strong>₹{bonus || 0}</strong>
+                <span className="text-[var(--color-text-secondary)]">Present Days:</span> <strong className="text-green-400">{salaryDetails.presentDays}</strong>
               </p>
               <p>
-                Total:{" "}
-                <strong>₹{Number(selected.salary) + Number(bonus || 0)}</strong>
+                <span className="text-[var(--color-text-secondary)]">Daily Rate:</span> <strong>₹{salaryDetails.dailyRate}</strong>
+              </p>
+              <hr className="my-2 border-[var(--color-border)]" />
+              <p>
+                <span className="text-[var(--color-text-secondary)]">Calculated Salary:</span> <strong className="text-blue-400">₹{salaryDetails.calculatedSalary}</strong>
+              </p>
+              <p>
+                <span className="text-[var(--color-text-secondary)]">Bonus:</span> <strong>₹{bonus || 0}</strong>
+              </p>
+              <p className="border-t border-[var(--color-border)] pt-2 mt-2">
+                <span className="text-[var(--color-text-secondary)]">Total Credited:</span>{" "}
+                <strong className="text-purple-400 text-lg">₹{salaryDetails.calculatedSalary + Number(bonus || 0)}</strong>
               </p>
             </div>
             <div className="flex justify-end">

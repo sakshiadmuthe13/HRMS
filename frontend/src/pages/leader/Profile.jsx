@@ -1,8 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { User, Upload, CheckCircle, XCircle, Eye, Download } from "lucide-react";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+
+const formatDateDMY = (value) => {
+  if (!value) return "";
+  const dateStr = typeof value === "string" ? value.split("T")[0] : value;
+  if (typeof dateStr !== "string") return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const [yyyy, mm, dd] = parts;
+  const d = String(dd).padStart(2, "0");
+  const m = String(mm).padStart(2, "0");
+  return `${d}/${m}/${yyyy}`;
+};
+
+const parseDateDMY = (dateStr) => {
+  if (!dateStr) return "";
+  try {
+    if (dateStr.includes("/")) {
+      const [d, m, yyyy] = dateStr.split("/");
+      return `${yyyy}-${m}-${d}`;
+    }
+    return dateStr;
+  } catch {
+    return "";
+  }
+};
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
@@ -59,7 +85,7 @@ const Profile = () => {
           bankIFSC: data.documents?.bankIFSC || "",
           bankAccountNumber: data.documents?.bankAccountNumber || "",
           isMarried: !!data.isMarried,
-          marriageAnniversary: data.marriageAnniversary ? data.marriageAnniversary.split("T")[0] : "",
+          marriageAnniversary: data.marriageAnniversary ? formatDateDMY(data.marriageAnniversary.split("T")[0]) : "",
         });
       } else {
         toast.error(data.message || "Failed to fetch profile");
@@ -92,7 +118,7 @@ const Profile = () => {
     data.append("bankAccountNumber", formData.bankAccountNumber);
     data.append("isMarried", String(formData.isMarried));
     if (formData.isMarried && formData.marriageAnniversary) {
-      data.append("marriageAnniversary", formData.marriageAnniversary);
+      data.append("marriageAnniversary", parseDateDMY(formData.marriageAnniversary));
     }
 
     Object.keys(files).forEach(field => {
@@ -317,12 +343,10 @@ const Profile = () => {
             {formData.isMarried && (
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Marriage Anniversary</label>
-                <input
-                  type="date"
-                  name="marriageAnniversary"
+                <DatePicker
                   value={formData.marriageAnniversary}
-                  onChange={(e) => setFormData(prev => ({ ...prev, marriageAnniversary: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  onChange={(value) => setFormData(prev => ({ ...prev, marriageAnniversary: value }))}
+                  placeholder="dd/mm/yyyy"
                 />
               </div>
             )}

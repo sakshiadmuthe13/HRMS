@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -35,16 +36,22 @@ const fetchJson = async (path, opts = {}) => {
 const apiGet = (p) => fetchJson(p);
 
 const AttendancePage = () => {
-  // Use client's local date (YYYY-MM-DD) so the initial date matches user's local day
-  const getLocalDateYMD = () => {
+  const getLocalDateDMY = () => {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
+    return `${dd}/${mm}/${yyyy}`;
   };
 
-  const [date, setDate] = useState(getLocalDateYMD());
+  const convertDMYtoYMD = (dmy) => {
+    if (!dmy) return "";
+    const parts = dmy.split("/");
+    if (parts.length !== 3) return "";
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
+  const [date, setDate] = useState(getLocalDateDMY());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -84,8 +91,9 @@ const AttendancePage = () => {
     try {
       setLoading(true);
       setError("");
+      const ymdDate = convertDMYtoYMD(date);
       const res = await apiGet(
-        `${API_BASE}/admin/attendance/by-date?date=${date}`
+        `${API_BASE}/admin/attendance/by-date?date=${ymdDate}`
       );
       setRows(res || []);
     } catch (err) {
@@ -105,13 +113,8 @@ const AttendancePage = () => {
         </h2>
 
         <div className="flex gap-3 items-center">
-          <div className="relative mt-5">
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="input w-auto bg-[var(--color-surface)] border border-white text-white pl-3 pr-3 rounded-md shadow-[0_0_10px_#0EA6F0] focus:shadow-[0_0_10px_#0EA6F0] focus:outline-none appearance-none"
-            />
+          <div className="relative w-48">
+            <DatePicker value={date} onChange={setDate} placeholder="dd/mm/yyyy" />
           </div>
 
           <button

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
 import { Users, UserCheck, Filter as FilterIcon, Download, RefreshCcw, User as UserIcon, FileText, Calendar, Briefcase, BarChart3 } from "lucide-react";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -27,6 +28,20 @@ const fetchJson = async (path, opts = {}) => {
 
 const apiGet = (p) => fetchJson(p);
 
+const convertYMDtoDMY = (ymd) => {
+  if (!ymd) return "";
+  const parts = ymd.split("-");
+  if (parts.length !== 3) return "";
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+const convertDMYtoYMD = (dmy) => {
+  if (!dmy) return "";
+  const parts = dmy.split("/");
+  if (parts.length !== 3) return "";
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
 const ReportsPage = () => {
   const [step, setStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState("");
@@ -39,6 +54,8 @@ const ReportsPage = () => {
     endDate: "",
     projectStatus: ""
   });
+  const [displayStartDate, setDisplayStartDate] = useState("");
+  const [displayEndDate, setDisplayEndDate] = useState("");
   const [leaveStats, setLeaveStats] = useState({ paid: 0, unpaid: 0 });
 
   const fetchUsers = useCallback(async () => {
@@ -196,6 +213,8 @@ const ReportsPage = () => {
     setSelectedUser(null);
     setReportData(null);
     setFilters({ startDate: "", endDate: "", projectStatus: "" });
+    setDisplayStartDate("");
+    setDisplayEndDate("");
   };
 
   return (
@@ -260,22 +279,26 @@ const ReportsPage = () => {
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Filters</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+                <div className="relative z-[99999]">
                   <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Start Date</label>
-                  <input
-                    type="date"
-                    value={filters.startDate}
-                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] input"
+                  <DatePicker 
+                    value={displayStartDate} 
+                    onChange={(val) => {
+                      setDisplayStartDate(val);
+                      setFilters({ ...filters, startDate: convertDMYtoYMD(val) });
+                    }} 
+                    placeholder="dd/mm/yyyy" 
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">End Date</label>
-                  <input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] input"
+                  <DatePicker 
+                    value={displayEndDate} 
+                    onChange={(val) => {
+                      setDisplayEndDate(val);
+                      setFilters({ ...filters, endDate: convertDMYtoYMD(val) });
+                    }} 
+                    placeholder="dd/mm/yyyy" 
                   />
                 </div>
                 <div>

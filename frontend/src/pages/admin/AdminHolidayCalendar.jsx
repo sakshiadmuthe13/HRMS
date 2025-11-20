@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -43,10 +44,25 @@ const fetchJson = async (path, opts = {}) => {
 };
 
 const AdminHolidayCalendar = () => {
+  const convertYMDtoDMY = (ymd) => {
+    if (!ymd) return "";
+    const parts = ymd.split("-");
+    if (parts.length !== 3) return "";
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+
+  const convertDMYtoYMD = (dmy) => {
+    if (!dmy) return "";
+    const parts = dmy.split("/");
+    if (parts.length !== 3) return "";
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  };
+
   const [activeMonth, setActiveMonth] = useState(new Date());
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ date: "", description: "" });
+  const [displayDate, setDisplayDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const daysInMonth = useMemo(
@@ -228,12 +244,13 @@ const AdminHolidayCalendar = () => {
               <label className="block text-sm text-[var(--color-text-secondary)] mb-1">
                 Date
               </label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
-                className="w-full bg-[var(--color-background)] border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                min={format(new Date(), "yyyy-MM-dd")}
+              <DatePicker 
+                value={displayDate} 
+                onChange={(val) => {
+                  setDisplayDate(val);
+                  setForm((prev) => ({ ...prev, date: convertDMYtoYMD(val) }));
+                }} 
+                placeholder="dd/mm/yyyy" 
               />
             </div>
             <div>

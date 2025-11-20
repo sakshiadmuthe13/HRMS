@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useState } from "react";
 import { parseISO, differenceInCalendarDays, startOfYear, endOfYear, max as dateMax, min as dateMin } from "date-fns";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
@@ -15,6 +16,14 @@ const formatDateDMY = (value) => {
   const d = String(dd).padStart(2, "0");
   const m = String(mm).padStart(2, "0");
   return `${d}/${m}/${yyyy}`;
+};
+
+const convertDMYToYMD = (dateStr) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return dateStr;
+  const [dd, mm, yyyy] = parts;
+  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
 };
 
 const fetchJson = async (path, opts = {}) => {
@@ -145,10 +154,14 @@ const Leaves = () => {
     try {
       const { fromDate, toDate, reason } = form;
       if (!fromDate || !toDate || !reason) return setModal({ show: true, type: "error", message: "Please fill all fields." });
-      if (new Date(toDate) < new Date(fromDate)) return setModal({ show: true, type: "error", message: "To date cannot be before From date." });
+      
+      const fromDateYMD = convertDMYToYMD(fromDate);
+      const toDateYMD = convertDMYToYMD(toDate);
+      
+      if (new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "To date cannot be before From date." });
 
       // Calculate requested days
-      const requestedDays = calcTotalDays(fromDate, toDate);
+      const requestedDays = calcTotalDays(fromDateYMD, toDateYMD);
 
       // Show info message if this will be unpaid leave
       if (role !== "admin" && remainingPaid === 0) {
@@ -159,7 +172,7 @@ const Leaves = () => {
           message: `ℹ️ No Paid Leaves Remaining\n\nYou have used all ${leaveAllowance} paid leave days for this year.\n\nYour request for ${requestedDays} day(s) will be counted as UNPAID LEAVE.\n\nClick OK to continue with unpaid leave application.`,
           onConfirm: async () => {
             try {
-              await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify(form) });
+              await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
               setForm({ fromDate: "", toDate: "", reason: "" });
               await fetchMyLeaves();
               setModal({ show: true, type: "success", message: "Your unpaid leave has been applied successfully! 📋" });
@@ -180,7 +193,7 @@ const Leaves = () => {
           message: `ℹ️ Partial Paid Leave Available\n\nYou are requesting ${requestedDays} day(s), but only ${paidDays} paid day(s) remaining.\n\n✅ ${paidDays} day(s) will be PAID\n⚠️ ${unpaidDays} day(s) will be UNPAID\n\nClick OK to continue with this leave application.`,
           onConfirm: async () => {
             try {
-              await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify(form) });
+              await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
               setForm({ fromDate: "", toDate: "", reason: "" });
               await fetchMyLeaves();
               setModal({ show: true, type: "success", message: "Your leave has been applied successfully! 🏖️" });
@@ -194,7 +207,7 @@ const Leaves = () => {
       }
 
       // Normal case - all paid leave or admin
-      await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify(form) });
+      await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
       setForm({ fromDate: "", toDate: "", reason: "" });
       await fetchMyLeaves();
       setModal({ show: true, type: "success", message: "Your leave has been applied successfully! 🏖️" });
@@ -206,7 +219,11 @@ const Leaves = () => {
 
   const openEdit = (leave) => {
     setEditing(leave);
-    setEditForm({ fromDate: new Date(leave.fromDate).toISOString().slice(0,10), toDate: new Date(leave.toDate).toISOString().slice(0,10), reason: leave.reason || "", id: leave._id });
+    const fromDateYMD = new Date(leave.fromDate).toISOString().slice(0, 10);
+    const toDateYMD = new Date(leave.toDate).toISOString().slice(0, 10);
+    const fromDateDMY = formatDateDMY(fromDateYMD);
+    const toDateDMY = formatDateDMY(toDateYMD);
+    setEditForm({ fromDate: fromDateDMY, toDate: toDateDMY, reason: leave.reason || "", id: leave._id });
   };
 
   const closeEdit = () => { setEditing(null); setEditForm({ fromDate: "", toDate: "", reason: "", id: "" }); };
@@ -214,10 +231,14 @@ const Leaves = () => {
   const saveEdit = async () => {
     try {
       if (!editForm.fromDate || !editForm.toDate || !editForm.reason) return setModal({ show: true, type: "error", message: "Please fill all fields." });
-      if (new Date(editForm.toDate) < new Date(editForm.fromDate)) return setModal({ show: true, type: "error", message: "To date cannot be before From date." });
+      
+      const fromDateYMD = convertDMYToYMD(editForm.fromDate);
+      const toDateYMD = convertDMYToYMD(editForm.toDate);
+      
+      if (new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "To date cannot be before From date." });
 
       // Calculate new requested days
-      const newRequestedDays = calcTotalDays(editForm.fromDate, editForm.toDate);
+      const newRequestedDays = calcTotalDays(fromDateYMD, toDateYMD);
 
       // Find the original leave to calculate the difference
       const originalLeave = leaves.find(l => l._id === editForm.id);
@@ -238,7 +259,7 @@ const Leaves = () => {
             onConfirm: async () => {
               try {
                 setSavingEdit(true);
-                await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: editForm.fromDate, toDate: editForm.toDate, reason: editForm.reason }) });
+                await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) });
                 await fetchMyLeaves();
                 closeEdit();
                 setModal({ show: true, type: "update", message: "Your leave details have been updated successfully! ✏️" });
@@ -260,7 +281,7 @@ const Leaves = () => {
             onConfirm: async () => {
               try {
                 setSavingEdit(true);
-                await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: editForm.fromDate, toDate: editForm.toDate, reason: editForm.reason }) });
+                await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) });
                 await fetchMyLeaves();
                 closeEdit();
                 setModal({ show: true, type: "update", message: "Your leave details have been updated successfully! ✏️" });
@@ -276,7 +297,7 @@ const Leaves = () => {
 
       // Normal case - all paid leave or admin or pending leave
       setSavingEdit(true);
-      await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: editForm.fromDate, toDate: editForm.toDate, reason: editForm.reason }) });
+      await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) });
       await fetchMyLeaves();
       closeEdit();
       setModal({ show: true, type: "update", message: "Your leave details have been updated successfully! ✏️" });
@@ -349,20 +370,20 @@ const Leaves = () => {
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-sm mb-1 block">From</label>
-              <input type="date" value={form.fromDate} onChange={(e) => setForm((f) => ({ ...f, fromDate: e.target.value }))} className="w-full p-2 rounded border bg-transparent" />
+              <DatePicker value={form.fromDate} onChange={(val) => setForm((f) => ({ ...f, fromDate: val }))} placeholder="dd/mm/yyyy" />
             </div>
             <div>
               <label className="text-sm mb-1 block">To</label>
-              <input type="date" value={form.toDate} onChange={(e) => setForm((f) => ({ ...f, toDate: e.target.value }))} className="w-full p-2 rounded border bg-transparent" />
+              <DatePicker value={form.toDate} onChange={(val) => setForm((f) => ({ ...f, toDate: val }))} placeholder="dd/mm/yyyy" />
             </div>
             <div>
               <label className="text-sm mb-1 block">Total days</label>
-              <div className="p-2 rounded border min-h-[40px] flex items-center">{calcTotalDays(form.fromDate, form.toDate) || "-"}</div>
+              <div className="p-2 rounded border min-h-[40px] flex items-center">{calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "-"}</div>
             </div>
 
             {/* Live validation warning - Show info about unpaid leaves */}
             {(() => {
-              const requestedDays = calcTotalDays(form.fromDate, form.toDate);
+              const requestedDays = calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate));
               if (requestedDays > 0 && role !== "admin") {
                 if (remainingPaid === 0) {
                   return (
@@ -471,15 +492,15 @@ const Leaves = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm mb-1">From</label>
-                <input type="date" value={editForm.fromDate} onChange={(e) => setEditForm((f) => ({ ...f, fromDate: e.target.value }))} className="w-full p-2 rounded border bg-transparent" />
+                <DatePicker value={editForm.fromDate} onChange={(val) => setEditForm((f) => ({ ...f, fromDate: val }))} placeholder="dd/mm/yyyy" />
               </div>
               <div>
                 <label className="block text-sm mb-1">To</label>
-                <input type="date" value={editForm.toDate} onChange={(e) => setEditForm((f) => ({ ...f, toDate: e.target.value }))} className="w-full p-2 rounded border bg-transparent" />
+                <DatePicker value={editForm.toDate} onChange={(val) => setEditForm((f) => ({ ...f, toDate: val }))} placeholder="dd/mm/yyyy" />
               </div>
               <div>
                 <label className="block text-sm mb-1">Days</label>
-                <div className="p-2 rounded border">{calcTotalDays(editForm.fromDate, editForm.toDate) || "-"}</div>
+                <div className="p-2 rounded border">{calcTotalDays(convertDMYToYMD(editForm.fromDate), convertDMYToYMD(editForm.toDate)) || "-"}</div>
               </div>
 
               <div className="sm:col-span-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -59,10 +60,26 @@ const emptyProject = {
   assignedTeams: [],
 };
 
+const convertYMDtoDMY = (ymd) => {
+  if (!ymd) return "";
+  const parts = ymd.split("-");
+  if (parts.length !== 3) return "";
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+const convertDMYtoYMD = (dmy) => {
+  if (!dmy) return "";
+  const parts = dmy.split("/");
+  if (parts.length !== 3) return "";
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
 const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [teams, setTeams] = useState([]);
   const [form, setForm] = useState(emptyProject);
+  const [displayStartDate, setDisplayStartDate] = useState("");
+  const [displayEndDate, setDisplayEndDate] = useState("");
   const [editing, setEditing] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -92,17 +109,23 @@ const ProjectsPage = () => {
 
   const handleCreate = () => {
     setForm(emptyProject);
+    setDisplayStartDate("");
+    setDisplayEndDate("");
     setEditing(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (project) => {
+    const startDateYMD = project.startDate ? project.startDate.split("T")[0] : "";
+    const endDateYMD = project.endDate ? project.endDate.split("T")[0] : "";
     setForm({
       ...project,
-      startDate: project.startDate ? project.startDate.split("T")[0] : "",
-      endDate: project.endDate ? project.endDate.split("T")[0] : "",
+      startDate: startDateYMD,
+      endDate: endDateYMD,
       assignedTeams: project.assignedTeams.map((t) => t._id),
     });
+    setDisplayStartDate(convertYMDtoDMY(startDateYMD));
+    setDisplayEndDate(convertYMDtoDMY(endDateYMD));
     setEditing(project._id);
     setIsModalOpen(true);
   };
@@ -296,9 +319,27 @@ const ProjectsPage = () => {
                       name="description"
                       className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"
                     />
+                  ) : k === "startDate" ? (
+                    <DatePicker 
+                      value={displayStartDate} 
+                      onChange={(val) => {
+                        setDisplayStartDate(val);
+                        setForm((prev) => ({ ...prev, startDate: convertDMYtoYMD(val) }));
+                      }} 
+                      placeholder="dd/mm/yyyy" 
+                    />
+                  ) : k === "endDate" ? (
+                    <DatePicker 
+                      value={displayEndDate} 
+                      onChange={(val) => {
+                        setDisplayEndDate(val);
+                        setForm((prev) => ({ ...prev, endDate: convertDMYtoYMD(val) }));
+                      }} 
+                      placeholder="dd/mm/yyyy" 
+                    />
                   ) : (
                     <input
-                      type={k.includes("Date") ? "date" : "text"}
+                      type="text"
                       value={form[k]}
                       onChange={handleInputChange}
                       name={k}

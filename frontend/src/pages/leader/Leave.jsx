@@ -1,9 +1,34 @@
-// LeaderLeaves.jsx
 import React, { useEffect, useState } from "react";
 import { parseISO, differenceInCalendarDays, startOfYear, endOfYear, max as dateMax, min as dateMin } from "date-fns";
+import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
+
+const formatDateDMY = (value) => {
+  if (!value) return "";
+  const dateStr = typeof value === "string" ? value.split("T")[0] : value;
+  if (typeof dateStr !== "string") return "";
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return "";
+  const [yyyy, mm, dd] = parts;
+  const d = String(dd).padStart(2, "0");
+  const m = String(mm).padStart(2, "0");
+  return `${d}/${m}/${yyyy}`;
+};
+
+const parseDateDMY = (dateStr) => {
+  if (!dateStr) return "";
+  try {
+    if (dateStr.includes("/")) {
+      const [d, m, yyyy] = dateStr.split("/");
+      return `${yyyy}-${m}-${d}`;
+    }
+    return dateStr;
+  } catch {
+    return "";
+  }
+};
 
 const fetchJson = async (path, opts = {}) => {
   const token = getToken();
@@ -343,20 +368,18 @@ const LeaderLeaves = () => {
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-sm mb-1 block">From</label>
-              <input
-                type="date"
-                value={form.fromDate}
-                onChange={(e) => setForm((f) => ({ ...f, fromDate: e.target.value }))}
-                className="w-full p-2 rounded border bg-transparent"
+              <DatePicker
+                value={formatDateDMY(form.fromDate)}
+                onChange={(value) => setForm((f) => ({ ...f, fromDate: parseDateDMY(value) }))}
+                placeholder="dd/mm/yyyy"
               />
             </div>
             <div>
               <label className="text-sm mb-1 block">To</label>
-              <input
-                type="date"
-                value={form.toDate}
-                onChange={(e) => setForm((f) => ({ ...f, toDate: e.target.value }))}
-                className="w-full p-2 rounded border bg-transparent"
+              <DatePicker
+                value={formatDateDMY(form.toDate)}
+                onChange={(value) => setForm((f) => ({ ...f, toDate: parseDateDMY(value) }))}
+                placeholder="dd/mm/yyyy"
               />
             </div>
             <div>
@@ -503,20 +526,18 @@ const LeaderLeaves = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm mb-1">From</label>
-                <input
-                  type="date"
-                  value={editForm.fromDate}
-                  onChange={(e) => setEditForm((f) => ({ ...f, fromDate: e.target.value }))}
-                  className="w-full p-2 rounded border bg-transparent"
+                <DatePicker
+                  value={formatDateDMY(editForm.fromDate)}
+                  onChange={(value) => setEditForm((f) => ({ ...f, fromDate: parseDateDMY(value) }))}
+                  placeholder="dd/mm/yyyy"
                 />
               </div>
               <div>
                 <label className="block text-sm mb-1">To</label>
-                <input
-                  type="date"
-                  value={editForm.toDate}
-                  onChange={(e) => setEditForm((f) => ({ ...f, toDate: e.target.value }))}
-                  className="w-full p-2 rounded border bg-transparent"
+                <DatePicker
+                  value={formatDateDMY(editForm.toDate)}
+                  onChange={(value) => setEditForm((f) => ({ ...f, toDate: parseDateDMY(value) }))}
+                  placeholder="dd/mm/yyyy"
                 />
               </div>
               <div>
