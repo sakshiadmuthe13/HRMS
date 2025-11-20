@@ -1,4 +1,4 @@
-## This is Frontend of My Employee Management System
+## This is My Employee Management System
 
 ## Credentials to login:
 1. Admin: admin@dwi4u.com, password: admin123
