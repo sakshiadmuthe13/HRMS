@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -112,14 +113,21 @@ export default function AssignTaskPage() {
   };
 
   return (
-    <div className="font-sans text-white min-h-full p-6 space-y-8">
-      <h2 className="text-3xl font-bold text-[#A756FA] mb-6">📋 Tasks</h2>
-      <section className="bg-[#161b22] rounded-2xl shadow-lg p-6 border border-gray-700 card-glow">
-        <h2 className="text-2xl font-semibold mb-4 text-[#58a6ff]">
+    <div className="font-sans text-white min-h-full p-3 sm:p-6 space-y-4 sm:space-y-8 relative">
+      {/* <button
+        onClick={() => window.history.back()}
+        className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
+        title="Close"
+      >
+        <X size={24} />
+      </button> */}
+      <h2 className="text-2xl sm:text-3xl font-bold text-[#A756FA] mb-6 pr-10 sm:pr-0">📋 Tasks</h2>
+      <section className="bg-[#161b22] rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-700 card-glow">
+        <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-[#58a6ff]">
           Assign New Task
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <select
             value={form.project}
             onChange={(e) =>
@@ -193,22 +201,20 @@ export default function AssignTaskPage() {
         </div>
       </section>
 
-      <section className="bg-[#161b22] rounded-2xl shadow-lg p-6 border border-gray-700 card-glow">
-        <h3 className="text-xl font-semibold mb-4 text-[#58a6ff]">
+      <section className="bg-[#161b22] rounded-2xl shadow-lg p-4 sm:p-6 border border-gray-700 card-glow">
+        <h3 className="text-lg sm:text-xl font-semibold mb-4 text-[#58a6ff]">
           My Assigned Tasks
         </h3>
         <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-0 table-auto text-left text-sm">
-            <thead className="text-gray-400 border-b border-gray-700">
+          <table className="w-full min-w-0 table-auto text-left text-xs sm:text-sm">
+            <thead className="text-xs sm:text-sm text-gray-400 border-b border-gray-700">
               <tr>
-                <th className="py-2">Project</th>
-                <th className="py-2">Assigned To</th>
-                <th className="py-2">Description</th>
-                <th className="py-2">Assigned On</th>
-                <th className="py-2">Deadline</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Completed On</th>               
-                <th className="py-2">Task Status</th>
+                <th className="py-2 px-1">Project</th>
+                <th className="py-2 px-1">Assigned To</th>
+                <th className="py-2 px-1 hidden sm:table-cell">Description</th>
+                <th className="py-2 px-1 hidden md:table-cell">Assigned On</th>
+                <th className="py-2 px-1 hidden lg:table-cell">Deadline</th>
+                <th className="py-2 px-1">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -216,64 +222,45 @@ export default function AssignTaskPage() {
                 tasks.map((t) => (
                   <tr
                     key={t._id}
-                    className="border-t border-gray-800 hover:bg-[#21262d]"
+                    className="border-t border-gray-800 hover:bg-[#21262d] text-xs sm:text-sm"
                   >
-                    <td className="py-2">{t.project?.name || "-"}</td>
-                    <td className="py-2">{t.assignedTo?.name || "-"}</td>
-                    <td className="py-2 text-gray-300">{t.description}</td>
-                    <td className="py-2 text-gray-400">
+                    <td className="py-2 px-1">{t.project?.name || "-"}</td>
+                    <td className="py-2 px-1">{t.assignedTo?.name || "-"}</td>
+                    <td className="py-2 px-1 text-gray-300 hidden sm:table-cell truncate max-w-[150px]">{t.description}</td>
+                    <td className="py-2 px-1 text-gray-400 hidden md:table-cell text-xs">
                       {t.assignedAt
                         ? new Date(t.assignedAt).toLocaleString("en-GB", {
                             day: "2-digit",
                             month: "2-digit",
                             year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
                           })
                         : "-"}
                     </td>
-                    <td className="py-2 text-gray-400">
+                    <td className="py-2 px-1 text-gray-400 hidden lg:table-cell text-xs">
                       {t.deadline
                         ? new Date(t.deadline).toLocaleString("en-GB", {
                             day: "2-digit",
                             month: "2-digit",
                             year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
                           })
                         : "-"}
                     </td>
-                    <td className="py-2 text-yellow-400">
-                      {t.status || "Pending"}
+                    <td className="py-2 px-1">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        t.status === "Completed"
+                          ? "bg-green-600/30 text-green-400"
+                          : t.status === "In Progress"
+                          ? "bg-yellow-600/30 text-yellow-400"
+                          : "bg-red-600/30 text-red-400"
+                      }`}>
+                        {t.status || "Pending"}
+                      </span>
                     </td>
-                    <td className="py-2 text-gray-400">
-                      {t.completedAt
-                        ? new Date(t.completedAt).toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          })
-                        : "-"}
-                    </td>
-                    <td className="py-2 text-gray-300">
-                      {t.completedAt
-                        ? t.deadline &&
-                          new Date(t.completedAt) > new Date(t.deadline)
-                          ? "Delayed"
-                          : "On Time"
-                        : "-"}
-                    </td>
-                    
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="text-center py-4 text-gray-500">
+                  <td colSpan="6" className="text-center py-4 text-xs sm:text-sm text-gray-500">
                     No tasks assigned yet.
                   </td>
                 </tr>
@@ -283,16 +270,16 @@ export default function AssignTaskPage() {
         </div>
       </section>
       {successMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[#161b22] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-green-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-0">
+          <div className="bg-[#161b22] p-4 sm:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4 text-green-400">
               🎉 Success
             </h3>
-            <p className="text-gray-300 mb-6">{successMessage}</p>
+            <p className="text-xs sm:text-sm text-gray-300 mb-6">{successMessage}</p>
             <div className="flex justify-end">
               <button
                 onClick={() => setSuccessMessage("")}
-                className="px-4 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition"
+                className="px-3 sm:px-4 py-2 text-xs sm:text-sm border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition"
               >
                 OK
               </button>

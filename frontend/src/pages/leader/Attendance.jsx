@@ -13,7 +13,7 @@ import {
 import { toZonedTime } from "date-fns-tz";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FaArrowLeft, FaArrowRight, FaCheck, FaTimes } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheck, FaTimes, FaTimesCircle } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -311,14 +311,21 @@ const LeaderAttendance = () => {
   })();
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6 relative">
       <ToastContainer />
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-2">
+      {/* <button
+        onClick={() => window.history.back()}
+        className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
+        title="Close"
+      >
+        <FaTimesCircle size={24} />
+      </button> */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-2 pr-10 sm:pr-0">
         <div>
-          <h2 className="text-3xl font-bold text-[var(--color-primary)]">
+          <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">
             🕒 Attendance
           </h2>
-          <p className="text-sm text-gray-500 ml-12 mt-4">
+          <p className="text-xs sm:text-sm text-gray-500 ml-12 mt-4">
             Today: {getTodayISTLabel()}
           </p>
         </div>
@@ -327,7 +334,7 @@ const LeaderAttendance = () => {
             <button
               onClick={handleCheckIn}
               disabled={loading}
-              className="px-6 py-2 font-semibold text-white rounded bg-green-500 hover:bg-green-600 flex items-center gap-2"
+              className="px-3 sm:px-6 py-2 text-sm sm:text-base font-semibold text-white rounded bg-green-500 hover:bg-green-600 flex items-center gap-2"
             >
               <FaCheck /> Check In
             </button>
@@ -336,14 +343,14 @@ const LeaderAttendance = () => {
             <button
               onClick={handleCheckOut}
               disabled={loading}
-              className="px-6 py-2 font-semibold text-white rounded bg-red-500 hover:bg-red-600 flex items-center gap-2"
+              className="px-3 sm:px-6 py-2 text-sm sm:text-base font-semibold text-white rounded bg-red-500 hover:bg-red-600 flex items-center gap-2"
             >
               <FaTimes /> Check Out
             </button>
           )}
         </div>
       </div>
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <button
             onClick={() => setCalendarDate(subMonths(calendarDate, 1))}
@@ -391,16 +398,16 @@ const LeaderAttendance = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-2 mt-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 mt-2">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="text-center font-semibold text-secondary">
+            <div key={d} className="text-center font-semibold text-secondary text-xs sm:text-sm">
               {d}
             </div>
           ))}
 
           {days.map((day, idx) => {
             if (!day) {
-              return <div key={`empty-${idx}`} className="h-20 p-1" />;
+              return <div key={`empty-${idx}`} className="h-16 sm:h-20 p-1" />;
             }
             const cellKey = format(day, "yyyy-MM-dd");
             const rec = monthRecords[cellKey];
@@ -408,7 +415,6 @@ const LeaderAttendance = () => {
             const isLeave = leaveMap?.[cellKey];
             const isTodayCell = cellKey === getTodayISTKey();
 
-            // Color precedence: Holiday (red) > Present (green, in+out) > Absent (orange, past no check-in) > Future blank (yellow) > Default
             const todayKey = getTodayISTKey();
             const isPast = cellKey < todayKey;
             const hasIn = !!rec?.checkIn;
@@ -429,26 +435,26 @@ const LeaderAttendance = () => {
             return (
               <div
                 key={cellKey}
-                className={`h-22 p-1 flex flex-col justify-center items-center rounded cursor-pointer font-semibold ${bgClass} ${
-                  isTodayCell ? "border-4 border-yellow-500" : ""
+                className={`h-16 sm:h-22 p-1 flex flex-col justify-center items-center rounded cursor-pointer font-semibold text-xs sm:text-sm ${bgClass} ${
+                  isTodayCell ? "border-2 sm:border-4 border-yellow-500" : ""
                 }`}
               >
-                <div>{dayNumber}</div>
+                <div className="text-xs sm:text-base">{dayNumber}</div>
                 {isHoliday?.description && (
-                  <div className="text-[10px] mt-1 text-white text-center px-1">
+                  <div className="text-[8px] sm:text-[10px] mt-1 text-white text-center px-1">
                     {isHoliday.description}
                   </div>
                 )}
-                <div className="text-xs mt-1">
+                <div className="text-[9px] sm:text-xs mt-1">
                   {isLeave
-                    ? "Leave Day"
+                    ? "Leave"
                     : isAbsent
-                    ? "Absent Day"
+                    ? "Absent"
                     : rec?.checkIn
                     ? `In: ${formatDateInIST(rec.checkIn, "hh:mm a")}`
                     : ""}
                 </div>
-                <div className="text-xs">
+                <div className="text-[9px] sm:text-xs">
                   {!isLeave && !isAbsent && rec?.checkOut
                     ? `Out: ${formatDateInIST(rec.checkOut, "hh:mm a")}`
                     : ""}
@@ -460,38 +466,38 @@ const LeaderAttendance = () => {
       </div>
 
       {/* Legend Section */}
-      <div className="mt-3 ml-6 p-6 rounded-xl bg-gray-900 border border-gray-700 w-19/20 shadow-lg">
-        <h3 className="text-base font-semibold text-[var(--color-primary)] mb-3">
+      <div className="mt-3 ml-0 p-3 sm:p-6 rounded-xl bg-gray-900 border border-gray-700 shadow-lg">
+        <h3 className="text-sm sm:text-base font-semibold text-[var(--color-primary)] mb-3">
           Legend
         </h3>
-        <div className="flex flex-wrap gap-4 text-sm items-center">
+        <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm items-center">
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-red-600 border border-gray-700" />
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-red-600 border border-gray-700" />
             <span className="text-gray-200">Holiday</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-green-600 border border-gray-700" />
-            <span className="text-gray-200">Present Day</span>
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-green-600 border border-gray-700" />
+            <span className="text-gray-200">Present</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-orange-500 border border-gray-700" />
-            <span className="text-gray-200">Absent Day</span>
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-orange-500 border border-gray-700" />
+            <span className="text-gray-200">Absent</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-blue-600 border border-gray-700" />
-            <span className="text-gray-200">Leave Day</span>
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-blue-600 border border-gray-700" />
+            <span className="text-gray-200">Leave</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-yellow-200 border border-gray-700" />
-            <span className="text-gray-200">Upcoming / Regular Day</span>
+            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-yellow-200 border border-gray-700" />
+            <span className="text-gray-200">Regular</span>
           </div>
         </div>
       </div>
       
-      <h2 className="text-2xl mt-4 mb-6 font-bold text-[var(--color-primary)]">
+      <h2 className="text-xl sm:text-2xl mt-4 mb-6 font-bold text-[var(--color-primary)]">
         ✨ Today's Celebrations
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-2">
         <CelebrationCard
           title="🎉 Birthdays Today"
           items={celebrations.birthdays}

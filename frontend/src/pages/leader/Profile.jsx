@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
-import { User, Upload, CheckCircle, XCircle, Eye, Download } from "lucide-react";
+import { User, Upload, CheckCircle, XCircle, Eye, Download, X } from "lucide-react";
 import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -191,47 +191,54 @@ const Profile = () => {
   }
 
   return (
-    <section className="p-6 bg-[var(--color-surface)] min-h-screen text-[var(--color-text-primary)]">
+    <section className="p-3 sm:p-6 bg-[var(--color-surface)] min-h-screen text-[var(--color-text-primary)] relative">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <User className="w-8 h-8 text-[var(--color-primary)]" />
-          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">My Profile</h1>
+        {/* <button
+          onClick={() => window.history.back()}
+          className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
+          title="Close"
+        >
+          <X size={24} />
+        </button> */}
+        <div className="flex items-center gap-3 mb-8 pr-10 sm:pr-0">
+          <User className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--color-primary)]" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">My Profile</h1>
         </div>
 
         {/* Profile Status */}
-        <div className="card-glow p-6 mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
+        <div className="card-glow p-4 sm:p-6 mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
               <img
                 src={profile?.documents?.passportPhoto?.path || "/default-avatar.png"}
                 alt="Profile"
-                className="mr-6 w-35 h-35 rounded-full object-cover border-2 border-[var(--color-primary)]"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-2 border-[var(--color-primary)]"
               />
-              <div className="text-left">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">{profile?.name}</h2>
-                <p className="text-[var(--color-text-secondary)]">Emailid: {profile?.email}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Position: {profile?.position}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Date of Joining: {profile?.dateOfJoining ? new Date(profile.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Phone: {profile?.phone}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Date of Birth: {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Base Salary: {profile?.salary}</p>
+              <div className="text-center sm:text-left">
+                <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)]">{profile?.name}</h2>
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Email: {profile?.email}</p>
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Position: {profile?.position}</p>
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">DOJ: {profile?.dateOfJoining ? new Date(profile.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</p>
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Phone: {profile?.phone}</p>
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">DOB: {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</p>
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Salary: {profile?.salary}</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+            <div className="text-center w-full sm:w-auto">
+              <div className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium ${
                 profile?.profileVerified
                   ? "bg-green-900/30 text-green-400 border border-green-800"
                   : "bg-yellow-900/30 text-yellow-400 border border-yellow-800"
               }`}>
                 {profile?.profileVerified ? (
                   <>
-                    <CheckCircle className="w-4 h-4" />
-                    Profile Verified
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Verified
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-4 h-4" />
-                    Profile Unverified
+                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                    Unverified
                   </>
                 )}
               </div>
@@ -240,9 +247,9 @@ const Profile = () => {
         </div>
 
         {/* Reporting Information */}
-        <div className="card-glow p-6 mb-8">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-6">Reporting Structure</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card-glow p-4 sm:p-6 mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-6">Reporting Structure</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
             <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
               <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Reporting Manager</h3>
               <p className="text-[var(--color-text-secondary)]">
@@ -274,10 +281,10 @@ const Profile = () => {
         </div>
 
         {/* Update Profile Form */}
-        <form onSubmit={handleSubmit} className="card-glow p-6 mb-8">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-6">Update Profile Information</h2>
+        <form onSubmit={handleSubmit} className="card-glow p-4 sm:p-6 mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-6">Update Profile Information</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Phone</label>
               <input
@@ -326,8 +333,8 @@ const Profile = () => {
           </div>
 
           {/* Marital Information */}
-          <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Marital Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <h3 className="text-base sm:text-lg font-medium text-[var(--color-text-primary)] mb-4">Marital Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 mb-6">
             <div>
               <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Married?</label>
               <select
@@ -353,8 +360,8 @@ const Profile = () => {
           </div>
 
           {/* Document Uploads */}
-          <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Upload Documents</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <h3 className="text-base sm:text-lg font-medium text-[var(--color-text-primary)] mb-4">Upload Documents</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
             {Object.entries(documentLabels).map(([field, label]) => (
               <div key={field} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">{label}</label>
@@ -374,7 +381,7 @@ const Profile = () => {
           <button
             type="submit"
             disabled={uploading}
-            className="w-full bg-[var(--color-primary)] text-white py-2 px-4 rounded-md hover:bg-[var(--color-primary)]/80 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-[var(--color-primary)] text-white py-2 px-4 rounded-md text-sm sm:text-base hover:bg-[var(--color-primary)]/80 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {uploading ? (
               <>
@@ -391,9 +398,9 @@ const Profile = () => {
         </form>
 
         {/* Document Status */}
-        <div className="card-glow p-6">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-6">Document Verification Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="card-glow p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-6">Document Verification Status</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {Object.entries(documentLabels).map(([field, label]) => {
               const doc = profile?.documents?.[field];
               const status = getVerificationStatus(doc);

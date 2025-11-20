@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -46,23 +47,30 @@ const LeaderTeamsPage = () => {
   }, []);
 
   return (
-    <div className="w-full">
-      <h2 className="text-3xl font-bold text-[#A756FA] mb-6">
+    <div className="w-full p-3 sm:p-6 relative">
+      {/* <button
+        onClick={() => window.history.back()}
+        className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
+        title="Close"
+      >
+        <X size={24} />
+      </button> */}
+      <h2 className="text-2xl sm:text-3xl font-bold text-[#A756FA] mb-6 pr-10 sm:pr-0">
         👥 My Teams
       </h2>
 
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg bg-[var(--color-surface)] p-4">
+      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg bg-[var(--color-surface)] p-3 sm:p-4">
         {loading ? (
-          <p className="p-6 text-center text-gray-400 animate-pulse">
+          <p className="p-6 text-center text-sm text-gray-400 animate-pulse">
             Loading teams...
           </p>
         ) : teams.length > 0 ? (
-          <table className="w-full min-w-[700px] text-left">
-            <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-sm">
+          <table className="w-full min-w-[500px] text-left text-xs sm:text-sm">
+            <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-xs sm:text-sm">
               <tr>
-                <th className="p-4">Team Name</th>
-                <th className="p-4">Total Members</th>
-                <th className="p-4">Members</th>
+                <th className="p-2 sm:p-4">Team Name</th>
+                <th className="p-2 sm:p-4">Members</th>
+                <th className="p-2 sm:p-4 hidden sm:table-cell">Team Members</th>
               </tr>
             </thead>
             <tbody>
@@ -71,9 +79,9 @@ const LeaderTeamsPage = () => {
                   key={team._id || i}
                   className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(167,86,250,0.05)] transition-all"
                 >
-                  <td className="p-4 font-medium">{team.name}</td>
-                  <td className="p-4">{team.members?.length || 0}</td>
-                  <td className="p-4 text-sm text-gray-300">
+                  <td className="p-2 sm:p-4 font-medium">{team.name}</td>
+                  <td className="p-2 sm:p-4">{team.members?.length || 0}</td>
+                  <td className="p-2 sm:p-4 text-xs sm:text-sm text-gray-300 hidden sm:table-cell truncate max-w-[200px]">
                     {team.members?.map((m) => m.name).join(", ") || "-"}
                   </td>
                 </tr>
@@ -81,8 +89,8 @@ const LeaderTeamsPage = () => {
             </tbody>
           </table>
         ) : (
-          <p className="text-center py-6 text-gray-400">
-            You don’t have any teams assigned yet.
+          <p className="text-center py-6 text-xs sm:text-sm text-gray-400">
+            You don't have any teams assigned yet.
           </p>
         )}
       </div>

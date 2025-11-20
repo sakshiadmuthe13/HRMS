@@ -69,8 +69,8 @@ const AdminLeaves = () => {
   const closeModal = () => setModal({ show: false, type: "", message: "" });
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
-      <h2 className="text-3xl font-bold text-[#A756FA] mb-6">📝 Leaves</h2>
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+      <h2 className="text-2xl sm:text-3xl font-bold text-[#A756FA] mb-4 sm:mb-6">📝 Leaves</h2>
 
       <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl">
         <div className="overflow-x-auto">
@@ -175,8 +175,8 @@ const AdminLeaves = () => {
 
       {/* MODAL */}
       {modal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-accent)] rounded-2xl shadow-lg p-8 w-full max-w-md text-center card-glow animate-scaleIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-accent)] rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-md text-center card-glow animate-scaleIn">
             <div className="text-5xl mb-4">
               {modal.type === "success" ? "✅" : "❌"}
             </div>

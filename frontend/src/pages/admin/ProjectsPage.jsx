@@ -199,9 +199,9 @@ const ProjectsPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold text-[var(--color-primary)]">
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">
           📁 Projects
         </h2>
         <button
@@ -286,8 +286,8 @@ const ProjectsPage = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-semibold mb-4 text-[var(--color-primary)]">
               {editing ? "Edit Project" : "Create Project"}
             </h3>
@@ -388,12 +388,12 @@ const ProjectsPage = () => {
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-red-400">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4 text-red-400">
               ⚠️ Confirm Deletion
             </h3>
-            <p className="text-[var(--color-text-secondary)] mb-6">
+            <p className="text-sm sm:text-base text-[var(--color-text-secondary)] mb-6">
               Are you sure you want to delete{" "}
               <span className="font-medium">{deleteTarget.name}</span>? This
               action cannot be undone.

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { parseISO, differenceInCalendarDays, startOfYear, endOfYear, max as dateMax, min as dateMin } from "date-fns";
 import DatePicker from "../../components/DatePicker";
+import { FaTimesCircle } from "react-icons/fa";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 const getToken = () => localStorage.getItem("token");
@@ -317,15 +318,22 @@ const LeaderLeaves = () => {
   const unpaidUsed = Math.max(0, approvedUsed - leaveAllowance);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-[#A756FA] mb-6">📋 Leaves</h2>
-        <div className="text-sm bg-white/5 px-3 py-2 rounded-md">
-          <span>Yearly allowance: <span className="font-semibold">{leaveAllowance}</span></span>
+    <div className="space-y-6 p-3 sm:p-6 relative">
+      {/* <button
+        onClick={() => window.history.back()}
+        className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
+        title="Close"
+      >
+        <FaTimesCircle size={24} />
+      </button> */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 pr-10 sm:pr-0">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#A756FA] mb-0 sm:mb-6">📋 Leaves</h2>
+        <div className="text-xs sm:text-sm bg-white/5 px-3 py-2 rounded-md whitespace-nowrap">
+          <span>Yearly: <span className="font-semibold">{leaveAllowance}</span></span>
           <span className="text-gray-300"> &middot; </span>
-          <span>Paid Used: <span className="font-semibold">{paidUsed}</span></span>
+          <span>Used: <span className="font-semibold">{paidUsed}</span></span>
           <span className="text-gray-300"> &middot; </span>
-          <span>Unpaid used: <span className="font-semibold">{unpaidUsed}</span></span>
+          <span>Unpaid: <span className="font-semibold">{unpaidUsed}</span></span>
         </div>
       </div>
 
@@ -363,9 +371,9 @@ const LeaderLeaves = () => {
       )}
 
       {/* APPLY LEAVE - Always visible */}
-      <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-[#58a6ff]">Apply for Leave</h2>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="card-glow bg-[var(--color-surface)] p-4 sm:p-6 rounded-xl">
+          <h2 className="text-lg sm:text-xl font-semibold text-[#58a6ff]">Apply for Leave</h2>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
               <label className="text-sm mb-1 block">From</label>
               <DatePicker
@@ -447,28 +455,28 @@ const LeaderLeaves = () => {
         </div>
 
       {/* LEAVES TABLE */}
-      <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-[#58a6ff]">My Leaves</h3>
-          <div className="text-sm text-muted">{loading ? "Loading..." : `${leaves.length} requests`}</div>
+      <div className="card-glow bg-[var(--color-surface)] p-4 sm:p-6 rounded-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+          <h3 className="text-base sm:text-lg font-medium text-[#58a6ff]">My Leaves</h3>
+          <div className="text-xs sm:text-sm text-muted">{loading ? "Loading..." : `${leaves.length} requests`}</div>
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full table-auto text-left">
+          <table className="w-full table-auto text-left text-xs sm:text-sm">
             <thead>
-              <tr className="text-sm text-gray-400">
-                <th className="py-2">From</th>
-                <th>To</th>
-                <th>Days</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
+              <tr className="text-xs sm:text-sm text-gray-400">
+                <th className="py-2 px-1">From</th>
+                <th className="px-1">To</th>
+                <th className="px-1">Days</th>
+                <th className="px-1 hidden sm:table-cell">Reason</th>
+                <th className="px-1">Status</th>
+                <th className="text-right px-1">Actions</th>
               </tr>
             </thead>
             <tbody>
               {leaves.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="py-6 text-center text-sm text-gray-400">
+                  <td colSpan="6" className="py-6 text-center text-xs sm:text-sm text-gray-400">
                     No leaves applied yet
                   </td>
                 </tr>
@@ -486,28 +494,28 @@ const LeaderLeaves = () => {
                 });
                 return (
                   <tr key={l._id} className="border-t">
-                    <td className="py-3">{from}</td>
-                    <td>{to}</td>
-                    <td>{l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}</td>
-                    <td className="max-w-[320px]">{l.reason}</td>
-                    <td>
+                    <td className="py-3 px-1 text-xs sm:text-sm">{from}</td>
+                    <td className="px-1 text-xs sm:text-sm">{to}</td>
+                    <td className="px-1 text-xs sm:text-sm">{l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}</td>
+                    <td className="max-w-[150px] px-1 text-xs sm:text-sm hidden sm:table-cell truncate">{l.reason}</td>
+                    <td className="px-1">
                       <span className={
                         l.status === "Pending"
-                          ? "px-2 py-1 rounded bg-yellow-600/40 text-sm"
+                          ? "px-2 py-1 rounded bg-yellow-600/40 text-xs sm:text-sm"
                           : l.status === "Approved"
-                          ? "px-2 py-1 rounded bg-green-600/30 text-sm"
-                          : "px-2 py-1 rounded bg-red-600/30 text-sm"
+                          ? "px-2 py-1 rounded bg-green-600/30 text-xs sm:text-sm"
+                          : "px-2 py-1 rounded bg-red-600/30 text-xs sm:text-sm"
                       }>
                         {l.status}
                       </span>
                     </td>
-                    <td className="text-right">
+                    <td className="text-right px-1">
                       {l.status === "Pending" ? (
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEdit(l)} className="px-3 py-1 rounded border">Edit</button>
+                          <button onClick={() => openEdit(l)} className="px-2 py-1 text-xs sm:text-sm rounded border hover:bg-white/5">Edit</button>
                         </div>
                       ) : (
-                        <div className="text-sm text-gray-400">—</div>
+                        <div className="text-xs sm:text-sm text-gray-400">—</div>
                       )}
                     </td>
                   </tr>
@@ -520,10 +528,10 @@ const LeaderLeaves = () => {
 
       {/* EDIT MODAL */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg p-6 rounded-xl card-glow bg-[var(--color-surface)]">
-            <h4 className="text-lg font-semibold mb-3">Edit Leave</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-0">
+          <div className="w-full max-w-lg p-4 sm:p-6 rounded-xl card-glow bg-[var(--color-surface)]">
+            <h4 className="text-base sm:text-lg font-semibold mb-3">Edit Leave</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm mb-1">From</label>
                 <DatePicker
@@ -565,18 +573,18 @@ const LeaderLeaves = () => {
 
       {/* MODAL - Support for info type and confirmation */}
       {modal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-accent)] rounded-2xl shadow-lg p-8 w-full max-w-md text-center card-glow animate-scaleIn">
-            <div className="text-5xl mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn p-3 sm:p-0">
+          <div className="bg-[var(--color-surface)] border border-[var(--color-accent)] rounded-2xl shadow-lg p-4 sm:p-8 w-full max-w-md text-center card-glow animate-scaleIn">
+            <div className="text-4xl sm:text-5xl mb-4">
               {modal.type === "success" && "✅"}
               {modal.type === "update" && "📝"}
               {modal.type === "info" && "ℹ️"}
               {modal.type === "error" && "❌"}
             </div>
-            <h3 className="text-2xl font-semibold mb-2 text-[var(--color-text)]">
+            <h3 className="text-lg sm:text-2xl font-semibold mb-2 text-[var(--color-text)]">
               {modal.type === "success" ? "Success!" : modal.type === "update" ? "Updated!" : modal.type === "info" ? "Information" : "Error!"}
             </h3>
-            <p className="text-[var(--color-text-secondary)] mb-6 whitespace-pre-line">{modal.message}</p>
+            <p className="text-xs sm:text-base text-[var(--color-text-secondary)] mb-6 whitespace-pre-line">{modal.message}</p>
             <div className="flex gap-3 justify-center">
               {modal.onConfirm ? (
                 <>

@@ -122,14 +122,13 @@ const SalaryPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
-      <h2 className="text-2xl font-semibold"></h2>
-      <h2 className="py-4 text-3xl font-bold text-[#0EA6F0]">
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+      <h2 className="py-2 sm:py-4 text-2xl sm:text-3xl font-bold text-[#0EA6F0]">
         💵 Salary Management
       </h2>
 
       {/* Input Section */}
-      <div className="mt-4 card-glow p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="mt-4 card-glow p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label className="text-sm">Select Employee / Leader</label>
           <select
@@ -279,8 +278,8 @@ const SalaryPage = () => {
 
       {/* ✅ Success Modal */}
       {showSuccess && selected && salaryDetails && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-semibold mb-3 text-green-500">
               ✅ Salary Credited Successfully
             </h3>
@@ -323,9 +322,10 @@ const SalaryPage = () => {
       )}
 
       {/* Salary History */}
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold">Salary History</h3>
-        <table className="w-full mt-4 border-collapse border border-gray-300 bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+      <div className="mt-8 overflow-x-auto">
+        <h3 className="text-lg sm:text-xl font-semibold mb-4">Salary History</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse border border-gray-300 bg-[var(--color-surface)] text-[var(--color-text-primary)] text-sm md:text-base">
           <thead>
             <tr className="bg-[var(--color-border)] text-[var(--color-primary)]">
               <th className="border p-2">Employee</th>
@@ -365,6 +365,7 @@ const SalaryPage = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

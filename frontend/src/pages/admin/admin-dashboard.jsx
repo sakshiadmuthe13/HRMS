@@ -188,10 +188,10 @@ const AdminDashboard = () => {
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
   return (
-    <div className="flex bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+    <div className="flex bg-[var(--color-surface)] text-[var(--color-text-primary)] min-h-screen">
       <AdminSidebar tabs={TABS} active={active} onChange={setActive} />
 
-      <main className="flex-1 px-10 py-6 ml-64 overflow-hidden">
+      <main className="flex-1 px-3 sm:px-6 md:px-10 py-4 sm:py-6 md:ml-64 overflow-y-auto pt-16 md:pt-6 w-full">
         {active === "Dashboard" && (
           <section className="flex flex-col h-full">
             {/* Header */}
@@ -205,7 +205,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-5">
               <div className="p-5 card-glow">
                 <div className="flex items-center justify-between">
                   <div>
@@ -314,7 +314,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Project Chart & Leave Requests */}
-            <div className="flex-1 mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+            <div className="flex-1 mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 h-full">
               {/* Project Pie Chart */}
               <div className="card-glow p-5 h-full">
                 <h3 className="text-xl font-bold mb-4">Project Summary</h3>
@@ -346,13 +346,13 @@ const AdminDashboard = () => {
               </div>
 
               {/* Leave Requests Table */}
-              <div className="card-glow p-5 h-full flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">Leave Requests</h3>
+              <div className="card-glow p-4 md:p-5 h-full flex flex-col">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+                  <h3 className="text-lg md:text-xl font-bold">Leave Requests</h3>
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="p-2 border border-gray-600 rounded bg-gray-800 text-white"
+                    className="w-full md:w-auto p-2 border border-gray-600 rounded bg-gray-800 text-white text-sm"
                   >
                     <option value="All">All</option>
                     <option value="Pending">Pending</option>
@@ -362,19 +362,19 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="overflow-x-auto overflow-y-auto max-h-70 rounded border border-gray-700">
-                  <table className="min-w-full table-auto border-collapse">
+                  <table className="min-w-full table-auto border-collapse text-xs md:text-sm">
                     <thead className="bg-gray-900 sticky top-0">
                       <tr>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-[var(--color-text-secondary)]">
+                        <th className="px-2 md:px-6 py-2 md:py-3 text-left font-semibold text-[var(--color-text-secondary)]">
                           Name
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-[var(--color-text-secondary)]">
+                        <th className="px-2 md:px-6 py-2 md:py-3 text-left font-semibold text-[var(--color-text-secondary)]">
                           Type
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-[var(--color-text-secondary)]">
+                        <th className="px-2 md:px-6 py-2 md:py-3 text-left font-semibold text-[var(--color-text-secondary)]">
                           Days
                         </th>
-                        <th className="px-6 py-3 text-left text-sm font-semibold text-[var(--color-text-secondary)]">
+                        <th className="px-2 md:px-6 py-2 md:py-3 text-left font-semibold text-[var(--color-text-secondary)]">
                           Status
                         </th>
                       </tr>
@@ -403,18 +403,18 @@ const AdminDashboard = () => {
                               key={leave._id}
                               className="border-b border-gray-700 hover:bg-gray-800 transition-colors duration-200"
                             >
-                              <td className="px-6 py-4 text-sm font-medium">
+                              <td className="px-2 md:px-6 py-2 md:py-4 font-medium">
                                 {leave.user?.name || "N/A"}
                               </td>
-                              <td className="px-6 py-4 text-sm text-[var(--color-text-secondary)]">
+                              <td className="px-2 md:px-6 py-2 md:py-4 text-[var(--color-text-secondary)]">
                                 {leave.user?.role || "N/A"}
                               </td>
-                              <td className="px-6 py-4 text-sm font-bold text-[var(--color-primary)]">
+                              <td className="px-2 md:px-6 py-2 md:py-4 font-bold text-[var(--color-primary)]">
                                 {days}
                               </td>
-                              <td className="px-6 py-4">
+                              <td className="px-2 md:px-6 py-2 md:py-4">
                                 <span
-                                  className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusBadge}`}
+                                  className={`inline-block px-2 md:px-3 py-1 rounded-full text-xs font-medium ${statusBadge}`}
                                 >
                                   {leave.status}
                                 </span>

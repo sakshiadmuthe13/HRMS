@@ -335,23 +335,23 @@ const Attendance = () => {
   const days = buildCalendarGrid();
 
   return (
-    <div className="p-6">
+    <div className="p-3 md:p-6">
       <ToastContainer />
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-2">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-3 md:gap-2">
         <div>
-          <h2 className="text-3xl font-bold text-[var(--color-primary)]">
+          <h2 className="text-2xl md:text-3xl font-bold text-[var(--color-primary)]">
             🕒 Attendance
           </h2>
-          <p className="text-sm text-gray-500 pt-4 pl-12">
+          <p className="text-xs md:text-sm text-gray-500 pt-2 md:pt-4 pl-6 md:pl-12">
             Today: {getTodayISTLabel()}
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
           {canCheckIn && (
             <button
               onClick={handleCheckIn}
               disabled={loading}
-              className="px-6 py-2 font-semibold text-white rounded bg-green-500 hover:bg-green-600 transition-colors flex items-center gap-2"
+              className="flex-1 md:flex-none px-4 md:px-6 py-2 md:py-2 font-semibold text-white text-sm md:text-base rounded bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center md:justify-start gap-2"
             >
               <FaCheck /> Check In
             </button>
@@ -360,30 +360,30 @@ const Attendance = () => {
             <button
               onClick={handleCheckOut}
               disabled={loading}
-              className="px-6 py-2 font-semibold text-white rounded bg-red-500 hover:bg-red-600 transition-colors flex items-center gap-2"
+              className="flex-1 md:flex-none px-4 md:px-6 py-2 md:py-2 font-semibold text-white text-sm md:text-base rounded bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center md:justify-start gap-2"
             >
               <FaTimes /> Check Out
             </button>
           )}
         </div>
       </div>
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {/* Month Navigation */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <button
             onClick={() => setCalendarDate(subMonths(calendarDate, 1))}
-            className="px-4 py-2 rounded bg-gray-800 text-white flex items-center gap-2 shadow-md hover:bg-gray-700 transition-colors"
+            className="px-3 py-2 md:px-4 md:py-2 rounded bg-gray-800 text-white text-sm md:text-base flex items-center justify-center gap-2 shadow-md hover:bg-gray-700 transition-colors"
           >
             <FaArrowLeft /> Prev
           </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-3 md:flex-1">
-            <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm font-semibold text-gray-200">
-              <span>Month</span>
+          <div className="flex flex-col xs:flex-row xs:items-center justify-center gap-2 sm:gap-3 flex-1 sm:flex-auto">
+            <label className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs xs:text-sm font-semibold text-gray-200">
+              <span className="whitespace-nowrap">Month</span>
               <select
                 value={calendarDate.getMonth()}
                 onChange={handleMonthChange}
-                className="px-3 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                className="px-2 py-1 md:px-3 md:py-2 text-sm md:text-base rounded-lg border border-gray-700 bg-gray-900 text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 {months.map((month, index) => (
                   <option key={month} value={index}>
@@ -392,12 +392,12 @@ const Attendance = () => {
                 ))}
               </select>
             </label>
-            <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm font-semibold text-gray-200">
-              <span>Year</span>
+            <label className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-2 text-xs xs:text-sm font-semibold text-gray-200">
+              <span className="whitespace-nowrap">Year</span>
               <select
                 value={calendarDate.getFullYear()}
                 onChange={handleYearChange}
-                className="px-3 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                className="px-2 py-1 md:px-3 md:py-2 text-sm md:text-base rounded-lg border border-gray-700 bg-gray-900 text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 {selectableYears.map((yearOption) => (
                   <option key={yearOption} value={yearOption}>
@@ -410,23 +410,23 @@ const Attendance = () => {
 
           <button
             onClick={() => setCalendarDate(addMonths(calendarDate, 1))}
-            className="px-4 py-2 rounded bg-gray-800 text-white flex items-center gap-2 shadow-md hover:bg-gray-700 transition-colors"
+            className="px-3 py-2 md:px-4 md:py-2 rounded bg-gray-800 text-white text-sm md:text-base flex items-center justify-center gap-2 shadow-md hover:bg-gray-700 transition-colors"
           >
             Next <FaArrowRight />
           </button>
         </div>
 
         {/* Calendar */}
-        <div className="grid grid-cols-7 gap-2 mt-2">
+        <div className="grid grid-cols-7 gap-1 md:gap-2 mt-2 overflow-x-auto">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="text-center font-semibold text-secondary">
+            <div key={d} className="text-center font-semibold text-secondary text-xs md:text-sm">
               {d}
             </div>
           ))}
 
           {days.map((cellKey, idx) => {
             if (!cellKey) {
-              return <div key={`empty-${idx}`} className={`h-20 p-1`} />;
+              return <div key={`empty-${idx}`} className={`h-16 md:h-20 p-0.5 md:p-1`} />;
             }
 
             const rec = monthRecords[cellKey];
@@ -434,7 +434,6 @@ const Attendance = () => {
             const isLeave = leaveMap?.[cellKey];
             const isTodayCell = cellKey === getTodayISTKey();
 
-            // Color precedence: Holiday (red) > Present (green, in+out) > Absent (orange, past no check-in) > Future blank (yellow) > Default
             const todayKey = getTodayISTKey();
             const isPast = cellKey < todayKey;
             const hasIn = !!rec?.checkIn;
@@ -443,7 +442,6 @@ const Attendance = () => {
             const isAbsent = (isPast && !hasIn && !isHoliday && !isLeave) || (isPast && hasIn && !hasOut && !isHoliday && !isLeave);
             const isFutureBlank =
               cellKey > todayKey && !hasIn && !isHoliday && !isLeave;
-            const leaveStatus = isLeave?.status;
 
             let bgClass = "bg-white text-gray-900 border border-gray-700";
             if (isHoliday) bgClass = "bg-red-600 text-white";
@@ -457,26 +455,26 @@ const Attendance = () => {
             return (
               <div
                 key={cellKey}
-                className={`h-22 p-1 flex flex-col justify-center items-center rounded cursor-pointer font-semibold ${bgClass} ${
-                  isTodayCell ? "border-4 border-yellow-500" : ""
+                className={`h-16 md:h-20 p-0.5 md:p-1 flex flex-col justify-center items-center rounded cursor-pointer font-semibold text-xs md:text-sm ${bgClass} ${
+                  isTodayCell ? "border-2 md:border-4 border-yellow-500" : ""
                 }`}
               >
-                <div>{dayNumber}</div>
+                <div className="font-bold">{dayNumber}</div>
                 {isHoliday?.description && (
-                  <div className="text-[10px] mt-1 text-white text-center px-1">
+                  <div className="text-[8px] md:text-[10px] mt-0.5 text-white text-center px-0.5 line-clamp-1">
                     {isHoliday.description}
                   </div>
                 )}
-                <div className="text-xs mt-1">
+                <div className="text-[7px] md:text-xs mt-0.5 line-clamp-1">
                   {isLeave
-                    ? "Leave Day"
+                    ? "Leave"
                     : isAbsent
-                    ? "Absent Day"
+                    ? "Absent"
                     : rec?.checkIn
                     ? `In: ${formatDateInIST(rec.checkIn, "hh:mm a")}`
                     : ""}
                 </div>
-                <div className="text-xs">
+                <div className="text-[7px] md:text-xs line-clamp-1">
                   {!isLeave && !isAbsent && rec?.checkOut
                     ? `Out: ${formatDateInIST(rec.checkOut, "hh:mm a")}`
                     : ""}
@@ -488,38 +486,38 @@ const Attendance = () => {
       </div>
 
       {/* Legend Section */}
-      <div className="mt-3 ml-6 p-6 rounded-xl bg-gray-900 border border-gray-700 w-19/20 shadow-lg">
-        <h3 className="text-base font-semibold text-[var(--color-primary)] mb-3 ">
+      <div className="mt-3 md:mt-6 ml-0 md:ml-6 p-4 md:p-6 rounded-xl bg-gray-900 border border-gray-700 w-full shadow-lg">
+        <h3 className="text-sm md:text-base font-semibold text-[var(--color-primary)] mb-3">
           Legend
         </h3>
-        <div className="flex flex-wrap gap-4 text-sm items-center">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-2 md:gap-4 text-xs md:text-sm items-center">
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-red-600 border border-gray-700" />
+            <span className="w-4 h-4 md:w-5 md:h-5 rounded bg-red-600 border border-gray-700 flex-shrink-0" />
             <span className="text-gray-200">Holiday</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-green-600 border border-gray-700" />
-            <span className="text-gray-200">Present Day</span>
+            <span className="w-4 h-4 md:w-5 md:h-5 rounded bg-green-600 border border-gray-700 flex-shrink-0" />
+            <span className="text-gray-200">Present</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-orange-500 border border-gray-700" />
-            <span className="text-gray-200">Absent Day</span>
+            <span className="w-4 h-4 md:w-5 md:h-5 rounded bg-orange-500 border border-gray-700 flex-shrink-0" />
+            <span className="text-gray-200">Absent</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-blue-600 border border-gray-700" />
-            <span className="text-gray-200">Leave Day</span>
+            <span className="w-4 h-4 md:w-5 md:h-5 rounded bg-blue-600 border border-gray-700 flex-shrink-0" />
+            <span className="text-gray-200">Leave</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded bg-yellow-200 border border-gray-700" />
-            <span className="text-gray-200">Upcoming / Regular Day</span>
+            <span className="w-4 h-4 md:w-5 md:h-5 rounded bg-yellow-200 border border-gray-700 flex-shrink-0" />
+            <span className="text-gray-200">Upcoming</span>
           </div>
         </div>
       </div>
 
-      <h2 className="text-2xl mt-6 mb-6 font-bold text-[var(--color-primary)]">
+      <h2 className="text-xl md:text-2xl mt-6 mb-4 md:mb-6 font-bold text-[var(--color-primary)]">
         ✨ Today's Celebrations
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-2">
         <CelebrationCard
           title="🎉 Birthdays Today"
           items={celebrations.birthdays}

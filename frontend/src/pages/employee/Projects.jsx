@@ -54,41 +54,41 @@ const Projects = () => {
   }, []);
 
   return (
-    <div className="w-full">
-      <h2 className="text-3xl font-bold text-[#0EA6F0] mb-6">📁 My Projects</h2>
+    <div className="w-full p-3 md:p-0">
+      <h2 className="text-2xl md:text-3xl font-bold text-[#0EA6F0] mb-4 md:mb-6">📁 My Projects</h2>
 
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg p-4 bg-[var(--color-surface)]">
+      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg p-3 md:p-4 bg-[var(--color-surface)]">
         {loading ? (
-          <p className="p-6 text-center text-gray-400 animate-pulse">Loading projects...</p>
+          <p className="p-4 md:p-6 text-center text-gray-400 animate-pulse text-sm">Loading projects...</p>
         ) : projects.length > 0 ? (
-          <table className="w-full min-w-[600px] text-left">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-gray-400 text-sm">
+          <table className="w-full min-w-full md:min-w-[600px] text-left text-xs md:text-sm">
+            <thead className="bg-[rgba(14,166,240,0.1)] text-gray-400 text-xs md:text-sm sticky top-0">
               <tr>
-                <th className="p-4">Project Name</th>
-                <th className="p-4">Description</th>
-                <th className="p-4">Start Date</th>
-                <th className="p-4">End Date</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Completion</th>
-                <th className="p-4">Teams</th>
+                <th className="p-2 md:p-4">Project</th>
+                <th className="p-2 md:p-4 hidden sm:table-cell">Description</th>
+                <th className="p-2 md:p-4 hidden md:table-cell">Start Date</th>
+                <th className="p-2 md:p-4 hidden md:table-cell">End Date</th>
+                <th className="p-2 md:p-4">Status</th>
+                <th className="p-2 md:p-4">Progress</th>
+                <th className="p-2 md:p-4 hidden lg:table-cell">Teams</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((p) => (
                 <tr key={p._id} className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all">
-                  <td className="p-4 font-medium">{p.name}</td>
-                  <td className="p-4">{p.description || "-"}</td>
-                  <td className="p-4">{p.startDate ? formatDateDMY(p.startDate) : "-"}</td>
-                  <td className="p-4">{p.endDate ? formatDateDMY(p.endDate) : "-"}</td>
-                  <td className="p-4">{p.status}</td>
-                  <td className="p-4">{p.completion}%</td>
-                  <td className="p-4">{p.assignedTeams?.map(t => t.name).join(", ") || "-"}</td>
+                  <td className="p-2 md:p-4 font-medium truncate">{p.name}</td>
+                  <td className="p-2 md:p-4 hidden sm:table-cell text-gray-300 truncate text-xs">{p.description || "-"}</td>
+                  <td className="p-2 md:p-4 hidden md:table-cell text-xs">{p.startDate ? formatDateDMY(p.startDate) : "-"}</td>
+                  <td className="p-2 md:p-4 hidden md:table-cell text-xs">{p.endDate ? formatDateDMY(p.endDate) : "-"}</td>
+                  <td className="p-2 md:p-4 text-xs">{p.status}</td>
+                  <td className="p-2 md:p-4 text-xs"><span className="inline-block bg-blue-600/30 px-2 py-1 rounded">{p.completion}%</span></td>
+                  <td className="p-2 md:p-4 hidden lg:table-cell text-xs text-gray-300 truncate">{p.assignedTeams?.map(t => t.name).join(", ") || "-"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <p className="text-center py-6 text-gray-400">No projects assigned yet.</p>
+          <p className="text-center py-4 md:py-6 text-gray-400 text-sm">No projects assigned yet.</p>
         )}
       </div>
     </div>

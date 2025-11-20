@@ -70,22 +70,22 @@ export default function EmployeeTasksPage() {
   };
 
   return (
-    <div className="font-sans text-white min-h-full p-6 space-y-8">
-      <h2 className="text-3xl font-bold text-[#A756FA] mb-6">
+    <div className="font-sans text-white min-h-full p-3 md:p-6 space-y-6 md:space-y-8">
+      <h2 className="text-2xl md:text-3xl font-bold text-[#A756FA] mb-4 md:mb-6">
         🧾 My Tasks
       </h2>
 
-      <section className="bg-[#161b22] rounded-2xl shadow-lg p-6 border border-gray-700 card-glow">
+      <section className="bg-[#161b22] rounded-2xl shadow-lg p-3 md:p-6 border border-gray-700 card-glow overflow-hidden">
         <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-0 table-auto text-left text-sm">
-            <thead className="text-gray-400 border-b border-gray-700">
+          <table className="w-full min-w-full table-auto text-left text-xs md:text-sm">
+            <thead className="text-gray-400 border-b border-gray-700 text-xs md:text-sm">
               <tr>
-                <th className="py-2">Project</th>
-                <th className="py-2">Description</th>
-                <th className="py-2">Assigned By</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Completion Status</th>
-                <th className="py-2">Action</th>
+                <th className="py-2 md:py-3 px-1 md:px-2">Project</th>
+                <th className="py-2 md:py-3 px-1 md:px-2 hidden sm:table-cell">Description</th>
+                <th className="py-2 md:py-3 px-1 md:px-2 hidden md:table-cell">Assigned By</th>
+                <th className="py-2 md:py-3 px-1 md:px-2">Status</th>
+                <th className="py-2 md:py-3 px-1 md:px-2 hidden sm:table-cell">Completion</th>
+                <th className="py-2 md:py-3 px-1 md:px-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -93,24 +93,23 @@ export default function EmployeeTasksPage() {
                 tasks.map((t) => (
                   <tr
                     key={t._id}
-                    className="border-t border-gray-800 hover:bg-[#21262d]"
+                    className="border-t border-gray-800 hover:bg-[#21262d] transition-colors"
                   >
-                    <td className="py-2">{t.project?.name || "-"}</td>
-                    <td className="py-2 text-gray-300">{t.description}</td>
-                    <td className="py-2">{t.assignedBy?.name || "-"}</td>
-                    <td className="py-2 text-yellow-400">{t.status}</td>
-                    <td className="py-2 text-gray-300">{getCompletionStatus(t)}</td>
-                    <td className="py-2">
+                    <td className="py-2 md:py-3 px-1 md:px-2 font-medium truncate">{t.project?.name || "-"}</td>
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-gray-300 hidden sm:table-cell truncate">{t.description}</td>
+                    <td className="py-2 md:py-3 px-1 md:px-2 hidden md:table-cell truncate">{t.assignedBy?.name || "-"}</td>
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-yellow-400 font-medium">{t.status}</td>
+                    <td className="py-2 md:py-3 px-1 md:px-2 text-gray-300 hidden sm:table-cell text-xs">{getCompletionStatus(t)}</td>
+                    <td className="py-2 md:py-3 px-1 md:px-2">
                       <select
                         value={t.status}
                         onChange={(e) =>
                           handleStatusChange(t._id, e.target.value)
                         }
-                        className="bg-[#0d1117] border border-gray-700 rounded-md p-1 focus:ring-2 focus:ring-[#58a6ff]"
+                        className="bg-[#0d1117] border border-gray-700 rounded-md p-1 text-xs md:text-sm focus:ring-2 focus:ring-[#58a6ff] w-full md:w-auto"
                       >
                         <option value="Pending">Pending</option>
                         <option value="In Progress">In Progress</option>
-                        {/* Delayed is computed automatically and cannot be selected by employee */}
                         <option value="Completed">Completed</option>
                       </select>
                     </td>
@@ -118,7 +117,7 @@ export default function EmployeeTasksPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="text-center py-4 text-gray-500">
+                  <td colSpan="6" className="text-center py-4 md:py-6 text-gray-500 text-xs md:text-sm">
                     No tasks assigned to you.
                   </td>
                 </tr>

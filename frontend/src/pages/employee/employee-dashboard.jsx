@@ -138,104 +138,93 @@ const EmployeeDashboard = () => {
     <div className="min-h-screen flex bg-[var(--color-surface)] text-[var(--color-text-primary)]">
       <EmployeeSidebar tabs={TABS} active={active} onChange={setActive} />
 
-      <main className="flex-1 px-10 py-6 ml-64 h-screen overflow-y-auto">
+      <main className="flex-1 px-4 md:px-10 py-6 md:ml-64 h-screen overflow-y-auto pt-16 md:pt-6">
         {active === "Dashboard" && (
           <section>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-8">
               <div>
-                <h2 className="text-3xl font-extrabold pt-10 mb-2 text-[var(--color-primary)]">Welcome back, {summary?.employeeName}!</h2>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">Your quick overview</p>
+                <h2 className="text-xl md:text-3xl font-extrabold mb-1 md:mb-2 text-[var(--color-primary)]">Welcome back, {summary?.employeeName}!</h2>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Your quick overview</p>
               </div>
               {!profileVerified && (
-                <div className="bg-yellow-900/30 text-yellow-400 border border-yellow-800 px-4 py-2 rounded-lg text-sm font-medium">
-                  ⚠️ Profile Unverified - Please complete your profile verification
+                <div className="w-full md:w-auto bg-yellow-900/30 text-yellow-400 border border-yellow-800 px-2 md:px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap">
+                  ⚠️ Profile Unverified
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">Leaves Taken</div>
-                    <div className="text-4xl font-bold mt-2">{loading ? "--" : leavesTaken}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Total approved leave days</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
+              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Leaves Taken</div>
+                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : leavesTaken}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Approved leave days</div>
                   </div>
-                  <Calendar size={40} className="text-green-500" />
+                  <Calendar size={32} className="text-green-500 flex-shrink-0" />
                 </div>
               </div>
 
-              <div className="p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">Pending Leaves</div>
-                    <div className="text-4xl font-bold mt-2">{loading ? "--" : pendingLeaves}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Leaves awaiting approval</div>
+              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Pending Leaves</div>
+                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : pendingLeaves}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Awaiting approval</div>
                   </div>
-                  <Clock size={40} className="text-yellow-500" />
+                  <Clock size={32} className="text-yellow-500 flex-shrink-0" />
                 </div>
               </div>
 
-              <div className="p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">Tasks Completed</div>
-                    <div className="text-4xl font-bold mt-2">{loading ? "--" : tasksCompleted}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Tasks you've finished</div>
+              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Tasks Completed</div>
+                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : tasksCompleted}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Finished tasks</div>
                   </div>
-                  <CheckCircle size={40} className="text-blue-500" />
+                  <CheckCircle size={32} className="text-blue-500 flex-shrink-0" />
                 </div>
               </div>
-              {/* <div className="p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">Leaves Remaining</div>
-                    <div className="text-4xl font-bold mt-2">{loading ? "--" : leavesRemaining}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Paid leave days left this year (of {leaveAllowance})</div>
-                  </div>
-                  <Calendar size={40} className="text-purple-500" />
-                </div>
-              </div> */}
 
-              <div className="p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">Projects Assigned</div>
-                    <div className="text-4xl font-bold mt-2">{loading ? "--" : projectsAssigned}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Projects you're working on</div>
+              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Projects Assigned</div>
+                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : projectsAssigned}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Active projects</div>
                   </div>
-                  <FolderOpen size={40} className="text-purple-500" />
+                  <FolderOpen size={32} className="text-purple-500 flex-shrink-0" />
                 </div>
               </div>
             </div>
 
             {/* Visualizations */}
-            <div className="mt-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="mt-4 md:mt-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
                 <div>
-                  <h3 className="text-xl font-bold mb-4">Tasks by Status</h3>
-                  <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl shadow-lg">
-                    <BarChart width={400} height={300} data={taskStatusData}>
+                  <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Tasks by Status</h3>
+                  <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg overflow-x-auto">
+                    <BarChart width={Math.min(280, window.innerWidth - 40)} height={200} data={taskStatusData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip />
-                      <Legend />
                       <Bar dataKey="value" fill="#8884d8" />
                     </BarChart>
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold mb-4">Leaves by Status</h3>
-                  <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl shadow-lg">
-                    <PieChart width={400} height={300}>
+                  <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Leaves by Status</h3>
+                  <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg overflow-x-auto">
+                    <PieChart width={Math.min(280, window.innerWidth - 40)} height={200}>
                       <Pie
                         data={leaveStatusData}
-                        cx={200}
-                        cy={150}
+                        cx="50%"
+                        cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
+                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                        outerRadius={50}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -251,32 +240,32 @@ const EmployeeDashboard = () => {
             </div>
 
             {/* Tables Grid */}
-            <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="mt-6 md:mt-10 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8">
               {/* My Tasks Table */}
               <div>
-                <h3 className="text-xl font-bold mb-4">My Tasks</h3>
-                <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl shadow-lg">
+                <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">My Tasks</h3>
+                <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg">
                   <div className="overflow-x-auto max-h-64 overflow-y-auto rounded-lg border border-gray-700">
-                    <table className="w-full table-auto text-left border-collapse">
-                    <thead className="bg-gray-800">
+                    <table className="w-full table-auto text-left border-collapse text-xs md:text-sm">
+                    <thead className="bg-gray-800 sticky top-0">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Project</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Assigned By</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Status</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Project</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300 hidden sm:table-cell">Assigned By</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {tasks.length === 0 ? (
                         <tr>
-                          <td colSpan="3" className="py-6 text-center text-sm text-gray-400">No tasks assigned</td>
+                          <td colSpan="3" className="py-4 text-center text-xs md:text-sm text-gray-400">No tasks assigned</td>
                         </tr>
                       ) : (
                         tasks.map((t) => (
                           <tr key={t._id} className="border-t border-gray-700 hover:bg-gray-800 transition-colors duration-200">
-                            <td className="py-3 px-4 text-sm">{t.project?.name || "-"}</td>
-                            <td className="py-3 px-4 text-sm">{t.assignedBy?.name || "-"}</td>
-                            <td className="py-3 px-4 text-sm">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm truncate">{t.project?.name || "-"}</td>
+                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell truncate">{t.assignedBy?.name || "-"}</td>
+                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">
+                              <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium inline-block ${
                                 t.status === "Completed"
                                   ? "bg-green-500 text-white"
                                   : t.status === "In Progress"
@@ -297,29 +286,29 @@ const EmployeeDashboard = () => {
 
               {/* My Leaves Table */}
               <div>
-                <h3 className="text-xl font-bold mb-4">My Leaves</h3>
-                <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl shadow-lg">
+                <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">My Leaves</h3>
+                <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg">
                   <div className="overflow-x-auto max-h-64 overflow-y-auto rounded-lg border border-gray-700">
-                    <table className="w-full table-auto text-left border-collapse">
-                    <thead className="bg-gray-800">
+                    <table className="w-full table-auto text-left border-collapse text-xs md:text-sm">
+                    <thead className="bg-gray-800 sticky top-0">
                       <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">From</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Days</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Status</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">From</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Days</th>
+                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {leaves.length === 0 ? (
                         <tr>
-                          <td colSpan="3" className="py-6 text-center text-sm text-gray-400">No leaves applied yet</td>
+                          <td colSpan="3" className="py-4 text-center text-xs md:text-sm text-gray-400">No leaves applied yet</td>
                         </tr>
                       ) : (
                         leaves.map((l) => (
                           <tr key={l._id} className="border-t border-gray-700 hover:bg-gray-800 transition-colors duration-200">
-                            <td className="py-3 px-4 text-sm">{new Date(l.fromDate).toLocaleDateString()}</td>
-                            <td className="py-3 px-4 text-sm">{l.totalDays ?? 0}</td>
-                            <td className="py-3 px-4 text-sm">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">{new Date(l.fromDate).toLocaleDateString()}</td>
+                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">{l.totalDays ?? 0}</td>
+                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">
+                              <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium inline-block ${
                                 l.status === "Approved"
                                   ? "bg-green-500 text-white"
                                   : l.status === "Pending"

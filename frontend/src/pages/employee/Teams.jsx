@@ -42,21 +42,21 @@ const Teams = () => {
   }, []);
 
   return (
-    <div className="w-full">
-      <h2 className="text-3xl font-bold text-[#0EA6F0] mb-6">👥 My Teams</h2>
+    <div className="w-full p-3 md:p-0">
+      <h2 className="text-2xl md:text-3xl font-bold text-[#0EA6F0] mb-4 md:mb-6">👥 My Teams</h2>
 
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg bg-[var(--color-surface)] p-4">
+      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg bg-[var(--color-surface)] p-3 md:p-4">
         {loading ? (
-          <p className="p-6 text-center text-gray-400 animate-pulse">
+          <p className="p-4 md:p-6 text-center text-gray-400 animate-pulse text-sm">
             Loading teams...
           </p>
         ) : teams.length > 0 ? (
-          <table className="w-full min-w-[600px] text-left">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-gray-400 text-sm">
+          <table className="w-full min-w-full md:min-w-[600px] text-left text-xs md:text-sm">
+            <thead className="bg-[rgba(14,166,240,0.1)] text-gray-400 text-xs md:text-sm sticky top-0">
               <tr>
-                <th className="p-4">Team Name</th>
-                <th className="p-4">Team Leader</th>
-                <th className="p-4">Team Members</th>
+                <th className="p-2 md:p-4">Team Name</th>
+                <th className="p-2 md:p-4 hidden sm:table-cell">Team Leader</th>
+                <th className="p-2 md:p-4">Team Members</th>
               </tr>
             </thead>
             <tbody>
@@ -65,9 +65,9 @@ const Teams = () => {
                   key={team._id || i}
                   className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all"
                 >
-                  <td className="p-4 font-medium">{team.name}</td>
-                  <td className="p-4">{team.leader?.name || "-"}</td>
-                  <td className="p-4 text-sm text-gray-300">
+                  <td className="p-2 md:p-4 font-medium truncate">{team.name}</td>
+                  <td className="p-2 md:p-4 hidden sm:table-cell truncate">{team.leader?.name || "-"}</td>
+                  <td className="p-2 md:p-4 text-xs md:text-sm text-gray-300 line-clamp-2">
                     {team.members?.map((m) => m.name).join(", ") || "-"}
                   </td>
                 </tr>
@@ -75,7 +75,7 @@ const Teams = () => {
             </tbody>
           </table>
         ) : (
-          <p className="text-center py-6 text-gray-400">
+          <p className="text-center py-4 md:py-6 text-gray-400 text-sm">
             You are not part of any team yet.
           </p>
         )}

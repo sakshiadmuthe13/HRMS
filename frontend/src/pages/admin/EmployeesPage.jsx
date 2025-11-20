@@ -91,10 +91,10 @@ const EmployeesPage = () => {
   const cancelDelete = () => setDeleteTarget(null);
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 mt-4">
-        <h2 className="text-3xl font-bold text-[var(--color-primary)]">👥 Employees</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8 mt-2 sm:mt-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">👥 Employees</h2>
         <button onClick={handleCreate} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200">
           + Create Employee
         </button>
@@ -108,34 +108,34 @@ const EmployeesPage = () => {
         {loading ? (
           <p className="p-6 text-center text-[var(--color-text-secondary)] animate-pulse">Loading employees...</p>
         ) : employees.length > 0 ? (
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-[var(--color-text-secondary)] text-sm">
+          <table className="w-full text-left min-w-[350px] md:min-w-[600px] text-xs md:text-sm">
+            <thead className="bg-[rgba(14,166,240,0.1)] text-[var(--color-text-secondary)] text-xs md:text-sm sticky top-0">
               <tr>
-                <th className="p-4">Name</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Phone</th>
-                <th className="p-4">Position</th>
-                <th className="p-4">Date of Joining</th>
-                <th className="p-4 text-center">Leave Allowance</th>
-                <th className="p-4 text-center">Actions</th>
+                <th className="p-2 md:p-4">Name</th>
+                <th className="p-2 md:p-4 hidden md:table-cell">Email</th>
+                <th className="p-2 md:p-4 hidden lg:table-cell">Phone</th>
+                <th className="p-2 md:p-4">Position</th>
+                <th className="p-2 md:p-4 hidden lg:table-cell">Date of Joining</th>
+                <th className="p-2 md:p-4 text-center hidden sm:table-cell">Leave</th>
+                <th className="p-2 md:p-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {employees.map((e, i) => (
                 <tr key={e._id || i} className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all">
-                  <td className="p-4 font-medium">{e.name}</td>
-                  <td className="p-4">{e.email}</td>
-                  <td className="p-4">{e.phone}</td>
-                  <td className="p-4">{e.position}</td>
-                  <td className="p-4">{e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</td>
-                  <td className="p-4 text-center">
-                    <button onClick={() => { setLeaveAllowanceModal({ userId: e._id, currentAllowance: e.leaveAllowance || 12, name: e.name }); setNewAllowance(e.leaveAllowance || 12); }} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-sm font-medium">
-                      {e.leaveAllowance || 12} days
+                  <td className="p-2 md:p-4 font-medium truncate">{e.name}</td>
+                  <td className="p-2 md:p-4 hidden md:table-cell truncate text-xs md:text-sm">{e.email}</td>
+                  <td className="p-2 md:p-4 hidden lg:table-cell text-xs md:text-sm">{e.phone}</td>
+                  <td className="p-2 md:p-4 text-xs md:text-sm">{e.position}</td>
+                  <td className="p-2 md:p-4 hidden lg:table-cell text-xs md:text-sm">{e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</td>
+                  <td className="p-2 md:p-4 text-center hidden sm:table-cell">
+                    <button onClick={() => { setLeaveAllowanceModal({ userId: e._id, currentAllowance: e.leaveAllowance || 12, name: e.name }); setNewAllowance(e.leaveAllowance || 12); }} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-xs md:text-sm font-medium">
+                      {e.leaveAllowance || 12} d
                     </button>
                   </td>
-                  <td className="p-4 flex justify-end gap-6">
-                    <button onClick={() => handleEdit(e)} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-sm font-medium">Edit</button>
-                    <button onClick={() => handleDeleteClick(e)} className="text-[var(--color-danger)] hover:underline text-sm font-medium">Delete</button>
+                  <td className="p-2 md:p-4 flex justify-end gap-2 md:gap-6">
+                    <button onClick={() => handleEdit(e)} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-xs md:text-sm font-medium">Edit</button>
+                    <button onClick={() => handleDeleteClick(e)} className="text-[var(--color-danger)] hover:underline text-xs md:text-sm font-medium">Delete</button>
                   </td>
                 </tr>
               ))}
@@ -146,10 +146,10 @@ const EmployeesPage = () => {
 
       {/* Modals */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-2xl font-semibold mb-4 text-[var(--color-primary)]">{editing === "new" ? "Create New Employee" : "Edit Employee"}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl md:text-2xl font-semibold mb-4 text-[var(--color-primary)]">{editing === "new" ? "Create New Employee" : "Edit Employee"}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               {["name","email","password","phone","address","position","salary"].map(k => (
                 <div key={k}>
                   <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
@@ -188,22 +188,22 @@ const EmployeesPage = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={handleSave} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-5 py-2 rounded-lg shadow-md transition-all">💾 Save</button>
-              <button onClick={() => setEditing(null)} className="px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition">✖ Cancel</button>
+            <div className="mt-6 flex flex-col md:flex-row justify-end gap-2 md:gap-3">
+              <button onClick={handleSave} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 md:px-5 py-2 rounded-lg shadow-md transition-all text-sm md:text-base">💾 Save</button>
+              <button onClick={() => setEditing(null)} className="px-4 md:px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition text-sm md:text-base">✖ Cancel</button>
             </div>
           </div>
         </div>
       )}
 
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-[var(--color-danger)]">⚠️ Confirm Deletion</h3>
-            <p className="text-[var(--color-text-secondary)] mb-6">Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={cancelDelete} className="px-4 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition">Cancel</button>
-              <button onClick={confirmDelete} className="bg-[var(--color-danger)] hover:bg-[rgba(255,70,56,0.8)] text-white px-4 py-2 rounded-lg shadow-md transition-all">Delete</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
+            <h3 className="text-lg md:text-xl font-semibold mb-4 text-[var(--color-danger)]">⚠️ Confirm Deletion</h3>
+            <p className="text-sm md:text-base text-[var(--color-text-secondary)] mb-6">Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.</p>
+            <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3">
+              <button onClick={cancelDelete} className="px-3 md:px-4 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition text-sm md:text-base order-2 md:order-1">Cancel</button>
+              <button onClick={confirmDelete} className="bg-[var(--color-danger)] hover:bg-[rgba(255,70,56,0.8)] text-white px-3 md:px-4 py-2 rounded-lg shadow-md transition-all text-sm md:text-base order-1 md:order-2">Delete</button>
             </div>
           </div>
         </div>
@@ -211,8 +211,8 @@ const EmployeesPage = () => {
 
       {/* Leave Allowance Modal */}
       {leaveAllowanceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[var(--color-surface)] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
             <h3 className="text-xl font-semibold mb-4 text-[var(--color-primary)]">📅 Update Leave Allowance</h3>
             <p className="text-[var(--color-text-secondary)] mb-4">
               Update yearly leave allowance for <span className="font-medium text-[var(--color-text-primary)]">{leaveAllowanceModal.name}</span>
@@ -229,7 +229,7 @@ const EmployeesPage = () => {
               />
               <p className="text-xs text-[var(--color-text-secondary)] mt-2">Current allowance: {leaveAllowanceModal.currentAllowance} days</p>
             </div>
-            <div className="flex justify-end gap-3">
+            <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3">
               <button
                 onClick={async () => {
                   try {
@@ -247,13 +247,13 @@ const EmployeesPage = () => {
                     setLeaveAllowanceModal(null);
                   }
                 }}
-                className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-5 py-2 rounded-lg shadow-md transition-all"
+                className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 md:px-5 py-2 rounded-lg shadow-md transition-all text-sm md:text-base order-2 md:order-1"
               >
                 💾 Save
               </button>
               <button
                 onClick={() => { setLeaveAllowanceModal(null); setNewAllowance(""); }}
-                className="px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition"
+                className="px-4 md:px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition text-sm md:text-base order-1 md:order-2"
               >
                 ✖ Cancel
               </button>

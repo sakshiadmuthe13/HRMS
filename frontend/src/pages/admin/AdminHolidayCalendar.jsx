@@ -153,8 +153,8 @@ const AdminHolidayCalendar = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-2 overflow-x-hidden">
-      <div className="flex items-center justify-between mt-4 mb-8">
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-2 sm:p-4 md:p-6 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2 sm:mt-4 mb-6 sm:mb-8">
         <h2 className="text-3xl font-bold text-[var(--color-primary)] flex items-center gap-2">
           <CalendarIcon className="w-8 h-8" /> Holiday Calendar
         </h2>
@@ -174,8 +174,8 @@ const AdminHolidayCalendar = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 card-glow p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-2 card-glow p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
               {format(activeMonth, "MMMM yyyy")}
@@ -235,7 +235,7 @@ const AdminHolidayCalendar = () => {
           </div>
         </div>
 
-        <div className="card-glow p-6 h-full">
+        <div className="card-glow p-4 md:p-6 h-full">
           <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
             <Plus size={18} /> Schedule Holiday
           </h3>

@@ -132,10 +132,10 @@ const TeamsPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 mt-4">
-        <h2 className="text-3xl font-bold text-[#0EA6F0]">👥 Teams</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8 mt-2 sm:mt-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[#0EA6F0]">👥 Teams</h2>
         <button
           onClick={handleCreate}
           className="bg-[#0EA6F0] hover:bg-[#A756FA] text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200"
@@ -202,8 +202,8 @@ const TeamsPage = () => {
 
       {/* Create/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[#111828] p-6 rounded-xl w-full max-w-xl shadow-lg card-glow animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[#111828] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-semibold mb-4 text-[#0EA6F0]">
               {editingTeam ? "Edit Team" : "Create New Team"}
             </h3>
@@ -275,8 +275,8 @@ const TeamsPage = () => {
 
       {/* Delete Confirmation */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-[#111828] p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="bg-[#111828] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
             <h3 className="text-xl font-semibold mb-4 text-red-400">
               ⚠️ Confirm Deletion
             </h3>

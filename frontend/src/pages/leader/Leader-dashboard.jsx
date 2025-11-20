@@ -155,79 +155,79 @@ const LeaderDashboard = () => {
     <div className="min-h-screen flex bg-[var(--color-surface)] text-[var(--color-text-primary)]">
       <LeaderSidebar tabs={TABS} active={active} onChange={setActive} />
 
-      <main className="flex-1 px-10 py-6 ml-64 h-screen overflow-y-auto">
+      <main className="flex-1 px-2 sm:px-4 md:px-10 py-4 sm:py-6 md:ml-64 h-screen overflow-y-auto pt-16 md:pt-6">
         {active === "Dashboard" && (
           <section>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-6">
               <div>
-                <h2 className="text-3xl font-extrabold pt-10 mb-2 text-[var(--color-primary)]">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-[var(--color-primary)]">
                   Welcome back, {summary?.leaderName || "Leader"}!
                 </h2>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                  Here’s an overview of your team’s performance.
+                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
+                  Team's performance overview
                 </p>
               </div>
               {!profileVerified && (
-                <div className="bg-yellow-900/30 text-yellow-400 border border-yellow-800 px-4 py-2 rounded-lg text-sm font-medium">
-                  ⚠️ Profile Unverified - Please complete your profile verification
+                <div className="w-full md:w-auto bg-yellow-900/30 text-yellow-400 border border-yellow-800 px-2 sm:px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium">
+                  ⚠️ Profile Unverified - Complete verification
                 </div>
               )}
             </div>
 
             {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
-              <div className="p-5 mb-2 card-glow">
-                <div className="text-sm text-[var(--color-text-secondary)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-5">
+              <div className="p-3 sm:p-5 mb-2 card-glow">
+                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
                   Total Team Members
                 </div>
-                <div className="text-4xl font-bold mt-2">
+                <div className="text-3xl sm:text-4xl font-bold mt-2">
                   {summary?.teamMembers ?? "--"}
                 </div>
                 <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Members under your supervision
+                  Members under supervision
                 </div>
               </div>
 
-              <div className="p-5 card-glow">
-                <div className="text-sm text-[var(--color-text-secondary)]">
+              <div className="p-3 sm:p-5 card-glow">
+                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
                   Tasks Assigned
                 </div>
-                <div className="text-4xl font-bold mt-2">
+                <div className="text-3xl sm:text-4xl font-bold mt-2">
                   {summary?.tasksAssigned ?? "--"}
                 </div>
                 <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Tasks you've assigned
+                  Tasks assigned
                 </div>
               </div>
 
-              <div className="p-5 card-glow">
-                <div className="text-sm text-[var(--color-text-secondary)]">
+              <div className="p-3 sm:p-5 card-glow">
+                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
                   Projects under Leader
                 </div>
-                <div className="text-4xl font-bold mt-2">
+                <div className="text-3xl sm:text-4xl font-bold mt-2">
                   {summary?.projectsUnderLeader ?? "--"}
                 </div>
                 <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Projects you're leading
+                  Projects leading
                 </div>
               </div>
 
-              <div className="p-5 card-glow">
-                <div className="text-sm text-[var(--color-text-secondary)]">Leaves Remaining</div>
-                <div className="text-4xl font-bold mt-2">{leavesRemaining ?? "--"}</div>
+              <div className="p-3 sm:p-5 card-glow">
+                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Leaves Remaining</div>
+                <div className="text-3xl sm:text-4xl font-bold mt-2">{leavesRemaining ?? "--"}</div>
                 <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Paid leave days left this year (of {leaveAllowance})
+                  Paid days left (of {leaveAllowance})
                 </div>
               </div>
             </div>
 
             {/* Charts */}
-            <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="mt-3 sm:mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
               {/* Attendance Pie Chart */}
-              <div className="min-h-[400px]">
-                <h3 className="text-lg font-medium mb-4">Attendance Overview</h3>
-                <div className="card-glow rounded-lg bg-[var(--color-surface)] p-4">
-                  <ResponsiveContainer width="100%" height={300}>
+              <div className="min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
+                <h3 className="text-sm sm:text-base md:text-lg font-medium mb-4">Attendance Overview</h3>
+                <div className="card-glow rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
+                  <ResponsiveContainer width="100%" height={250}>
                     <PieChart>
                       <Pie
                         data={getAttendanceData()}
@@ -252,10 +252,10 @@ const LeaderDashboard = () => {
               </div>
 
               {/* Task Status Bar Chart */}
-              <div className="min-h-[400px]">
-                <h3 className="text-lg font-medium mb-4">Task Status Overview</h3>
-                <div className="card-glow rounded-lg bg-[var(--color-surface)] p-4">
-                  <ResponsiveContainer width="100%" height={300}>
+              <div className="min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
+                <h3 className="text-sm sm:text-base md:text-lg font-medium mb-4">Task Status Overview</h3>
+                <div className="card-glow rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
+                  <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={getTaskData()}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="status" />
@@ -269,19 +269,19 @@ const LeaderDashboard = () => {
             </div>
 
             {/* Task Overview and Team Members Attendance */}
-            <div className="mt-2 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div className="mt-3 sm:mt-4 md:mt-2 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 items-start">
               {/* Team Members Attendance */}
-              <div className="max-h-[400px] overflow-y-auto">
-                <h3 className="text-lg font-medium mb-4">Team Members Attendance</h3>
-                <div className="card-glow overflow-x-auto max-h-64 overflow-y-auto rounded-lg bg-[var(--color-surface)] p-4">
+              <div className="max-h-[350px] md:max-h-[400px] overflow-y-auto">
+                <h3 className="text-sm sm:text-base md:text-lg font-medium mb-4">Team Members Attendance</h3>
+                <div className="card-glow overflow-x-auto max-h-64 overflow-y-auto rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
                   {teamAttendance.length > 0 ? (
-                    <table className="w-full min-w-[500px] text-left">
-                      <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-sm">
+                    <table className="w-full min-w-[320px] text-left text-xs md:text-sm">
+                      <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-xs md:text-sm sticky top-0">
                         <tr>
-                          <th className="p-4">Name</th>
-                          <th className="p-4">Status</th>
-                          <th className="p-4">Check In</th>
-                          <th className="p-4">Check Out</th>
+                          <th className="p-1 sm:p-2 md:p-4">Name</th>
+                          <th className="p-1 sm:p-2 md:p-4">Status</th>
+                          <th className="p-1 sm:p-2 md:p-4 hidden md:table-cell">Check In</th>
+                          <th className="p-1 sm:p-2 md:p-4 hidden md:table-cell">Check Out</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -290,10 +290,10 @@ const LeaderDashboard = () => {
                             key={member._id}
                             className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(167,86,250,0.05)] transition-all"
                           >
-                            <td className="p-4 font-medium">{member.name}</td>
-                            <td className="p-4">
+                            <td className="p-1 sm:p-2 md:p-4 font-medium text-xs sm:text-sm">{member.name}</td>
+                            <td className="p-1 sm:p-2 md:p-4">
                               <span
-                                className={`px-2 py-1 rounded text-sm ${
+                                className={`px-1 sm:px-2 py-0.5 md:py-1 rounded text-xs md:text-sm ${
                                   member.status === "Present"
                                     ? "bg-green-600/30 text-green-400"
                                     : member.status === "Leave"
@@ -306,12 +306,12 @@ const LeaderDashboard = () => {
                                 {member.status}
                               </span>
                             </td>
-                            <td className="p-4">
+                            <td className="p-1 sm:p-2 md:p-4 text-xs hidden md:table-cell">
                               {member.attendance?.checkIn
                                 ? new Date(member.attendance.checkIn).toLocaleTimeString()
                                 : "-"}
                             </td>
-                            <td className="p-4">
+                            <td className="p-1 sm:p-2 md:p-4 text-xs hidden md:table-cell">
                               {member.attendance?.checkOut
                                 ? new Date(member.attendance.checkOut).toLocaleTimeString()
                                 : "-"}
@@ -321,7 +321,7 @@ const LeaderDashboard = () => {
                       </tbody>
                     </table>
                   ) : (
-                    <p className="text-center py-6 text-gray-400">
+                    <p className="text-center py-6 text-xs sm:text-sm text-gray-400">
                       No team members found.
                     </p>
                   )}
@@ -330,12 +330,12 @@ const LeaderDashboard = () => {
 
               {/* Task Overview */}
               <div className="max-h-[400px] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium">Task Overview</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                  <h3 className="text-sm sm:text-base md:text-lg font-medium">Task Overview</h3>
                   <select
                     value={taskFilter}
                     onChange={(e) => setTaskFilter(e.target.value)}
-                    className="px-3 py-1 rounded text-sm bg-gray-700 text-gray-300 border border-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="px-2 sm:px-3 py-1 rounded text-xs sm:text-sm bg-gray-700 text-gray-300 border border-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
                   >
                     <option value="All">All</option>
                     <option value="Pending">Pending</option>
@@ -343,14 +343,14 @@ const LeaderDashboard = () => {
                     <option value="Completed">Completed</option>
                   </select>
                 </div>
-                <div className="card-glow overflow-x-auto max-h-64 overflow-y-auto rounded-lg bg-[var(--color-surface)] p-4">
+                <div className="card-glow overflow-x-auto max-h-64 overflow-y-auto rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
                   {tasks.filter((task) => taskFilter === "All" || task.status === taskFilter).length > 0 ? (
-                    <table className="w-full min-w-[500px] text-left">
-                      <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-sm">
+                    <table className="w-full min-w-[350px] text-left text-xs md:text-sm">
+                      <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-xs md:text-sm">
                         <tr>
-                          <th className="p-4">Assigned To</th>
-                          <th className="p-4">Status</th>
-                          <th className="p-4">Assigned On</th>
+                          <th className="p-1 sm:p-2 md:p-4">Assigned To</th>
+                          <th className="p-1 sm:p-2 md:p-4">Status</th>
+                          <th className="p-1 sm:p-2 md:p-4">Assigned On</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -361,12 +361,12 @@ const LeaderDashboard = () => {
                               key={task._id}
                               className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(167,86,250,0.05)] transition-all"
                             >
-                              <td className="p-4">
+                              <td className="p-1 sm:p-2 md:p-4 text-xs sm:text-sm">
                                 {task.assignedTo?.name || "-"}
                               </td>
-                              <td className="p-4">
+                              <td className="p-1 sm:p-2 md:p-4">
                                 <span
-                                  className={`px-2 py-1 rounded text-sm ${
+                                  className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs md:text-sm ${
                                     task.status === "Completed"
                                       ? "bg-green-600/30 text-green-400"
                                       : task.status === "In Progress"
@@ -377,7 +377,7 @@ const LeaderDashboard = () => {
                                   {task.status}
                                 </span>
                               </td>
-                              <td className="p-4">
+                              <td className="p-1 sm:p-2 md:p-4 text-xs">
                                 {new Date(task.assignedAt).toLocaleDateString()}
                               </td>
                             </tr>
@@ -385,7 +385,7 @@ const LeaderDashboard = () => {
                       </tbody>
                     </table>
                   ) : (
-                    <p className="text-center py-6 text-gray-400">
+                    <p className="text-center py-6 text-xs sm:text-sm text-gray-400">
                       No {taskFilter === "All" ? "" : `${taskFilter.toLowerCase()} `}tasks found.
                     </p>
                   )}

@@ -314,34 +314,29 @@ const Leaves = () => {
   const unpaidUsed = (unpaidUsedDays ?? Math.max(0, approvedUsed - leaveAllowance));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-[#A756FA] mb-6">📋 Leaves</h2>
-        <div className="text-sm bg-white/5 px-3 py-2 rounded-md">
-          <span>Yearly allowance: <span className="font-semibold">{leaveAllowance}</span></span>
-          <span className="text-gray-300"> &middot; </span>
-          <span>Paid Used: <span className="font-semibold">{paidUsed}</span></span>
-          <span className="text-gray-300"> &middot; </span>
-          {/* <span className={remainingPaid < 0 ? "text-red-400 font-semibold" : ""}>
-            Remaining: <span className="font-semibold">{remainingPaid}</span>
-          </span>
-          <span className="text-gray-300"> &middot; </span>
-          <span>Pending: <span className="font-medium">{pendingRequested}</span></span> */}
-          <span>Unpaid used: <span className="font-semibold">{unpaidUsed}</span></span>
+    <div className="space-y-4 md:space-y-6 p-3 md:p-0">
+      <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-3 md:gap-0">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#A756FA] mb-0">📋 Leaves</h2>
+        <div className="text-xs md:text-sm bg-white/5 px-2 md:px-3 py-2 rounded-md w-full md:w-auto whitespace-nowrap overflow-x-auto">
+          <div className="flex gap-2 md:gap-3">
+            <span><span className="text-gray-400">Allowance:</span> <span className="font-semibold">{leaveAllowance}</span></span>
+            <span className="text-gray-400">|</span>
+            <span><span className="text-gray-400">Used:</span> <span className="font-semibold">{paidUsed}</span></span>
+            <span className="text-gray-400">|</span>
+            <span><span className="text-gray-400">Unpaid:</span> <span className="font-semibold">{unpaidUsed}</span></span>
+          </div>
         </div>
       </div>
 
       {/* Info message if no paid leaves remaining */}
       {remainingPaid === 0 && role !== "admin" && (
-        <div className="card-glow bg-blue-600/20 border border-blue-500/30 p-4 rounded-xl">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">ℹ️</span>
+        <div className="card-glow bg-blue-600/20 border border-blue-500/30 p-3 md:p-4 rounded-xl">
+          <div className="flex items-start gap-2 md:gap-3">
+            <span className="text-lg md:text-2xl flex-shrink-0">ℹ️</span>
             <div>
-              <div className="font-semibold text-blue-300">No Paid Leaves Remaining</div>
-              <div className="text-sm text-blue-200">
-                You have used all {leaveAllowance} paid leave days for this year.
-                Any new leave applications will be counted as <strong>unpaid leaves</strong>.
-                Contact an admin if you need to increase your paid leave allowance.
+              <div className="font-semibold text-blue-300 text-sm md:text-base">No Paid Leaves Remaining</div>
+              <div className="text-xs md:text-sm text-blue-200 mt-1">
+                You have used all {leaveAllowance} paid leave days. Any new applications will be <strong>unpaid</strong>.
               </div>
             </div>
           </div>
@@ -350,14 +345,13 @@ const Leaves = () => {
 
       {/* Warning if exceeded */}
       {remainingPaid < 0 && role !== "admin" && (
-        <div className="card-glow bg-red-600/20 border border-red-500/30 p-4 rounded-xl">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚠️</span>
+        <div className="card-glow bg-red-600/20 border border-red-500/30 p-3 md:p-4 rounded-xl">
+          <div className="flex items-start gap-2 md:gap-3">
+            <span className="text-lg md:text-2xl flex-shrink-0">⚠️</span>
             <div>
-              <div className="font-semibold text-red-300">Leave allowance exceeded</div>
-              <div className="text-sm text-red-200">
-                You have used {leaveAllowance - remainingPaid} out of {leaveAllowance} yearly paid leaves.
-                Contact an admin to increase your allowance if needed.
+              <div className="font-semibold text-red-300 text-sm md:text-base">Leave allowance exceeded</div>
+              <div className="text-xs md:text-sm text-red-200 mt-1">
+                Used {leaveAllowance - remainingPaid} of {leaveAllowance} yearly leaves.
               </div>
             </div>
           </div>
@@ -365,35 +359,35 @@ const Leaves = () => {
       )}
 
       {/* APPLY LEAVE - Always visible */}
-      <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl">
-          <h2 className="text-xl font-semibold text-[#58a6ff]">Apply for Leave</h2>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="card-glow bg-[var(--color-surface)] p-4 md:p-6 rounded-xl">
+          <h2 className="text-lg md:text-xl font-semibold text-[#58a6ff]">Apply for Leave</h2>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             <div>
-              <label className="text-sm mb-1 block">From</label>
+              <label className="text-xs md:text-sm mb-1 block">From</label>
               <DatePicker value={form.fromDate} onChange={(val) => setForm((f) => ({ ...f, fromDate: val }))} placeholder="dd/mm/yyyy" />
             </div>
             <div>
-              <label className="text-sm mb-1 block">To</label>
+              <label className="text-xs md:text-sm mb-1 block">To</label>
               <DatePicker value={form.toDate} onChange={(val) => setForm((f) => ({ ...f, toDate: val }))} placeholder="dd/mm/yyyy" />
             </div>
             <div>
-              <label className="text-sm mb-1 block">Total days</label>
-              <div className="p-2 rounded border min-h-[40px] flex items-center">{calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "-"}</div>
+              <label className="text-xs md:text-sm mb-1 block">Total days</label>
+              <div className="p-2 text-xs md:text-sm rounded border min-h-[40px] flex items-center justify-center">{calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "-"}</div>
             </div>
 
-            {/* Live validation warning - Show info about unpaid leaves */}
+            {/* Live validation warning */}
             {(() => {
               const requestedDays = calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate));
               if (requestedDays > 0 && role !== "admin") {
                 if (remainingPaid === 0) {
                   return (
-                    <div className="sm:col-span-3 bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg">
+                    <div className="col-span-1 sm:col-span-2 md:col-span-3 bg-blue-900/30 border border-blue-500/50 p-2 md:p-3 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <span className="text-blue-400 text-lg">ℹ️</span>
-                        <div className="text-sm">
+                        <span className="text-blue-400 text-base md:text-lg flex-shrink-0">ℹ️</span>
+                        <div className="text-xs md:text-sm">
                           <div className="font-semibold text-blue-300">This will be unpaid leave</div>
-                          <div className="text-blue-200 mt-1">
-                            You have no paid leaves remaining. Requesting {requestedDays} day(s) will be counted as unpaid leave.
+                          <div className="text-blue-200 mt-0.5">
+                            No paid leaves remaining. {requestedDays} day(s) will be unpaid.
                           </div>
                         </div>
                       </div>
@@ -403,13 +397,13 @@ const Leaves = () => {
                   const paidDays = remainingPaid;
                   const unpaidDays = requestedDays - remainingPaid;
                   return (
-                    <div className="sm:col-span-3 bg-yellow-900/30 border border-yellow-500/50 p-3 rounded-lg">
+                    <div className="col-span-1 sm:col-span-2 md:col-span-3 bg-yellow-900/30 border border-yellow-500/50 p-2 md:p-3 rounded-lg">
                       <div className="flex items-start gap-2">
-                        <span className="text-yellow-400 text-lg">⚠️</span>
-                        <div className="text-sm">
+                        <span className="text-yellow-400 text-base md:text-lg flex-shrink-0">⚠️</span>
+                        <div className="text-xs md:text-sm">
                           <div className="font-semibold text-yellow-300">Partial unpaid leave</div>
-                          <div className="text-yellow-200 mt-1">
-                            {paidDays} day(s) will be paid, {unpaidDays} day(s) will be unpaid.
+                          <div className="text-yellow-200 mt-0.5">
+                            {paidDays} paid, {unpaidDays} unpaid.
                           </div>
                         </div>
                       </div>
@@ -420,14 +414,14 @@ const Leaves = () => {
               return null;
             })()}
 
-            <div className="sm:col-span-3">
-              <label className="text-sm mb-1 block">Reason</label>
-              <textarea value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} className="w-full p-3 rounded border bg-transparent min-h-[80px]" placeholder="Explain reason for leave..." />
+            <div className="col-span-1 sm:col-span-2 md:col-span-3">
+              <label className="text-xs md:text-sm mb-1 block">Reason</label>
+              <textarea value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} className="w-full p-2 md:p-3 text-sm rounded border bg-transparent min-h-[60px] md:min-h-[80px]" placeholder="Explain reason for leave..." />
             </div>
 
-            <div className="sm:col-span-3 flex gap-3 pt-2 align-center justify-center">
-              <button onClick={apply} className="bg-primary text-white px-4 py-2 rounded">Apply</button>
-              <button onClick={() => setForm({ fromDate: "", toDate: "", reason: "" })} className="px-4 py-2 rounded border">Reset</button>
+            <div className="col-span-1 sm:col-span-2 md:col-span-3 flex gap-2 md:gap-3 pt-2 justify-center">
+              <button onClick={apply} className="flex-1 sm:flex-none bg-primary text-white px-4 py-2 text-sm md:text-base rounded hover:bg-opacity-80 transition">Apply</button>
+              <button onClick={() => setForm({ fromDate: "", toDate: "", reason: "" })} className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base rounded border hover:bg-white/5 transition">Reset</button>
             </div>
           </div>
         </div>

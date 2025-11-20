@@ -190,39 +190,39 @@ const Profile = () => {
   }
 
   return (
-    <section className="p-6 bg-[var(--color-surface)] min-h-screen text-[var(--color-text-primary)]">
+    <section className="p-3 md:p-6 bg-[var(--color-surface)] min-h-screen text-[var(--color-text-primary)]">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <User className="w-8 h-8 text-[var(--color-primary)]" />
-          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">My Profile</h1>
+        <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-8">
+          <User className="w-6 md:w-8 h-6 md:h-8 text-[var(--color-primary)]" />
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text-primary)]">My Profile</h1>
         </div>
 
         {/* Profile Status */}
-        <div className="card-glow p-6 mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
+        <div className="card-glow p-4 md:p-6 mb-4 md:mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4">
               <img
                 src={profile?.documents?.passportPhoto?.path || "/default-avatar.png"}
                 alt="Profile"
-                className="mr-6 w-35 h-35 rounded-full object-cover border-2 border-[var(--color-primary)]"
+                className="w-20 md:w-32 h-20 md:h-32 rounded-full object-cover border-2 border-[var(--color-primary)] flex-shrink-0"
               />
-              <div className="text-left">
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">{profile?.name}</h2>
-                <p className="text-[var(--color-text-secondary)]">Emailid: {profile?.email}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Position: {profile?.position}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Date of Joining: {formatDateDMY(profile?.dateOfJoining)}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Phone: {profile?.phone}</p>
-                <p className="text-sm text-[var(--color-text-secondary)]">Date of Birth: {formatDateDMY(profile?.dateOfBirth)}</p>
+              <div className="text-left flex-1">
+                <h2 className="text-lg md:text-xl font-semibold text-[var(--color-text-primary)]">{profile?.name}</h2>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Email: {profile?.email}</p>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Position: {profile?.position}</p>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Joined: {formatDateDMY(profile?.dateOfJoining)}</p>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Phone: {profile?.phone}</p>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">DOB: {formatDateDMY(profile?.dateOfBirth)}</p>
                 {profile?.isMarried && profile?.marriageAnniversary && (
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Marriage Anniversary: {formatDateDMY(profile?.marriageAnniversary)}
+                  <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">
+                    Anniversary: {formatDateDMY(profile?.marriageAnniversary)}
                   </p>
                 )}
-                <p className="text-sm text-[var(--color-text-secondary)]">Base Salary: {profile?.salary}</p>
+                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Salary: {profile?.salary}</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+            <div className="w-full sm:w-auto">
+              <div className={`inline-flex items-center gap-2 px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-medium w-full sm:w-auto justify-center ${
                 profile?.profileVerified
                   ? "bg-green-900/30 text-green-400 border border-green-800"
                   : "bg-yellow-900/30 text-yellow-400 border border-yellow-800"
@@ -230,12 +230,12 @@ const Profile = () => {
                 {profile?.profileVerified ? (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    Profile Verified
+                    Verified
                   </>
                 ) : (
                   <>
                     <XCircle className="w-4 h-4" />
-                    Profile Unverified
+                    Unverified
                   </>
                 )}
               </div>
@@ -244,9 +244,9 @@ const Profile = () => {
         </div>
 
         {/* Reporting Information */}
-        <div className="card-glow p-6 mb-8">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-6">Reporting Structure</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card-glow p-4 md:p-6 mb-4 md:mb-8">
+          <h2 className="text-lg md:text-xl font-semibold text-[var(--color-text-primary)] mb-4 md:mb-6">Reporting Structure</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
             <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
               <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Reporting Manager</h3>
               <p className="text-[var(--color-text-secondary)]">
@@ -278,67 +278,67 @@ const Profile = () => {
         </div>
 
         {/* Update Profile Form */}
-        <form onSubmit={handleSubmit} className="card-glow p-6 mb-8">
-          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-6">Update Profile Information</h2>
+        <form onSubmit={handleSubmit} className="card-glow p-4 md:p-6 mb-4 md:mb-8">
+          <h2 className="text-lg md:text-xl font-semibold text-[var(--color-text-primary)] mb-4 md:mb-6">Update Profile Information</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6 mb-4 md:mb-6">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Phone</label>
+              <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2">Phone</label>
               <input
                 type="text"
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-2 md:px-3 py-2 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 placeholder="Enter phone number"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Address</label>
+              <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2">Address</label>
               <textarea
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
                 rows={1}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-2 md:px-3 py-2 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 placeholder="Enter address"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Bank IFSC Code</label>
+              <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2">Bank IFSC Code</label>
               <input
                 type="text"
                 name="bankIFSC"
                 value={formData.bankIFSC}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-2 md:px-3 py-2 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 placeholder="Enter IFSC code"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Bank Account Number</label>
+              <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2">Bank Account Number</label>
               <input
                 type="text"
                 name="bankAccountNumber"
                 value={formData.bankAccountNumber}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-2 md:px-3 py-2 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 placeholder="Enter account number"
               />
             </div>
           </div>
 
           {/* Marital Information */}
-          <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Marital Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <h3 className="text-base md:text-lg font-medium text-[var(--color-text-primary)] mb-3 md:mb-4">Marital Information</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6 mb-4 md:mb-6">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Married?</label>
+              <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2">Married?</label>
               <select
                 name="isMarried"
                 value={formData.isMarried ? "true" : "false"}
                 onChange={(e) => setFormData(prev => ({ ...prev, isMarried: e.target.value === "true" }))}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full px-2 md:px-3 py-2 text-sm border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
               >
                 <option value="false">No</option>
                 <option value="true">Yes</option>
@@ -346,7 +346,7 @@ const Profile = () => {
             </div>
             {formData.isMarried && (
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Marriage Anniversary</label>
+                <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2">Marriage Anniversary</label>
                 <DatePicker
                   value={formData.marriageAnniversary}
                   onChange={(val) => setFormData(prev => ({ ...prev, marriageAnniversary: val }))}
@@ -357,18 +357,18 @@ const Profile = () => {
           </div>
 
           {/* Document Uploads */}
-          <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Upload Documents</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <h3 className="text-base md:text-lg font-medium text-[var(--color-text-primary)] mb-3 md:mb-4">Upload Documents</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
             {Object.entries(documentLabels).map(([field, label]) => {
               const doc = profile?.documents?.[field];
               const isVerified = doc?.verified;
               return (
-                <div key={field} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">{label}</label>
+                <div key={field} className="border border-[var(--color-border)] rounded-lg p-3 md:p-4 bg-[var(--color-surface)]">
+                  <label className="block text-xs md:text-sm font-medium text-[var(--color-text-primary)] mb-2 truncate">{label}</label>
                   {isVerified ? (
-                    <div className="text-sm text-green-600 mb-2 flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      Document Verified - Cannot be changed
+                    <div className="text-xs md:text-sm text-green-600 mb-2 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate">Verified</span>
                     </div>
                   ) : (
                     <>
@@ -376,10 +376,10 @@ const Profile = () => {
                         type="file"
                         accept="image/*,.pdf"
                         onChange={(e) => handleFileChange(field, e.target.files[0])}
-                        className="w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)]/20 file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary)]/30"
+                        className="w-full text-xs md:text-sm text-[var(--color-text-secondary)] file:mr-2 file:py-1 md:file:py-2 file:px-2 md:file:px-4 file:rounded-full file:border-0 file:text-xs md:file:text-sm file:font-semibold file:bg-[var(--color-primary)]/20 file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary)]/30 cursor-pointer"
                       />
                       {files[field] && (
-                        <p className="text-xs text-[var(--color-text-secondary)] mt-1">Selected: {files[field].name}</p>
+                        <p className="text-xs text-[var(--color-text-secondary)] mt-1 truncate">Selected: {files[field].name}</p>
                       )}
                     </>
                   )}
@@ -391,7 +391,7 @@ const Profile = () => {
           <button
             type="submit"
             disabled={uploading}
-            className="w-full bg-[var(--color-primary)] text-white py-2 px-4 rounded-md hover:bg-[var(--color-primary)]/80 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-[var(--color-primary)] text-white py-2 md:py-3 px-4 text-sm md:text-base rounded-md hover:bg-[var(--color-primary)]/80 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
           >
             {uploading ? (
               <>

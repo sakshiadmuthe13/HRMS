@@ -218,12 +218,12 @@ const ReportsPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-extrabold mb-8 flex items-center gap-2"><BarChart3 size={28} className="text-[var(--color-primary)]" /><span className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] bg-clip-text text-transparent">Detailed Reports</span></h1>
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+      <div className="max-w-6xl mx-auto w-full">
+        <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 sm:mb-8 flex items-center gap-2"><BarChart3 size={24} sm:size={28} className="text-[var(--color-primary)]" /><span className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] bg-clip-text text-transparent">Detailed Reports</span></h1>
 
         {step === 1 && (
-          <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
+          <div className="bg-[var(--color-surface)] rounded-lg p-4 sm:p-6 card-glow">
             <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Select Role</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div
@@ -245,7 +245,7 @@ const ReportsPage = () => {
         )}
 
         {step === 2 && (
-          <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
+          <div className="bg-[var(--color-surface)] rounded-lg p-4 sm:p-6 card-glow">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Select {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}</h2>
               <button
@@ -272,8 +272,8 @@ const ReportsPage = () => {
         )}
 
         {step === 3 && selectedUser && (
-          <div className="space-y-6">
-            <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-[var(--color-surface)] rounded-lg p-4 sm:p-6 card-glow">
               <div className="flex items-center gap-2 mb-4">
                 <FilterIcon size={20} className="text-[var(--color-primary)]" />
                 <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Filters</h2>

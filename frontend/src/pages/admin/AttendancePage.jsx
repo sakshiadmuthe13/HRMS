@@ -105,15 +105,15 @@ const AttendancePage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-2 overflow-x-hidden">
+    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-2 sm:p-4 md:p-6 overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 mt-4">
-        <h2 className="text-3xl font-bold text-[var(--color-primary)] flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8 mt-2 sm:mt-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)] flex items-center gap-2">
           🕒 Attendance
         </h2>
 
-        <div className="flex gap-3 items-center">
-          <div className="relative w-48">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full sm:w-auto">
+          <div className="relative w-full sm:w-48">
             <DatePicker value={date} onChange={setDate} placeholder="dd/mm/yyyy" />
           </div>
 

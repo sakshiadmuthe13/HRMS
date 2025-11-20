@@ -162,19 +162,19 @@ const ProfileVerificationPage = () => {
   }
 
   return (
-    <section className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-6 overflow-x-hidden">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <CheckCircle className="w-8 h-8 text-[var(--color-primary)]" />
-          <h1 className=" text-3xl font-bold bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] bg-clip-text text-transparent">
+    <section className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="flex items-center gap-3 mb-6 sm:mb-8">
+          <CheckCircle className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--color-primary)]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] bg-clip-text text-transparent">
             Profile Verification
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
           {/* All Users List */}
           <div className="lg:col-span-1">
-            <div className="card-glow p-6">
+            <div className="card-glow p-4 md:p-6">
               <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">
                 Employees & Leaders
               </h2>
@@ -287,7 +287,7 @@ const ProfileVerificationPage = () => {
           {/* Document Verification */}
           <div className="lg:col-span-2">
             {selectedUser ? (
-              <div className="card-glow p-6">
+              <div className="card-glow p-4 md:p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <User className="w-6 h-6 text-[var(--color-primary)]" />
                   <div className="flex-1">
