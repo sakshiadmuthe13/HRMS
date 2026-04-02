@@ -13,11 +13,11 @@ const About = () => {
       }}
     >
       <h2 className="text-4xl md:text-5xl font-extrabold mb-8 text-primary text-center">
-        About <span className="text-white">DW Innovation</span>
+        About <span className="text-white">QiroTech Innovation</span>
       </h2>
 
       <p className="max-w-4xl text-center text-gray-300 leading-relaxed md:leading-loose text-lg md:text-xl space-y-4">
-        DW INNOVATION PVT. LTD. was founded by a team of forward-thinking
+        QIROTECH INNOVATION PVT. LTD. was founded by a team of forward-thinking
         entrepreneurs who recognized the need for reliable, high-impact
         development services. Driven by a culture of creativity, precision, and
         passion, we transform ideas into exceptional digital experiences.

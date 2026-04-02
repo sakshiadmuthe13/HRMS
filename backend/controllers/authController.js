@@ -53,7 +53,7 @@ export const forgotPassword = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
           
@@ -79,7 +79,7 @@ export const forgotPassword = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>

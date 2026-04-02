@@ -136,7 +136,7 @@ const HomePage = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-6 text-sm text-gray-400 border-t border-white/3">
-          © {new Date().getFullYear()} DW Innovation Pvt. Ltd. — All rights reserved.
+          © {new Date().getFullYear()} QiroTech Innovation Pvt. Ltd. — All rights reserved.
         </div>
       </footer>
     </div>

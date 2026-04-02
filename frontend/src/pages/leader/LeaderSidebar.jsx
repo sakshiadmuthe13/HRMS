@@ -77,7 +77,7 @@ const LeaderSidebar = ({ tabs = [], active, onChange }) => {
       {/* Brand */}
       <div className="pt-6 pb-8 px-4 relative">
         <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-          DW Innovation
+          QiroTech Innovation
         </h3>
         <p className="text-sm text-gray-400 mt-1 ml-2">Leader Portal</p>
         <button

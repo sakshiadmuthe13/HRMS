@@ -139,26 +139,25 @@ export const leaderCheckIn = async (req, res) => {
     if (attendance?.checkIn)
       return res.status(400).json({ message: "Already checked in today" });
 
-    if (!attendance)
-      {
-        const day = new Date(now);
-        const holidayStart = new Date(day);
-        holidayStart.setHours(0, 0, 0, 0);
-        const holidayEnd = new Date(day);
-        holidayEnd.setHours(23, 59, 59, 999);
-        const isCustomHoliday = await Holiday.exists({
-          date: { $gte: holidayStart, $lte: holidayEnd },
-        });
-        const isWeekend = [0, 6].includes(holidayStart.getDay());
-        const isHoliday = !!isCustomHoliday || isWeekend;
+    if (!attendance) {
+      const day = new Date(now);
+      const holidayStart = new Date(day);
+      holidayStart.setHours(0, 0, 0, 0);
+      const holidayEnd = new Date(day);
+      holidayEnd.setHours(23, 59, 59, 999);
+      const isCustomHoliday = await Holiday.exists({
+        date: { $gte: holidayStart, $lte: holidayEnd },
+      });
+      const isWeekend = [0, 6].includes(holidayStart.getDay());
+      const isHoliday = !!isCustomHoliday || isWeekend;
 
-        // Create attendance as Present on check-in; convert to Over-time on check-out if required
-        attendance = new Attendance({
-          user: userId,
-          date: todayStart,
-          status: "Present",
-        });
-      }
+      // Create attendance as Present on check-in; convert to Over-time on check-out if required
+      attendance = new Attendance({
+        user: userId,
+        date: todayStart,
+        status: "Present",
+      });
+    }
     attendance.checkIn = now.toISOString();
     await attendance.save();
     res.status(200).json(attendance);
@@ -406,7 +405,7 @@ export const applyLeaderLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -435,7 +434,7 @@ export const applyLeaderLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -851,7 +850,7 @@ export const updateMyLeaderProfile = async (req, res) => {
                 <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                   <tr>
                     <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                      <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+                      <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
                     </td>
                   </tr>
                   <tr>
@@ -871,7 +870,7 @@ export const updateMyLeaderProfile = async (req, res) => {
                   <tr>
                     <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                       <p style="margin:0; font-size:12px; color:#999;">
-                        &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                        &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
                       </p>
                     </td>
                   </tr>

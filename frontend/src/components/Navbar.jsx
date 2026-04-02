@@ -17,7 +17,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto flex items-center justify-between py-4 px-6">
         {/* Logo */}
           <h1 className="text-3xl font-extrabold tracking-wide select-none flex items-center gap-1">
-            <span className="text-white">DW</span>
+            <span className="text-white">QiroTech</span>
             <span
               className="font-extrabold"
               style={{

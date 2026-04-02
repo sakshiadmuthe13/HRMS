@@ -611,7 +611,7 @@ export const createHoliday = async (req, res) => {
       // Send emails to all users
       const emailPromises = allUsers.map((user) => {
         const emailSubject = `🎉 Holiday Announcement - ${description}`;
-        const emailText = `Dear ${user.name},\n\nA new holiday has been announced!\n\nDate: ${formattedDate}\nReason: ${description}\n\nEnjoy your day off!\n\nBest regards,\nDW Innovations Pvt. Ltd.`;
+        const emailText = `Dear ${user.name},\n\nA new holiday has been announced!\n\nDate: ${formattedDate}\nReason: ${description}\n\nEnjoy your day off!\n\nBest regards,\nQiroTech Innovation Pvt. Ltd.`;
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
             <div style="background: linear-gradient(135deg, #0EA6F0 0%, #667eea 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -634,7 +634,7 @@ export const createHoliday = async (req, res) => {
 
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                 <p style="font-size: 14px; color: #666; margin: 0;">Best regards,</p>
-                <p style="font-size: 14px; color: #0EA6F0; font-weight: bold; margin: 5px 0 0 0;">DW Innovations Pvt. Ltd.</p>
+                <p style="font-size: 14px; color: #0EA6F0; font-weight: bold; margin: 5px 0 0 0;">QiroTech Innovation Pvt. Ltd.</p>
               </div>
             </div>
           </div>
@@ -910,7 +910,7 @@ export const approveLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -939,7 +939,7 @@ export const approveLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -972,7 +972,7 @@ export const approveLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1002,7 +1002,7 @@ export const approveLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1082,7 +1082,7 @@ export const rejectLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1111,7 +1111,7 @@ export const rejectLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1144,7 +1144,7 @@ export const rejectLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1174,7 +1174,7 @@ export const rejectLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1916,7 +1916,7 @@ export const verifyDocument = async (req, res) => {
               <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                 <tr>
                   <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                    <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+                    <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
                   </td>
                 </tr>
                 <tr>
@@ -1939,7 +1939,7 @@ export const verifyDocument = async (req, res) => {
                 <tr>
                   <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                     <p style="margin:0; font-size:12px; color:#999;">
-                      &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                      &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -2044,7 +2044,7 @@ export const unverifyDocument = async (req, res) => {
               <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                 <tr>
                   <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                    <h1 style="margin:0; color:#fff; font-size:24px;">DW Innovations Pvt. Ltd.</h1>
+                    <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
                   </td>
                 </tr>
                 <tr>
@@ -2063,7 +2063,7 @@ export const unverifyDocument = async (req, res) => {
                 <tr>
                   <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                     <p style="margin:0; font-size:12px; color:#999;">
-                      &copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.
+                      &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
                     </p>
                   </td>
                 </tr>

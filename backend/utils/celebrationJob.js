@@ -67,7 +67,7 @@ const buildHtml = (sections) => {
             <!-- Header -->
             <tr>
               <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:24px 20px;">
-                <h1 style="margin:0; color:#fff; font-size:22px;">DW Innovations Pvt. Ltd.</h1>
+                <h1 style="margin:0; color:#fff; font-size:22px;">QiroTech Innovation Pvt. Ltd.</h1>
                 <p style="margin:6px 0 0; color:#e9f6ff; font-size:14px;">Celebrations Update</p>
               </td>
             </tr>
@@ -94,7 +94,7 @@ const buildHtml = (sections) => {
             <!-- Footer -->
             <tr>
               <td style="background-color:#f0f3f8; text-align:center; padding:16px 15px;">
-                <p style="margin:0; font-size:12px; color:#8590a3;">&copy; 2025 DW Innovations Pvt. Ltd. All rights reserved.</p>
+                <p style="margin:0; font-size:12px; color:#8590a3;">&copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.</p>
               </td>
             </tr>
 

@@ -35,7 +35,7 @@ const playNotificationSound = () => {
 // Browser notification function
 const showBrowserNotification = (message) => {
   if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("DW Innovation - New Notification", {
+    new Notification("QiroTech Innovation - New Notification", {
       body: message,
       icon: "/favicon.ico",
     });
