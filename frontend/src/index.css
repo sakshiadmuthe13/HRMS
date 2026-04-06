@@ -11,7 +11,7 @@
   --color-secondary: #A756FA;
   --color-accent-pink: #ED4797;
   --color-accent-blue: #2A6BF4;
-  
+
   --color-danger: #FF4638;
 
   --color-text-primary: #F9FAFB;
@@ -26,12 +26,12 @@ body {
 
 /* Tailwind custom classes in globals.css or a new CSS file */
 .card-glow {
-  background-color: rgba(17, 24, 40, 0.8); 
-  border: 1px solid rgba(14, 166, 240, 0.5); 
+  background-color: rgba(17, 24, 40, 0.8);
+  border: 1px solid rgba(14, 166, 240, 0.5);
   border-radius: 1rem;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  box-shadow: 0 10px 25px rgba(14, 166, 240, 0.35); 
+  box-shadow: 0 10px 25px rgba(14, 166, 240, 0.35);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -70,32 +70,65 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.text-primary { color: var(--color-text-primary) !important; }
-.text-secondary { color: var(--color-text-secondary) !important; }
-.bg-primary { background-color: var(--color-primary) !important; }
-.bg-surface { background-color: var(--color-surface) !important; }
-.hover\:bg-secondary:hover { background-color: var(--color-secondary) !important; }
+.text-primary {
+  color: var(--color-text-primary) !important;
+}
+
+.text-secondary {
+  color: var(--color-text-secondary) !important;
+}
+
+.bg-primary {
+  background-color: var(--color-primary) !important;
+}
+
+.bg-surface {
+  background-color: var(--color-surface) !important;
+}
+
+.hover\:bg-secondary:hover {
+  background-color: var(--color-secondary) !important;
+}
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
+
 @keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
-.animate-fadeIn { animation: fadeIn 0.3s ease-out; }
-.animate-scaleIn { animation: scaleIn 0.3s ease-out; }
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out;
+}
 
 /* === Custom style for calendar picker icons === */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(56%) sepia(99%) saturate(562%) hue-rotate(186deg)
-    brightness(98%) contrast(99%);
+  filter: invert(56%) sepia(99%) saturate(562%) hue-rotate(186deg) brightness(98%) contrast(99%);
   cursor: pointer;
 }

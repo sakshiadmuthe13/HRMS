@@ -13,23 +13,32 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 w-full bg-dark2/80 backdrop-blur-md text-textLight shadow-lg z-50 border-b border-dark1/40 transition-all duration-300">
+    <nav className="fixed top-0 left-0 w-full backdrop-blur-md text-textLight shadow-lg z-50 border-b border-dark1/40 transition-all duration-300" style={{ backgroundColor: '#192736' }}>
       <div className="max-w-7xl mx-auto flex items-center justify-between py-4 px-6">
         {/* Logo */}
-          <h1 className="text-3xl font-extrabold tracking-wide select-none flex items-center gap-1">
-            <span className="text-white">QiroTech</span>
-            <span
-              className="font-extrabold"
-              style={{
-                background: 'linear-gradient(90deg, rgba(14,166,240,1) 0%, rgba(167,86,250,1) 50%)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-              }}
-            >
-              Innovation
-            </span>
-          </h1>
+        <h1 className="text-3xl font-extrabold tracking-wide select-none flex items-center gap-1">
+          <img
+            src="/qiro-logo.png"
+            alt="Logo"
+            className="w-12 h-12 mt-2 mr-2"
+            // style={{
+            //   boxShadow: '0 0 10px rgba(14,166,240,0.6), 0 0 20px rgba(14,166,240,0.4), 0 0 40px rgba(167,86,250,0.3)',
+            //   animation: 'logoGlow 2s ease-in-out infinite alternate',
+            // }}
+          />
+          <span className="text-white">QiroTech</span>
+          <span
+            className="font-extrabold"
+            style={{
+              background: 'linear-gradient(90deg, rgba(14,166,240,1) 0%, rgba(167,86,250,1) 50%)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            Innovation
+          </span>
+        </h1>
 
         {/* Desktop Nav */}
         <ul className="hidden md:flex items-center gap-8 text-lg font-medium">
@@ -71,7 +80,7 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-dark2/95 backdrop-blur-md border-t border-dark1/40 px-6 py-4 space-y-4">
+        <div className="md:hidden backdrop-blur-md border-t border-dark1/40 px-6 py-4 space-y-4" style={{ backgroundColor: '#192736' }}>
           {["home", "about", "contact"].map((item) => (
             <button
               key={item}
