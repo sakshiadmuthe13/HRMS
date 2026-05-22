@@ -1,60 +1,38 @@
-import React, { useEffect, useState } from "react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Users, Briefcase, FileText, ClipboardCheck, TrendingUp, Calendar, Clock, Layout, CheckCircle2, AlertCircle } from "lucide-react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import LeaderSidebar from "./LeaderSidebar";
-import LeaderAttendancePage from "./Attendance";
+import LeaderAttendance from "./Attendance";
 import LeaderTeamsPage from "./Teams";
 import LeaderProjectsPage from "./Projects";
 import LeaderLeavesPage from "./Leave";
 import AssignTaskPage from "./Task";
 import Profile from "./Profile";
-import ContactEmployeePage from "./ContactEmployee";
+import ContactEmployeeLeaderPage from "./ContactEmployee";
+import VacancyManagementPage from "../../components/VacancyManagementPage";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
-// Helper function to handle fetch with token
-const fetchJson = async (path, opts = {}) => {
-  const token =
-    localStorage.getItem("token") || sessionStorage.getItem("token");
-  const headers = { ...(opts.headers || {}) };
-  if (token && !headers.Authorization)
-    headers.Authorization = `Bearer ${token}`;
+const apiGet = async (path) => {
+  const token = localStorage.getItem("token");
   const res = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    ...opts,
-    headers,
+    headers: { Authorization: `Bearer ${token}` }
   });
-  if (!res.ok) {
-    const text = await res.text();
-    try {
-      throw new Error(JSON.parse(text).message || "API Error");
-    } catch {
-      throw new Error("API Error");
-    }
-  }
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error("API Failure");
+  return res.json();
 };
 
 const TABS = [
-  "Dashboard",
-  "Profile",
-  "Attendance",
-  "Leaves",
-  "Assign Task",
-  "My Teams",
-  "My Projects",
-  "Contact Employee",
+  { id: "Dashboard", label: "Dashboard", icon: Layout },
+  { id: "Profile", label: "Profile", icon: Users },
+  { id: "Attendance", label: "Attendance", icon: Calendar },
+  { id: "My Teams", label: "My Teams", icon: Users },
+  { id: "My Projects", label: "My Projects", icon: Briefcase },
+  { id: "Leaves", label: "Leaves", icon: FileText },
+  { id: "Assign Task", label: "Assign Task", icon: ClipboardCheck },
+  { id: "Contact Employee", label: "Contact Employee", icon: Users },
+  { id: "Hiring Requirements", label: "Hiring Requirements", icon: Briefcase },
 ];
 
 const LeaderDashboard = () => {
@@ -64,47 +42,28 @@ const LeaderDashboard = () => {
   const [teamAttendance, setTeamAttendance] = useState([]);
   const [leaveAllowance, setLeaveAllowance] = useState(12);
   const [leavesRemaining, setLeavesRemaining] = useState(12);
-  const [taskFilter, setTaskFilter] = useState("All");
   const [profileVerified, setProfileVerified] = useState(true);
 
-  // ✅ All functions defined inside component (before useEffect)
   const fetchSummary = async () => {
-    try {
-      const res = await fetchJson("/leader/dashboard");
-      setSummary(res);
-    } catch (err) {
-      console.error("Error fetching leader dashboard summary:", err);
-    }
+    try { const res = await apiGet("/leader/dashboard"); setSummary(res); } 
+    catch (err) { console.error(err); }
   };
 
   const fetchTasks = async () => {
-    try {
-      const res = await fetchJson("/leader/my-assigned-tasks");
-      setTasks(res || []);
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-    }
+    try { const res = await apiGet("/leader/my-assigned-tasks"); setTasks(res || []); } 
+    catch (err) { console.error(err); }
   };
 
   const fetchTeamAttendance = async () => {
-    try {
-      const res = await fetchJson("/leader/team-attendance");
-      setTeamAttendance(res || []);
-    } catch (err) {
-      console.error("Error fetching team attendance:", err);
-    }
+    try { const res = await apiGet("/leader/team-attendance"); setTeamAttendance(res || []); } 
+    catch (err) { console.error(err); }
   };
 
   const fetchProfileStatus = async () => {
-    try {
-      const res = await fetchJson("/leader/profile");
-      setProfileVerified(res?.profileVerified || false);
-    } catch (err) {
-      console.error("Error fetching profile status:", err);
-    }
+    try { const res = await apiGet("/leader/profile"); setProfileVerified(res?.profileVerified || false); } 
+    catch (err) { console.error(err); }
   };
 
-  // ✅ useEffect runs when "active" changes
   useEffect(() => {
     if (active === "Dashboard") {
       fetchSummary();
@@ -114,294 +73,195 @@ const LeaderDashboard = () => {
     }
   }, [active]);
 
-  // Prepare data for Attendance Pie Chart
   const getAttendanceData = () => {
     const statusCount = { Present: 0, Leave: 0, Absent: 0, "Over-time": 0 };
     teamAttendance.forEach((member) => {
-      const raw = member?.status;
-      const ci = member?.attendance?.checkIn;
-      const co = member?.attendance?.checkOut;
-      const label = raw === "Over-time" || (raw === "Holiday" && (ci || co)) ? "Over-time" : raw;
-      if (label in statusCount) {
-        statusCount[label]++;
-      } else {
-        statusCount.Absent++;
-      }
+      const label = member?.status === "Over-time" ? "Over-time" : member?.status;
+      if (label in statusCount) statusCount[label]++;
+      else statusCount.Absent++;
     });
     return [
-      { name: "Present", value: statusCount.Present, color: "#10B981" },
-      { name: "Leave", value: statusCount.Leave, color: "#3B82F6" },
-      { name: "Over-time", value: statusCount["Over-time"], color: "#EC4899" },
+      { name: "Present", value: statusCount.Present, color: "#12637E" },
+      { name: "Leave", value: statusCount.Leave, color: "#1A9DC2" },
+      { name: "Over-time", value: statusCount["Over-time"], color: "#242736" },
       { name: "Absent", value: statusCount.Absent, color: "#EF4444" },
     ];
   };
 
-  // Prepare data for Task Status Bar Chart
   const getTaskData = () => {
     const statusCount = { Completed: 0, "In Progress": 0, Pending: 0 };
-    tasks.forEach((task) => {
-      if (task.status in statusCount) {
-        statusCount[task.status]++;
-      }
-    });
+    tasks.forEach((task) => { if (task.status in statusCount) statusCount[task.status]++; });
     return [
-      { status: "Completed", count: statusCount.Completed },
-      { status: "In Progress", count: statusCount["In Progress"] },
-      { status: "Pending", count: statusCount.Pending },
+      { status: "Done", count: statusCount.Completed },
+      { status: "Doing", count: statusCount["In Progress"] },
+      { status: "Todo", count: statusCount.Pending },
     ];
   };
 
   return (
-    <div className="min-h-screen flex bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+    <div className="min-h-screen flex bg-gray-50/50">
       <LeaderSidebar tabs={TABS} active={active} onChange={setActive} />
 
-      <main className="flex-1 px-2 sm:px-4 md:px-10 py-4 sm:py-6 md:ml-64 h-screen overflow-y-auto pt-16 md:pt-6">
-        {active === "Dashboard" && (
-          <section>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 mb-6">
-              <div>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold mb-2 text-[var(--color-primary)]">
-                  Welcome back, {summary?.leaderName || "Leader"}!
-                </h2>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
-                  Team's performance overview
-                </p>
-              </div>
-              {!profileVerified && (
-                <div className="w-full md:w-auto bg-yellow-900/30 text-yellow-400 border border-yellow-800 px-2 sm:px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium">
-                  ⚠️ Profile Unverified - Complete verification
+      <main className="flex-1 md:ml-60 min-h-screen overflow-x-hidden transition-all duration-300">
+        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-12">
+          {active === "Dashboard" && (
+            <div className="animate-fadeIn space-y-12">
+              <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slideUp">
+                <div>
+                  <h2 className="text-5xl font-black mb-3 text-primary tracking-tighter leading-tight">
+                    Welcome back, <span className="text-secondary">{summary?.leaderName || "Leader"}</span>!
+                  </h2>
+                  <p className="text-lg font-semibold text-secondary/70 flex items-center gap-2">
+                    <Calendar size={18} />
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
                 </div>
-              )}
-            </div>
+                {!profileVerified && (
+                  <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2.5 rounded-xl text-[10px] font-black border border-amber-200 uppercase tracking-widest shadow-sm">
+                    <AlertCircle size={14} /> Verification Pending
+                  </motion.div>
+                )}
+              </header>
 
-            {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-5">
-              <div className="p-3 sm:p-5 mb-2 card-glow">
-                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
-                  Total Team Members
-                </div>
-                <div className="text-3xl sm:text-4xl font-bold mt-2">
-                  {summary?.teamMembers ?? "--"}
-                </div>
-                <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Members under supervision
-                </div>
-              </div>
-
-              <div className="p-3 sm:p-5 card-glow">
-                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
-                  Tasks Assigned
-                </div>
-                <div className="text-3xl sm:text-4xl font-bold mt-2">
-                  {summary?.tasksAssigned ?? "--"}
-                </div>
-                <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Tasks assigned
-                </div>
-              </div>
-
-              <div className="p-3 sm:p-5 card-glow">
-                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">
-                  Projects under Leader
-                </div>
-                <div className="text-3xl sm:text-4xl font-bold mt-2">
-                  {summary?.projectsUnderLeader ?? "--"}
-                </div>
-                <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Projects leading
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[
+                  { label: "Total Members", val: summary?.teamMembers || 0, sub: "Team Size", icon: <Users />, color: "bg-cyan-50 text-[#12637E]" },
+                  { label: "Tasks Assigned", val: summary?.tasksAssigned || 0, sub: "Assigned Tasks", icon: <ClipboardCheck />, color: "bg-blue-50 text-[#1A9DC2]" },
+                  { label: "My Projects", val: summary?.projectsUnderLeader || 0, sub: "Active Projects", icon: <Briefcase />, color: "bg-amber-50 text-amber-600" },
+                  { label: "Leaves Remaining", val: leavesRemaining ?? 0, sub: `Of ${leaveAllowance} Days`, icon: <FileText />, color: "bg-emerald-50 text-emerald-600" },
+                ].map((s, i) => (
+                  <motion.div
+                    key={s.label}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                    className="bg-white p-6 rounded-[2rem] border border-gray-150 shadow-md hover:shadow-lg transition-all flex flex-col justify-between h-[160px] relative overflow-hidden group"
+                  >
+                    <div className="absolute top-0 right-0 p-5 opacity-[0.03] group-hover:opacity-[0.06] group-hover:scale-110 transition-all text-primary rotate-12">
+                      {React.cloneElement(s.icon, { size: 100 })}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{s.label}</span>
+                      <div className={`p-2.5 rounded-xl ${s.color} shadow-sm`}>
+                        {React.cloneElement(s.icon, { size: 20 })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-3xl font-extrabold text-gray-900 tracking-tight">{s.val}</div>
+                      <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">{s.sub}</div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
 
-              <div className="p-3 sm:p-5 card-glow">
-                <div className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Leaves Remaining</div>
-                <div className="text-3xl sm:text-4xl font-bold mt-2">{leavesRemaining ?? "--"}</div>
-                <div className="text-xs text-[var(--color-text-secondary)] mt-1">
-                  Paid days left (of {leaveAllowance})
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200">
+                  <h3 className="text-xl font-black text-primary tracking-tight mb-8 flex items-center gap-3">
+                    <TrendingUp size={20} className="text-secondary" /> Workforce Pulse
+                  </h3>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={getAttendanceData()} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
+                          {getAttendanceData().map((e, i) => <Cell key={i} fill={e.color} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: '900' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-8">
+                    {getAttendanceData().map((e, i) => (
+                      <div key={i} className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: e.color }} />
+                        <div className="text-[10px] font-black text-primary uppercase tracking-widest">{e.name}</div>
+                        <div className="ml-auto text-[10px] font-black text-secondary">{e.value}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Charts */}
-            <div className="mt-3 sm:mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-              {/* Attendance Pie Chart */}
-              <div className="min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
-                <h3 className="text-sm sm:text-base md:text-lg font-medium mb-4">Attendance Overview</h3>
-                <div className="card-glow rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={getAttendanceData()}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name} ${(percent * 100).toFixed(0)}%`
-                        }
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {getAttendanceData().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200">
+                  <h3 className="text-xl font-black text-primary tracking-tight mb-8 flex items-center gap-3">
+                    <CheckCircle2 size={20} className="text-secondary" /> Execution Velocity
+                  </h3>
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={getTaskData()}>
+                        <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#12637E' }} />
+                        <Tooltip cursor={{ fill: 'rgba(18, 99, 126, 0.05)' }} contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: '900' }} />
+                        <Bar dataKey="count" fill="#12637E" radius={[10, 10, 0, 0]} barSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
-              {/* Task Status Bar Chart */}
-              <div className="min-h-[300px] sm:min-h-[350px] md:min-h-[400px]">
-                <h3 className="text-sm sm:text-base md:text-lg font-medium mb-4">Task Status Overview</h3>
-                <div className="card-glow rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={getTaskData()}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="status" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#A855F7" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </div>
-
-            {/* Task Overview and Team Members Attendance */}
-            <div className="mt-3 sm:mt-4 md:mt-2 grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6 items-start">
-              {/* Team Members Attendance */}
-              <div className="max-h-[350px] md:max-h-[400px] overflow-y-auto">
-                <h3 className="text-sm sm:text-base md:text-lg font-medium mb-4">Team Members Attendance</h3>
-                <div className="card-glow overflow-x-auto max-h-64 overflow-y-auto rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
-                  {teamAttendance.length > 0 ? (
-                    <table className="w-full min-w-[320px] text-left text-xs md:text-sm">
-                      <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-xs md:text-sm sticky top-0">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+                <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden">
+                   <h3 className="text-xl font-black text-primary tracking-tight mb-8">Team Presence Status</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-gray-50/50">
                         <tr>
-                          <th className="p-1 sm:p-2 md:p-4">Name</th>
-                          <th className="p-1 sm:p-2 md:p-4">Status</th>
-                          <th className="p-1 sm:p-2 md:p-4 hidden md:table-cell">Check In</th>
-                          <th className="p-1 sm:p-2 md:p-4 hidden md:table-cell">Check Out</th>
+                           <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest">Name</th>
+                           <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest text-right">Status</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {teamAttendance.map((member) => (
-                          <tr
-                            key={member._id}
-                            className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(167,86,250,0.05)] transition-all"
-                          >
-                            <td className="p-1 sm:p-2 md:p-4 font-medium text-xs sm:text-sm">{member.name}</td>
-                            <td className="p-1 sm:p-2 md:p-4">
-                              <span
-                                className={`px-1 sm:px-2 py-0.5 md:py-1 rounded text-xs md:text-sm ${
-                                  member.status === "Present"
-                                    ? "bg-green-600/30 text-green-400"
-                                    : member.status === "Leave"
-                                    ? "bg-blue-600/30 text-blue-400"
-                                    : member.status === "Over-time"
-                                    ? "bg-pink-600/30 text-pink-400"
-                                    : "bg-red-600/30 text-red-400"
-                                }`}
-                              >
-                                {member.status}
-                              </span>
-                            </td>
-                            <td className="p-1 sm:p-2 md:p-4 text-xs hidden md:table-cell">
-                              {member.attendance?.checkIn
-                                ? new Date(member.attendance.checkIn).toLocaleTimeString()
-                                : "-"}
-                            </td>
-                            <td className="p-1 sm:p-2 md:p-4 text-xs hidden md:table-cell">
-                              {member.attendance?.checkOut
-                                ? new Date(member.attendance.checkOut).toLocaleTimeString()
-                                : "-"}
+                      <tbody className="divide-y divide-gray-100">
+                        {teamAttendance.slice(0, 5).map((m) => (
+                          <tr key={m._id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="p-4 text-sm font-black text-primary">{m.name}</td>
+                            <td className="p-4 text-right">
+                              <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                m.status === 'Present' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-amber-50 text-amber-600 border-amber-200'
+                              }`}>{m.status}</span>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  ) : (
-                    <p className="text-center py-6 text-xs sm:text-sm text-gray-400">
-                      No team members found.
-                    </p>
-                  )}
+                  </div>
                 </div>
-              </div>
-
-              {/* Task Overview */}
-              <div className="max-h-[400px] overflow-y-auto">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                  <h3 className="text-sm sm:text-base md:text-lg font-medium">Task Overview</h3>
-                  <select
-                    value={taskFilter}
-                    onChange={(e) => setTaskFilter(e.target.value)}
-                    className="px-2 sm:px-3 py-1 rounded text-xs sm:text-sm bg-gray-700 text-gray-300 border border-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                  >
-                    <option value="All">All</option>
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Completed">Completed</option>
-                  </select>
-                </div>
-                <div className="card-glow overflow-x-auto max-h-64 overflow-y-auto rounded-lg bg-[var(--color-surface)] p-2 sm:p-3 md:p-4">
-                  {tasks.filter((task) => taskFilter === "All" || task.status === taskFilter).length > 0 ? (
-                    <table className="w-full min-w-[350px] text-left text-xs md:text-sm">
-                      <thead className="bg-[rgba(167,86,250,0.1)] text-gray-400 text-xs md:text-sm">
+ 
+                <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden">
+                   <h3 className="text-xl font-black text-primary tracking-tight mb-8">Recent Tasks</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="bg-gray-50/50">
                         <tr>
-                          <th className="p-1 sm:p-2 md:p-4">Assigned To</th>
-                          <th className="p-1 sm:p-2 md:p-4">Status</th>
-                          <th className="p-1 sm:p-2 md:p-4">Assigned On</th>
+                          <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest">Task</th>
+                           <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest text-right">Assigned Date</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {tasks
-                          .filter((task) => taskFilter === "All" || task.status === taskFilter)
-                          .map((task) => (
-                            <tr
-                              key={task._id}
-                              className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(167,86,250,0.05)] transition-all"
-                            >
-                              <td className="p-1 sm:p-2 md:p-4 text-xs sm:text-sm">
-                                {task.assignedTo?.name || "-"}
-                              </td>
-                              <td className="p-1 sm:p-2 md:p-4">
-                                <span
-                                  className={`px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs md:text-sm ${
-                                    task.status === "Completed"
-                                      ? "bg-green-600/30 text-green-400"
-                                      : task.status === "In Progress"
-                                      ? "bg-yellow-600/30 text-yellow-400"
-                                      : "bg-red-600/30 text-red-400"
-                                  }`}
-                                >
-                                  {task.status}
-                                </span>
-                              </td>
-                              <td className="p-1 sm:p-2 md:p-4 text-xs">
-                                {new Date(task.assignedAt).toLocaleDateString()}
-                              </td>
-                            </tr>
-                          ))}
+                      <tbody className="divide-y divide-gray-100">
+                        {tasks.slice(0, 5).map((t) => (
+                          <tr key={t._id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="p-4">
+                              <div className="text-sm font-black text-primary">{t.assignedTo?.name}</div>
+                              <div className="text-[9px] font-bold text-secondary/40 uppercase tracking-widest">{t.status}</div>
+                            </td>
+                             <td className="p-4 text-right text-[10px] font-black text-secondary/40 uppercase tracking-widest">
+                              {new Date(t.assignedAt).toLocaleDateString()}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
-                  ) : (
-                    <p className="text-center py-6 text-xs sm:text-sm text-gray-400">
-                      No {taskFilter === "All" ? "" : `${taskFilter.toLowerCase()} `}tasks found.
-                    </p>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
-          </section>
-        )}
+          )}
 
-        {active === "Attendance" && <LeaderAttendancePage />}
-        {active === "My Teams" && <LeaderTeamsPage />}
-        {active === "My Projects" && <LeaderProjectsPage />}
-        {active === "Leaves" && <LeaderLeavesPage />}
-        {active === "Assign Task" && <AssignTaskPage />}
-        {active === "Profile" && <Profile />}
-        {active === "Contact Employee" && <ContactEmployeePage />}
+          {active === "Attendance" && <LeaderAttendance />}
+          {active === "My Teams" && <LeaderTeamsPage />}
+          {active === "My Projects" && <LeaderProjectsPage />}
+          {active === "Leaves" && <LeaderLeavesPage />}
+          {active === "Assign Task" && <AssignTaskPage />}
+          {active === "Hiring Requirements" && <VacancyManagementPage />}
+          {active === "Profile" && <Profile />}
+          {active === "Contact Employee" && <ContactEmployeeLeaderPage />}
+        </div>
       </main>
     </div>
   );

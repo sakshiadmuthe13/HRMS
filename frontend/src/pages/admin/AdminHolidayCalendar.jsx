@@ -8,7 +8,8 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { Calendar as CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Calendar as CalendarIcon, Plus, Trash2, ChevronLeft, ChevronRight, Info, AlertCircle, Clock } from "lucide-react";
 import { toast } from "react-toastify";
 import DatePicker from "../../components/DatePicker";
 
@@ -152,142 +153,169 @@ const AdminHolidayCalendar = () => {
     }
   };
 
+
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-2 sm:p-4 md:p-6 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-2 sm:mt-4 mb-6 sm:mb-8">
-        <h2 className="text-3xl font-bold text-[var(--color-primary)] flex items-center gap-2">
-          <CalendarIcon className="w-8 h-8" /> Holiday Calendar
-        </h2>
-        <div className="flex gap-2 mb-4">
+    <div className="min-h-screen bg-background text-primary animate-fadeIn">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <h2 className="text-4xl font-black text-primary tracking-tight mb-2 flex items-center gap-3">
+            <CalendarIcon size={32} className="text-primary" />
+            Holiday Registry
+          </h2>
+          <p className="text-secondary font-medium opacity-80">Define organizational holidays and manage weekend cycles.</p>
+        </div>
+        
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl shadow-xl shadow-primary/5 border border-gray-200">
           <button
             onClick={() => setActiveMonth(subMonths(activeMonth, 1))}
-            className="btn bg-[var(--color-surface)] border border-white/10 hover:bg-white/5 text-white shadow-md"
+            className="p-3 hover:bg-gray-50 rounded-xl text-primary transition-all"
           >
-            Prev
+            <ChevronLeft size={24} />
           </button>
+          <div className="px-6 font-black text-primary text-lg">
+            {format(activeMonth, "MMMM yyyy")}
+          </div>
           <button
             onClick={() => setActiveMonth(addMonths(activeMonth, 1))}
-            className="btn bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white shadow-md"
+            className="p-3 hover:bg-gray-50 rounded-xl text-primary transition-all"
           >
-            Next
+            <ChevronRight size={24} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="lg:col-span-2 card-glow p-4 md:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">
-              {format(activeMonth, "MMMM yyyy")}
-            </h3>
-            {loading && (
-              <span className="text-sm text-[var(--color-text-secondary)] animate-pulse">
-                Loading...
-              </span>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Calendar Grid */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-primary/5 border border-gray-200">
+            <div className="grid grid-cols-7 gap-4">
+              {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
+                <div key={day} className="text-center text-[10px] font-black text-secondary uppercase tracking-widest mb-4">
+                  {day}
+                </div>
+              ))}
+
+              {Array.from({ length: firstDayOfMonth }).map((_, index) => (
+                <div key={`empty-${index}`} className="aspect-square"></div>
+              ))}
+
+              {daysInMonth.map((day) => {
+                const key = format(day, "yyyy-MM-dd");
+                const holiday = monthHolidayMap.get(key);
+                const isHoliday = !!holiday;
+
+                const cellVariantClass = isHoliday
+                  ? holiday?.type === "WEEKEND"
+                    ? "bg-[#EF4444]/50 border-red-200 text-red-500 shadow-md"
+                    : "bg-red-600 border-red-700 text-white shadow-lg shadow-red-700/20"
+                  : "bg-gray-50/50 border-gray-200 text-primary hover:bg-white hover:shadow-xl hover:shadow-primary/5";
+
+                return (
+                  <motion.div
+                    key={key}
+                    whileHover={{ scale: 1.05 }}
+                    className={`aspect-square p-3 rounded-2xl border transition-all flex flex-col items-start justify-between relative group overflow-hidden ${cellVariantClass}`}
+                  >
+                    <div className="text-sm font-black">{format(day, "d")}</div>
+
+                    {isHoliday && (
+                      <div className="text-[9px] font-bold leading-tight opacity-80 uppercase tracking-tighter">
+                        {holiday.type === "WEEKEND" ? "Weekend" : holiday.description}
+                      </div>
+                    )}
+
+                    {holiday && holiday.type === "CUSTOM" && (
+                      <button
+                        onClick={() => handleDeleteHoliday(holiday)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-3">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div
-                key={day}
-                className="text-center text-sm font-medium text-[var(--color-text-secondary)]"
-              >
-                {day}
+          <div className="bg-primary p-8 rounded-[2.5rem] shadow-2xl text-white flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-white/10 rounded-2xl border border-gray-200/5">
+                <Info size={24} />
               </div>
-            ))}
-
-            {/* Empty cells for days before the first day of the month */}
-            {Array.from({ length: firstDayOfMonth }).map((_, index) => (
-              <div key={`empty-${index}`} className="h-24"></div>
-            ))}
-
-            {daysInMonth.map((day) => {
-              const key = format(day, "yyyy-MM-dd");
-              const holiday = monthHolidayMap.get(key);
-
-              const bgColor = holiday
-                ? "bg-red-500/90"
-                : "bg-green-500/80";
-              const borderColor = holiday ? "border-red-300" : "border-green-300";
-              const description = holiday?.description || "Working Day";
-
-              return (
-                <div
-                  key={key}
-                  className={`h-24 p-3 rounded-lg border shadow-md flex flex-col items-start justify-between text-white transition-all duration-200 hover:scale-[1.02] ${bgColor} ${borderColor}`}
-                >
-                  <div className="text-lg font-bold">{format(day, "d")}</div>
-                  <div className="text-xs leading-snug">
-                    {holiday?.type === "WEEKEND" ? "Weekend Off" : description}
-                  </div>
-                  {holiday && holiday.type === "CUSTOM" && (
-                    <button
-                      onClick={() => handleDeleteHoliday(holiday)}
-                      className="self-end flex items-center gap-1 text-xs text-white/80 hover:text-white"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+              <div>
+                <h4 className="font-black text-lg">Auto-Notifications Active</h4>
+                <p className="text-sm opacity-60 font-medium">All employees will be alerted of new holiday scheduling.</p>
+              </div>
+            </div>
+            <Clock size={40} className="opacity-10" />
           </div>
         </div>
 
-        <div className="card-glow p-4 md:p-6 h-full">
-          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-            <Plus size={18} /> Schedule Holiday
-          </h3>
-          <form className="space-y-4" onSubmit={handleCreateHoliday}>
-            <div>
-              <label className="block text-sm text-[var(--color-text-secondary)] mb-1">
-                Date
-              </label>
-              <DatePicker 
-                value={displayDate} 
-                onChange={(val) => {
-                  setDisplayDate(val);
-                  setForm((prev) => ({ ...prev, date: convertDMYtoYMD(val) }));
-                }} 
-                placeholder="dd/mm/yyyy" 
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-[var(--color-text-secondary)] mb-1">
-                Description
-              </label>
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Reason for holiday"
-                rows={3}
-                className="w-full bg-[var(--color-background)] border border-white/10 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full btn bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white shadow-md"
-            >
-              {submitting ? "Saving..." : "Add Holiday"}
-            </button>
-          </form>
+        {/* Action Sidebar */}
+        <div className="space-y-8">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200">
+            <h3 className="text-xl font-black mb-6 text-primary flex items-center gap-2">
+              <Plus size={20} />
+              Provision Holiday
+            </h3>
+            <form className="space-y-6" onSubmit={handleCreateHoliday}>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Event Date</label>
+                <DatePicker 
+                  value={displayDate} 
+                  onChange={(val) => {
+                    setDisplayDate(val);
+                    setForm((prev) => ({ ...prev, date: convertDMYtoYMD(val) }));
+                  }} 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Reason / Description</label>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="e.g. Annual Summit"
+                  rows={4}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all resize-none"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full py-4 bg-primary text-white font-bold rounded-2xl hover:bg-secondary transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {submitting ? "Processing..." : <><Plus size={20} /> Add to Calendar</>}
+              </button>
+            </form>
+          </div>
 
-          <div className="mt-6">
-            <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-2">
-              Legend
-            </h4>
-            <ul className="space-y-2 text-sm text-[var(--color-text-secondary)]">
-              <li>
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                Working Day
-              </li>
-              <li>
-                <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                Holiday
-              </li>
-            </ul>
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200">
+            <h4 className="text-xs font-black text-primary uppercase tracking-widest mb-6">Calendar Key</h4>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-red-500 shadow-lg shadow-red-500/20"></div>
+                <span className="text-sm font-bold text-secondary">Statutory Holiday</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-gray-50 border border-gray-200"></div>
+                <span className="text-sm font-bold text-secondary">Regular Working Day</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full bg-[#EF4444]/50"></div>
+                <span className="text-sm font-bold text-secondary">Weekend Cycle</span>
+              </div>
+            </div>
+            
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={18} className="text-secondary mt-0.5" />
+                <p className="text-[10px] text-secondary font-medium leading-relaxed uppercase tracking-wider opacity-60">
+                  Weekend cycles are automatically calculated based on organizational policy and cannot be manually modified.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

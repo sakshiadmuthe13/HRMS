@@ -1,6 +1,7 @@
-// src/pages/Login.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Lock, User, ArrowLeft } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -32,15 +33,14 @@ const Login = () => {
         throw new Error(data.message || "Login failed");
       }
 
-      // Save JWT token & user info in localStorage
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
       localStorage.setItem("name", data.name);
 
-      // Role-based redirect
       if (data.role === "admin") navigate("/admin-dashboard");
       else if (data.role === "leader") navigate("/leader-dashboard");
       else if (data.role === "employee") navigate("/employee-dashboard");
+      else if (data.role === "hr") navigate("/hr-dashboard");
       else navigate("/");
 
     } catch (err) {
@@ -51,115 +51,135 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dark1 px-6 ">
-      <div className="flex flex-col md:flex-row w-full max-w-4xl bg-dark2 rounded-3xl shadow-2xl overflow-hidden border border-[#1C1436]">
-        {/* Left Section - Login Form */}
-        <div className="md:w-1/2 p-10 flex flex-col justify-center relative z-10 bg-dark2">
-          <h2 className="text-4xl font-extrabold mb-6 text-primary text-center">
-            Login
-          </h2>
-          <p className="text-gray-300 mb-8 text-center">
-            Enter your credentials to access your account
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB] p-6 font-sans relative overflow-hidden">
+      {/* Page Background Bubbles */}
+      <div className="absolute top-[-25%] left-[-15%] w-[50vw] h-[50vw] rounded-full bg-[#1A9DC2] opacity-10 z-0 pointer-events-none"></div>
+      <div className="absolute bottom-[-40%] right-[-20%] w-[60vw] h-[60vw] rounded-full bg-[#12637E] opacity-5 z-0 pointer-events-none"></div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Decorative Full Bubbles */}
+      <div className="absolute top-[-200px] right-[10%] md:right-[15%] w-[300px] h-[300px] rounded-full bg-[#1A9DC2] opacity-10 z-0 pointer-events-none"></div>
+      <div className="absolute bottom-[-200px] left-[10%] md:left-[15%] w-[300px] h-[300px] rounded-full bg-[#12637E] opacity-10 z-0 pointer-events-none"></div>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-[850px] bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex flex-col md:flex-row overflow-hidden relative z-10"
+        style={{ minHeight: '500px' }}
+      >
+        {/* Left Decorative Section */}
+        <div className="hidden md:flex md:w-[45%] relative overflow-hidden flex-col justify-center z-0">
+          {/* Company Image Background */}
+          <img
+            src="/company-img.webp"
+            alt="Company Facility"
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
+          {/* Thematic Overlays for color consistency */}
+          <div className="absolute inset-0 bg-[#12637E]/20 mix-blend-multiply z-0"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#12637E] to-transparent opacity-80 z-0"></div>
+
+          {/* Toggle buttons overlay */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-end z-20">
+            <div className="bg-white rounded-l-full py-2.5 pl-8 pr-10 text-[13px] font-black tracking-wide shadow-lg text-[#12637E] relative z-10 flex items-center">
+              LOGIN
+            </div>
+            <Link to="/forgot-password" className="py-2.5 pr-10 text-[13px] font-black tracking-wide text-white/70 hover:text-white transition mt-1">
+              Recover
+            </Link>
+          </div>
+        </div>
+
+        {/* Right Form Section */}
+        <div className="w-full md:w-[55%] p-10 lg:p-12 flex flex-col justify-center relative bg-white z-10">
+          <div className="flex flex-col items-center mb-10">
+            <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-b from-[#1A9DC2] to-[#12637E] flex items-center justify-center mb-4 shadow-[0_10px_20px_rgba(18,99,126,0.3)] border-4 border-gray-200 relative">
+              <div className="absolute inset-0 rounded-full border border-gray-200/20"></div>
+              <User className="text-white" size={32} strokeWidth={2} />
+            </div>
+            <h2 className="text-[20px] font-black text-[#12637E] tracking-widest uppercase">
+              LOGIN
+            </h2>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-7 w-full max-w-[300px] mx-auto">
             {error && (
-              <div className="text-red-500 text-center font-medium">{error}</div>
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-red-50 text-red-500 p-3 rounded-lg text-xs font-bold border border-red-200 text-center"
+              >
+                {error}
+              </motion.div>
             )}
 
-            <div>
-              <label className="block text-gray-300 mb-2 font-medium">
-                Email
-              </label>
+            <div className="relative border-b-[1.5px] border-gray-200 focus-within:border-[#12637E] transition-colors py-2 flex items-center group">
+              <User className="text-gray-500 group-focus-within:text-[#12637E] mr-4 transition-colors" size={18} />
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="you@example.com"
-                className="w-full px-5 py-3 rounded-xl border border-gray-300 bg-dark3 text-textLight outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                placeholder="Email"
+                className="w-full bg-transparent outline-none text-gray-900 placeholder-gray-400 text-[13px] font-semibold"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-gray-300 mb-2 font-medium">
-                Password
-              </label>
+            <div className="relative border-b-[1.5px] border-gray-200 focus-within:border-[#12637E] transition-colors py-2 flex items-center group">
+              <Lock className="text-gray-500 group-focus-within:text-[#12637E] mr-4 transition-colors" size={18} />
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Enter your password"
-                className="w-full px-5 py-3 rounded-xl border border-gray-300 bg-dark3 text-textLight outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                placeholder="Password"
+                className="w-full bg-transparent outline-none text-gray-900 placeholder-gray-400 text-[13px] font-semibold"
                 required
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary text-white py-3 rounded-xl font-semibold text-lg shadow-md hover:bg-secondary hover:shadow-lg transition-all duration-300 disabled:opacity-50"
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-
-            <div className="text-center">
-              <Link
-                to="/forgot-password"
-                className="text-base text-primary text-center hover:underline cursor-pointer"
-              >
+            <div className="flex items-center justify-between pt-4">
+              <Link to="/forgot-password" className="text-[10px] font-bold text-[#1A9DC2] hover:text-[#12637E] transition">
                 Forgot Password?
               </Link>
-            </div>
-
-            <div className="text-center">
-              <Link
-                to="/"
-                className="text-base text-primary text-center cursor-pointer"
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[#1A9DC2] hover:bg-[#12637E] text-white px-8 py-2.5 rounded-full font-bold text-[12px] tracking-wide shadow-[0_5px_15px_rgba(72,138,160,0.4)] transition-all duration-300 disabled:opacity-50 active:scale-95"
               >
-                ← Back to Home
-              </Link>
+                {loading ? "..." : "LOGIN"}
+              </button>
             </div>
           </form>
-        </div>
 
-        {/* Right Section - Info Panel */}
-        <div
-          className="hidden md:flex md:w-1/2 p-10 flex-col justify-center items-center text-center relative"
-          style={{
-            backdropFilter: "blur(20px)",
-            background: `linear-gradient(135deg, rgba(14,166,240,0.4) 0%, rgba(167,86,250,0.4) 50%, rgba(14,166,240,0.2) 100%)`,
-          }}
-        >
-          <div className="bg-white/10 p-6 rounded-xl mb-6">
-            <svg
-              className="w-12 h-12 text-white mb-4 mx-auto"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2M8 11V7a4 4 0 118 0v4M4 11h16v10H4V11z"
-              />
-            </svg>
+          {/* Social Logins */}
+          {/* <div className="mt-12 w-full max-w-[300px] mx-auto flex items-center justify-between text-[11px] font-bold text-gray-900">
+            <span>Or Login With</span>
+            <div className="flex gap-4">
+              <button className="flex items-center gap-1.5 hover:opacity-70 transition">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-4 h-4" alt="Google" />
+                Google
+              </button>
+              <button className="flex items-center gap-1.5 hover:opacity-70 transition">
+                <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="w-4 h-4" alt="Facebook" />
+                Facebook
+              </button>
+            </div>
+          </div> */}
+
+          <div className="pt-10 text-center text-[13px] font-black text-[#1A9DC2] hover:text-[#12637E] transition">
+            <Link to="/">
+              <div className="flex items-center gap-2 justify-center">
+                <ArrowLeft size={18} /> Back home
+              </div>
+            </Link>
           </div>
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
-            Secure Login
-          </h3>
-          <p className="text-gray-300 max-w-xs">
-            Your credentials are encrypted and safely stored. Login securely to
-            access your employee dashboard and manage tasks efficiently.
-          </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
 
 export default Login;
+

@@ -1,70 +1,162 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent-primary: var(--color-accent-primary);
+  --color-accent-secondary: var(--color-accent-secondary);
+  --color-bg-app: var(--color-bg-app);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-danger: var(--color-danger);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-border: var(--color-border);
+}
+
 :root {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --font-sans: 'Inter', 'Outfit', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  --color-background: #030712;
-  --color-surface: #111828;
-  --color-border: #1C1436;
+  /* Backgrounds */
+  --color-bg-app:       #F9FAFB;   /* page / outermost background */
+  --color-bg-card:      #FFFFFF;   /* cards and panels */
+  --color-bg-elevated:  #F3F4F6;   /* sidebar, nav, hover states */
 
-  --color-primary: #0EA6F0;
-  --color-secondary: #A756FA;
-  --color-accent-pink: #ED4797;
-  --color-accent-blue: #2A6BF4;
+  /* Accents */
+  --color-primary:        #12637E;
+  --color-secondary:      #1A9DC2;
+  --color-accent-primary: #12637E;
+  --color-accent-secondary: #1A9DC2;
 
-  --color-danger: #FF4638;
+  /* Semantic */
+  --color-success:  #22C55E;
+  --color-warning:  #F59E0B;
+  --color-danger:   #EF4444;
 
-  --color-text-primary: #F9FAFB;
-  --color-text-secondary: #9CA3AF;
+  /* Text */
+  --color-text-primary:   #111827;
+  --color-text-secondary: #6B7280;
+
+  /* Borders */
+  --color-border: #E5E7EB;
+
+  /* Shadows - Modern Layered Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(18, 99, 126, 0.05), 0 10px 10px -5px rgba(18, 99, 126, 0.02);
+  --shadow-premium: 0 20px 50px -12px rgba(18, 99, 126, 0.12);
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-background);
+  background-color: var(--color-bg-app);
   color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
-/* Tailwind custom classes in globals.css or a new CSS file */
-.card-glow {
-  background-color: rgba(17, 24, 40, 0.8);
-  border: 1px solid rgba(14, 166, 240, 0.5);
-  border-radius: 1rem;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 10px 25px rgba(14, 166, 240, 0.35);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+/* Modern Card Style */
+.card-premium {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 1.5rem;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
-.card-glow:hover {
-  transform: translateY(-7px);
-  box-shadow: 0 15px 35px rgba(14, 166, 240, 0.55);
+.card-premium:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-premium);
+  border-color: rgba(18, 99, 126, 0.2);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .btn {
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  padding: 0.75rem 1.5rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
 
-.btn:hover {
-  transform: scale(1.05);
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(18, 99, 126, 0.25);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-secondary);
+  box-shadow: 0 6px 20px rgba(18, 99, 126, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-primary);
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .input {
   width: 100%;
-  padding: 0.5rem;
-  margin-bottom: 1rem;
+  padding: 0.875rem 1rem;
   border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  background-color: var(--color-surface);
+  border-radius: 1rem;
+  background-color: white;
   color: var(--color-text-primary);
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
 }
 
 .input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 5px rgba(14, 166, 240, 0.5);
+  box-shadow: 0 0 0 4px rgba(18, 99, 126, 0.1);
+  background-color: white;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -76,59 +168,78 @@ body {
   scrollbar-width: none;
 }
 
-.text-primary {
-  color: var(--color-text-primary) !important;
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.025em;
+  color: var(--color-text-primary);
 }
 
-.text-secondary {
-  color: var(--color-text-secondary) !important;
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-.bg-primary {
-  background-color: var(--color-primary) !important;
+.animate-slideUp {
+  animation: slideUp 0.4s ease-out forwards;
 }
 
-.bg-surface {
-  background-color: var(--color-surface) !important;
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }
 
-.hover\:bg-secondary:hover {
-  background-color: var(--color-secondary) !important;
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
+/* Legacy & Utility */
+.text-primary { color: var(--color-primary) !important; }
+.text-secondary { color: var(--color-secondary) !important; }
+.bg-primary { background-color: var(--color-primary) !important; }
+.bg-surface { background-color: var(--color-bg-card) !important; }
+.border-primary { border-color: var(--color-primary) !important; }
 
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.3s ease-out;
-}
-
-/* === Custom style for calendar picker icons === */
+/* Custom style for calendar picker icons */
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(56%) sepia(99%) saturate(562%) hue-rotate(186deg) brightness(98%) contrast(99%);
+  filter: invert(30%) sepia(50%) saturate(1000%) hue-rotate(160deg) brightness(90%) contrast(90%);
   cursor: pointer;
+}
+
+/* Premium Table Styling */
+.table-premium {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-premium th {
+  background-color: var(--color-bg-app);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.table-premium td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.table-premium tr:last-child td {
+  border-bottom: none;
+}
+
+.table-premium tr:hover td {
+  background-color: rgba(18, 99, 126, 0.02);
 }

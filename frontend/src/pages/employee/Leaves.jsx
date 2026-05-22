@@ -1,123 +1,78 @@
-﻿import React, { useEffect, useState } from "react";
-import { parseISO, differenceInCalendarDays, startOfYear, endOfYear, max as dateMax, min as dateMin } from "date-fns";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { parseISO, differenceInCalendarDays, startOfYear, endOfYear, max as dateMax, min as dateMin, format } from "date-fns";
+import { Info, Calendar, Plus, FileText, CheckCircle2, XCircle, AlertTriangle, ArrowRight, History } from "lucide-react";
 import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
-const getToken = () => localStorage.getItem("token");
-
-// Helper to format dates as DD/MM/YYYY
-const formatDateDMY = (value) => {
-  if (!value) return "";
-  const dateStr = typeof value === "string" ? value.split("T")[0] : value;
-  if (typeof dateStr !== "string") return "";
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return "";
-  const [yyyy, mm, dd] = parts;
-  const d = String(dd).padStart(2, "0");
-  const m = String(mm).padStart(2, "0");
-  return `${d}/${m}/${yyyy}`;
-};
-
-const convertDMYToYMD = (dateStr) => {
-  if (!dateStr) return "";
-  const parts = dateStr.split("/");
-  if (parts.length !== 3) return dateStr;
-  const [dd, mm, yyyy] = parts;
-  return `${yyyy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
-};
 
 const fetchJson = async (path, opts = {}) => {
-  const token = getToken();
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const headers = { ...(opts.headers || {}) };
+  if (token && !headers.Authorization && !headers.authorization) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     ...opts,
+    headers,
   });
   if (!res.ok) {
     let text = await res.text();
-    try { text = JSON.parse(text); } catch (err) { void err; }
-    throw new Error((text && text.message) || res.statusText || "API error");
+    try { text = JSON.parse(text); } catch { }
+    throw new Error(text?.message || res.statusText || "API error");
   }
   const t = await res.text();
   return t ? JSON.parse(t) : null;
 };
 
-const calcTotalDays = (fromStr, toStr) => {
-  if (!fromStr || !toStr) return 0;
-  const from = new Date(fromStr);
-  const to = new Date(toStr);
-  if (isNaN(from) || isNaN(to) || to < from) return 0;
-  const oneDay = 1000 * 60 * 60 * 24;
-  return Math.floor((to - from) / oneDay) + 1;
+const apiGet = (p) => fetchJson(p);
+
+const convertDMYToYMD = (dmy) => {
+  if (!dmy) return "";
+  const parts = dmy.split("/");
+  if (parts.length !== 3) return "";
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
 
-const calcApprovedDaysThisYear = (leaves = []) => {
-  const yearStart = startOfYear(new Date());
-  const yearEnd = endOfYear(new Date());
-  let used = 0;
-  for (const l of leaves) {
-    if (!l) continue;
-    const status = (l.status || "").toString().toLowerCase();
-    if (status !== "approved") continue;
-    const from = l.fromDate ? parseISO(l.fromDate) : null;
-    const to = l.toDate ? parseISO(l.toDate) : null;
-    if (!from || !to || isNaN(from) || isNaN(to)) continue;
-    const start = dateMax([from, yearStart]);
-    const end = dateMin([to, yearEnd]);
-    if (end < start) continue;
-    used += differenceInCalendarDays(end, start) + 1;
-  }
-  return used;
+const formatDateDMY = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d)) return "";
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
-const calcPendingDaysThisYear = (leaves = []) => {
-  const yearStart = startOfYear(new Date());
-  const yearEnd = endOfYear(new Date());
-  let pending = 0;
-  for (const l of leaves) {
-    if (!l) continue;
-    const status = (l.status || "").toString().toLowerCase();
-    if (status !== "pending") continue;
-    const from = l.fromDate ? parseISO(l.fromDate) : null;
-    const to = l.toDate ? parseISO(l.toDate) : null;
-    if (!from || !to || isNaN(from) || isNaN(to)) continue;
-    const start = dateMax([from, yearStart]);
-    const end = dateMin([to, yearEnd]);
-    if (end < start) continue;
-    pending += differenceInCalendarDays(end, start) + 1;
-  }
-  return pending;
+const calcTotalDays = (start, end) => {
+  if (!start || !end) return 0;
+  const s = new Date(start);
+  const e = new Date(end);
+  if (isNaN(s) || isNaN(e)) return 0;
+  return differenceInCalendarDays(e, s) + 1;
 };
 
-const statusBadgeClass = (status) => {
-  if (!status) return "px-2 py-1 rounded bg-red-600/30 text-sm";
-  if (status === "Pending") return "px-2 py-1 rounded bg-yellow-600/40 text-sm";
-  if (status === "Approved") return "px-2 py-1 rounded bg-green-600/30 text-sm";
-  return "px-2 py-1 rounded bg-red-600/30 text-sm";
-};
-
-const modalTitle = (type) => {
-  if (type === "success") return "Success!";
-  if (type === "update") return "Updated!";
-  if (type === "info") return "Information";
-  return "Error!";
-};
-
-const modalEmoji = (type) => {
-  if (type === "success") return "✅";
-  if (type === "update") return "📝";
-  if (type === "info") return "ℹ️";
-  return "❌";
+const calcApprovedDaysThisYear = (leaves) => {
+  const now = new Date();
+  const yearStart = startOfYear(now);
+  const yearEnd = endOfYear(now);
+  let total = 0;
+  (leaves || []).forEach(l => {
+    if (l.status !== "Approved") return;
+    const from = parseISO(l.fromDate);
+    const to = parseISO(l.toDate);
+    const actualStart = dateMax([from, yearStart]);
+    const actualEnd = dateMin([to, yearEnd]);
+    if (actualStart <= actualEnd) {
+      total += differenceInCalendarDays(actualEnd, actualStart) + 1;
+    }
+  });
+  return total;
 };
 
 const Leaves = () => {
   const [leaves, setLeaves] = useState([]);
   const [leaveAllowance, setLeaveAllowance] = useState(12);
   const [remainingPaid, setRemainingPaid] = useState(12);
-  const [pendingRequested, setPendingRequested] = useState(0);
   const [approvedUsedDays, setApprovedUsedDays] = useState(null);
   const [unpaidUsedDays, setUnpaidUsedDays] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -141,420 +96,322 @@ const Leaves = () => {
       if (srvUnpaidUsed !== null) setUnpaidUsedDays(srvUnpaidUsed);
       const used = srvApprovedUsed !== null ? srvApprovedUsed : calcApprovedDaysThisYear(list);
       setRemainingPaid(Math.max(0, allowance - used));
-      setPendingRequested(calcPendingDaysThisYear(list));
-    } catch (err) {
-      console.error(err);
-      setModal({ show: true, type: "error", message: "Failed to fetch leaves. Please try again." });
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const apply = async () => {
-    try {
-      const { fromDate, toDate, reason } = form;
-      if (!fromDate || !toDate || !reason) return setModal({ show: true, type: "error", message: "Please fill all fields." });
-      
-      const fromDateYMD = convertDMYToYMD(fromDate);
-      const toDateYMD = convertDMYToYMD(toDate);
-      
-      if (new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "To date cannot be before From date." });
+    const { fromDate, toDate, reason } = form;
+    if (!fromDate || !toDate || !reason) return setModal({ show: true, type: "error", message: "Please complete all fields." });
+    
+    const fromDateYMD = convertDMYToYMD(fromDate);
+    const toDateYMD = convertDMYToYMD(toDate);
+    if (new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "Invalid date range." });
 
-      // Calculate requested days
-      const requestedDays = calcTotalDays(fromDateYMD, toDateYMD);
+    const requestedDays = calcTotalDays(fromDateYMD, toDateYMD);
 
-      // Show info message if this will be unpaid leave
-      if (role !== "admin" && remainingPaid === 0) {
-        // All requested days will be unpaid
-        setModal({
-          show: true,
-          type: "info",
-          message: `ℹ️ No Paid Leaves Remaining\n\nYou have used all ${leaveAllowance} paid leave days for this year.\n\nYour request for ${requestedDays} day(s) will be counted as UNPAID LEAVE.\n\nClick OK to continue with unpaid leave application.`,
-          onConfirm: async () => {
-            try {
-              await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
-              setForm({ fromDate: "", toDate: "", reason: "" });
-              await fetchMyLeaves();
-              setModal({ show: true, type: "success", message: "Your unpaid leave has been applied successfully! 📋" });
-            } catch (err) {
-              console.error(err);
-              setModal({ show: true, type: "error", message: "Failed to apply leave." });
-            }
-          }
-        });
-        return;
-      } else if (role !== "admin" && remainingPaid < requestedDays) {
-        // Partial unpaid leave
-        const paidDays = remainingPaid;
-        const unpaidDays = requestedDays - remainingPaid;
-        setModal({
-          show: true,
-          type: "info",
-          message: `ℹ️ Partial Paid Leave Available\n\nYou are requesting ${requestedDays} day(s), but only ${paidDays} paid day(s) remaining.\n\n✅ ${paidDays} day(s) will be PAID\n⚠️ ${unpaidDays} day(s) will be UNPAID\n\nClick OK to continue with this leave application.`,
-          onConfirm: async () => {
-            try {
-              await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
-              setForm({ fromDate: "", toDate: "", reason: "" });
-              await fetchMyLeaves();
-              setModal({ show: true, type: "success", message: "Your leave has been applied successfully! 🏖️" });
-            } catch (err) {
-              console.error(err);
-              setModal({ show: true, type: "error", message: "Failed to apply leave." });
-            }
-          }
-        });
-        return;
-      }
+    const submit = async () => {
+      try {
+        await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
+        setForm({ fromDate: "", toDate: "", reason: "" });
+        await fetchMyLeaves();
+        setModal({ show: true, type: "success", message: "Application submitted successfully." });
+      } catch (err) { setModal({ show: true, type: "error", message: err.message }); }
+    };
 
-      // Normal case - all paid leave or admin
-      await fetchJson("/employee/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
-      setForm({ fromDate: "", toDate: "", reason: "" });
-      await fetchMyLeaves();
-      setModal({ show: true, type: "success", message: "Your leave has been applied successfully! 🏖️" });
-    } catch (err) {
-      console.error(err);
-      setModal({ show: true, type: "error", message: "Failed to apply leave." });
+    if (role !== "admin" && remainingPaid < requestedDays) {
+      setModal({
+        show: true,
+        type: "info",
+        message: `Requested: ${requestedDays} days\nAvailable: ${remainingPaid} paid days\n\n${requestedDays - remainingPaid} days will be UNPAID.`,
+        onConfirm: submit
+      });
+    } else {
+      await submit();
     }
   };
 
-  const openEdit = (leave) => {
-    setEditing(leave);
-    const fromDateYMD = new Date(leave.fromDate).toISOString().slice(0, 10);
-    const toDateYMD = new Date(leave.toDate).toISOString().slice(0, 10);
-    const fromDateDMY = formatDateDMY(fromDateYMD);
-    const toDateDMY = formatDateDMY(toDateYMD);
-    setEditForm({ fromDate: fromDateDMY, toDate: toDateDMY, reason: leave.reason || "", id: leave._id });
+  const openEdit = (l) => {
+    setEditing(l);
+    setEditForm({ 
+      fromDate: formatDateDMY(l.fromDate), 
+      toDate: formatDateDMY(l.toDate), 
+      reason: l.reason || "", 
+      id: l._id 
+    });
   };
-
-  const closeEdit = () => { setEditing(null); setEditForm({ fromDate: "", toDate: "", reason: "", id: "" }); };
 
   const saveEdit = async () => {
     try {
-      if (!editForm.fromDate || !editForm.toDate || !editForm.reason) return setModal({ show: true, type: "error", message: "Please fill all fields." });
-      
+      setSavingEdit(true);
       const fromDateYMD = convertDMYToYMD(editForm.fromDate);
       const toDateYMD = convertDMYToYMD(editForm.toDate);
-      
-      if (new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "To date cannot be before From date." });
-
-      // Calculate new requested days
-      const newRequestedDays = calcTotalDays(fromDateYMD, toDateYMD);
-
-      // Find the original leave to calculate the difference
-      const originalLeave = leaves.find(l => l._id === editForm.id);
-      const originalDays = originalLeave ? calcTotalDays(originalLeave.fromDate, originalLeave.toDate) : 0;
-
-      // Show info message if this will be unpaid leave (only for approved leaves being edited)
-      if (role !== "admin" && originalLeave?.status === "Approved") {
-        const usedDays = leaveAllowance - remainingPaid;
-        const usedWithoutOriginal = usedDays - originalDays;
-        const availableAfterRemovingOriginal = leaveAllowance - usedWithoutOriginal;
-
-        if (availableAfterRemovingOriginal === 0) {
-          // All requested days will be unpaid
-          setModal({
-            show: true,
-            type: "info",
-            message: `ℹ️ No Paid Leaves Remaining\n\nYou have used all ${leaveAllowance} paid leave days for this year.\n\nYour updated request for ${newRequestedDays} day(s) will be counted as UNPAID LEAVE.\n\nClick OK to continue.`,
-            onConfirm: async () => {
-              try {
-                setSavingEdit(true);
-                await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) });
-                await fetchMyLeaves();
-                closeEdit();
-                setModal({ show: true, type: "update", message: "Your leave details have been updated successfully! ✏️" });
-              } catch (err) {
-                console.error(err);
-                setModal({ show: true, type: "error", message: "Failed to update leave." });
-              } finally { setSavingEdit(false); }
-            }
-          });
-          return;
-        } else if (availableAfterRemovingOriginal < newRequestedDays) {
-          // Partial unpaid leave
-          const paidDays = availableAfterRemovingOriginal;
-          const unpaidDays = newRequestedDays - availableAfterRemovingOriginal;
-          setModal({
-            show: true,
-            type: "info",
-            message: `ℹ️ Partial Paid Leave Available\n\nYou are requesting ${newRequestedDays} day(s), but only ${paidDays} paid day(s) remaining.\n\n✅ ${paidDays} day(s) will be PAID\n⚠️ ${unpaidDays} day(s) will be UNPAID\n\nClick OK to continue.`,
-            onConfirm: async () => {
-              try {
-                setSavingEdit(true);
-                await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) });
-                await fetchMyLeaves();
-                closeEdit();
-                setModal({ show: true, type: "update", message: "Your leave details have been updated successfully! ✏️" });
-              } catch (err) {
-                console.error(err);
-                setModal({ show: true, type: "error", message: "Failed to update leave." });
-              } finally { setSavingEdit(false); }
-            }
-          });
-          return;
-        }
-      }
-
-      // Normal case - all paid leave or admin or pending leave
-      setSavingEdit(true);
-      await fetchJson(`/employee/leave/${editForm.id}`, { method: "PATCH", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) });
+      await fetchJson(`/employee/leave/${editForm.id}`, { 
+        method: "PATCH", 
+        body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason }) 
+      });
       await fetchMyLeaves();
-      closeEdit();
-      setModal({ show: true, type: "update", message: "Your leave details have been updated successfully! ✏️" });
-    } catch (err) {
-      console.error(err);
-      setModal({ show: true, type: "error", message: "Failed to update leave." });
-    } finally { setSavingEdit(false); }
+      setEditing(null);
+      setModal({ show: true, type: "success", message: "Application updated." });
+    } catch (err) { setModal({ show: true, type: "error", message: err.message }); }
+    finally { setSavingEdit(false); }
   };
-
-  const closeModal = () => setModal({ show: false, type: "", message: "", onConfirm: null });
 
   const approvedUsed = approvedUsedDays ?? calcApprovedDaysThisYear(leaves);
   const paidUsed = Math.min(approvedUsed, leaveAllowance);
-  const unpaidUsed = (unpaidUsedDays ?? Math.max(0, approvedUsed - leaveAllowance));
+  const unpaidUsed = unpaidUsedDays ?? Math.max(0, approvedUsed - leaveAllowance);
 
   return (
-    <div className="space-y-4 md:space-y-6 p-3 md:p-0">
-      <div className="flex flex-col md:flex-row items-start md:items-center md:justify-between gap-3 md:gap-0">
-        <h2 className="text-2xl md:text-3xl font-bold text-[#A756FA] mb-0">📋 Leaves</h2>
-        <div className="text-xs md:text-sm bg-white/5 px-2 md:px-3 py-2 rounded-md w-full md:w-auto whitespace-nowrap overflow-x-auto">
-          <div className="flex gap-2 md:gap-3">
-            <span><span className="text-gray-400">Allowance:</span> <span className="font-semibold">{leaveAllowance}</span></span>
-            <span className="text-gray-400">|</span>
-            <span><span className="text-gray-400">Used:</span> <span className="font-semibold">{paidUsed}</span></span>
-            <span className="text-gray-400">|</span>
-            <span><span className="text-gray-400">Unpaid:</span> <span className="font-semibold">{unpaidUsed}</span></span>
+    <div className="animate-fadeIn max-w-7xl mx-auto space-y-12 pb-20">
+      
+      {/* Page Header */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 animate-slideUp">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+            <FileText size={28} />
+          </div>
+          <div>
+            <h2 className="text-5xl font-black text-primary tracking-tighter mb-3 leading-tight">My Leaves</h2>
+            <div className="inline-flex items-center gap-3 text-secondary/80 font-bold text-sm bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-gray-100">
+              <Calendar size={18} className="text-primary" />
+              {format(new Date(), 'EEEE, do MMMM yyyy')}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Info message if no paid leaves remaining */}
-      {remainingPaid === 0 && role !== "admin" && (
-        <div className="card-glow bg-blue-600/20 border border-blue-500/30 p-3 md:p-4 rounded-xl">
-          <div className="flex items-start gap-2 md:gap-3">
-            <span className="text-lg md:text-2xl flex-shrink-0">ℹ️</span>
-            <div>
-              <div className="font-semibold text-blue-300 text-sm md:text-base">No Paid Leaves Remaining</div>
-              <div className="text-xs md:text-sm text-blue-200 mt-1">
-                You have used all {leaveAllowance} paid leave days. Any new applications will be <strong>unpaid</strong>.
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: "Annual Allowance", val: leaveAllowance, icon: <Calendar />, color: "bg-primary text-white", desc: "Total paid days per year" },
+          { label: "Utilized Days", val: paidUsed, icon: <CheckCircle2 />, color: "bg-green-50 text-green-600", desc: "Approved paid leave" },
+          { label: "Unpaid Days", val: unpaidUsed, icon: <AlertTriangle />, color: "bg-amber-50 text-amber-600", desc: "Exceeded allowance" },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white p-6 rounded-[2.5rem] shadow-xl shadow-primary/5 border border-gray-200 flex flex-col items-center text-center group hover:border-primary transition-all"
+          >
+            <div className={`p-4 rounded-2xl ${stat.color} mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-current/10`}>
+              {React.cloneElement(stat.icon, { size: 24 })}
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Warning if exceeded */}
-      {remainingPaid < 0 && role !== "admin" && (
-        <div className="card-glow bg-red-600/20 border border-red-500/30 p-3 md:p-4 rounded-xl">
-          <div className="flex items-start gap-2 md:gap-3">
-            <span className="text-lg md:text-2xl flex-shrink-0">⚠️</span>
-            <div>
-              <div className="font-semibold text-red-300 text-sm md:text-base">Leave allowance exceeded</div>
-              <div className="text-xs md:text-sm text-red-200 mt-1">
-                Used {leaveAllowance - remainingPaid} of {leaveAllowance} yearly leaves.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* APPLY LEAVE - Always visible */}
-      <div className="card-glow bg-[var(--color-surface)] p-4 md:p-6 rounded-xl">
-          <h2 className="text-lg md:text-xl font-semibold text-[#58a6ff]">Apply for Leave</h2>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-            <div>
-              <label className="text-xs md:text-sm mb-1 block">From</label>
-              <DatePicker value={form.fromDate} onChange={(val) => setForm((f) => ({ ...f, fromDate: val }))} placeholder="dd/mm/yyyy" />
-            </div>
-            <div>
-              <label className="text-xs md:text-sm mb-1 block">To</label>
-              <DatePicker value={form.toDate} onChange={(val) => setForm((f) => ({ ...f, toDate: val }))} placeholder="dd/mm/yyyy" />
-            </div>
-            <div>
-              <label className="text-xs md:text-sm mb-1 block">Total days</label>
-              <div className="p-2 text-xs md:text-sm rounded border min-h-[40px] flex items-center justify-center">{calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "-"}</div>
-            </div>
-
-            {/* Live validation warning */}
-            {(() => {
-              const requestedDays = calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate));
-              if (requestedDays > 0 && role !== "admin") {
-                if (remainingPaid === 0) {
-                  return (
-                    <div className="col-span-1 sm:col-span-2 md:col-span-3 bg-blue-900/30 border border-blue-500/50 p-2 md:p-3 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <span className="text-blue-400 text-base md:text-lg flex-shrink-0">ℹ️</span>
-                        <div className="text-xs md:text-sm">
-                          <div className="font-semibold text-blue-300">This will be unpaid leave</div>
-                          <div className="text-blue-200 mt-0.5">
-                            No paid leaves remaining. {requestedDays} day(s) will be unpaid.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                } else if (requestedDays > remainingPaid) {
-                  const paidDays = remainingPaid;
-                  const unpaidDays = requestedDays - remainingPaid;
-                  return (
-                    <div className="col-span-1 sm:col-span-2 md:col-span-3 bg-yellow-900/30 border border-yellow-500/50 p-2 md:p-3 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <span className="text-yellow-400 text-base md:text-lg flex-shrink-0">⚠️</span>
-                        <div className="text-xs md:text-sm">
-                          <div className="font-semibold text-yellow-300">Partial unpaid leave</div>
-                          <div className="text-yellow-200 mt-0.5">
-                            {paidDays} paid, {unpaidDays} unpaid.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-              }
-              return null;
-            })()}
-
-            <div className="col-span-1 sm:col-span-2 md:col-span-3">
-              <label className="text-xs md:text-sm mb-1 block">Reason</label>
-              <textarea value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} className="w-full p-2 md:p-3 text-sm rounded border bg-transparent min-h-[60px] md:min-h-[80px]" placeholder="Explain reason for leave..." />
-            </div>
-
-            <div className="col-span-1 sm:col-span-2 md:col-span-3 flex gap-2 md:gap-3 pt-2 justify-center">
-              <button onClick={apply} className="flex-1 sm:flex-none bg-primary text-white px-4 py-2 text-sm md:text-base rounded hover:bg-opacity-80 transition">Apply</button>
-              <button onClick={() => setForm({ fromDate: "", toDate: "", reason: "" })} className="flex-1 sm:flex-none px-4 py-2 text-sm md:text-base rounded border hover:bg-white/5 transition">Reset</button>
-            </div>
-          </div>
-        </div>
-
-      {/* LEAVES TABLE */}
-      <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-[#58a6ff]">My Leaves</h3>
-          <div className="text-sm text-muted">{loading ? "Loading..." : `${leaves.length} requests`}</div>
-        </div>
-
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full table-auto text-left">
-            <thead>
-              <tr className="text-sm text-gray-400">
-                <th className="py-2">From</th>
-                <th>To</th>
-                <th>Days</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaves.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="py-6 text-center text-sm text-gray-400">No leaves applied yet</td>
-                </tr>
-              )}
-              {leaves.map((l) => {
-                const from = formatDateDMY(l.fromDate);
-                const to = formatDateDMY(l.toDate);
-                return (
-                  <tr key={l._id} className="border-t">
-                    <td className="py-3">{from}</td>
-                    <td>{to}</td>
-                    <td>{l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}</td>
-                    <td className="max-w-[320px]">{l.reason}</td>
-                    <td><span className={statusBadgeClass(l.status)}>{l.status}</span></td>
-                    <td className="text-right">
-                      {l.status === "Pending" ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => openEdit(l)} className="px-3 py-1 rounded border">Edit</button>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-400">—</div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+            <div className="text-3xl font-black text-primary mb-1">{stat.val}</div>
+            <div className="text-[10px] font-black text-secondary uppercase tracking-[0.2em]">{stat.label}</div>
+            <div className="text-[10px] text-secondary/50 mt-2 font-bold">{stat.desc}</div>
+          </motion.div>
+        ))}
       </div>
 
-      {/* EDIT MODAL */}
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-lg p-6 rounded-xl card-glow bg-[var(--color-surface)]">
-            <h4 className="text-lg font-semibold mb-3">Edit Leave</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm mb-1">From</label>
-                <DatePicker value={editForm.fromDate} onChange={(val) => setEditForm((f) => ({ ...f, fromDate: val }))} placeholder="dd/mm/yyyy" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-5">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200 sticky top-10">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                <Plus size={20} />
               </div>
-              <div>
-                <label className="block text-sm mb-1">To</label>
-                <DatePicker value={editForm.toDate} onChange={(val) => setEditForm((f) => ({ ...f, toDate: val }))} placeholder="dd/mm/yyyy" />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Days</label>
-                <div className="p-2 rounded border">{calcTotalDays(convertDMYToYMD(editForm.fromDate), convertDMYToYMD(editForm.toDate)) || "-"}</div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label className="block text-sm mb-1">Reason</label>
-                <textarea value={editForm.reason} onChange={(e) => setEditForm((f) => ({ ...f, reason: e.target.value }))} className="w-full p-3 rounded border bg-transparent min-h-[90px]" />
-              </div>
-
-              <div className="sm:col-span-3 flex justify-end gap-3 pt-2">
-                <button onClick={closeEdit} className="px-4 py-2 rounded border">Close</button>
-                <button onClick={saveEdit} className="px-4 py-2 rounded bg-primary text-white" disabled={savingEdit}>{savingEdit ? "Saving..." : "Save changes"}</button>
-              </div>
+              <h3 className="text-xl font-black text-primary tracking-tight">Apply for Leave</h3>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* MODALS (success / update / error / info) */}
-      {modal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-accent)] rounded-2xl shadow-lg p-8 w-full max-w-md text-center card-glow animate-scaleIn">
-            <div className="text-5xl mb-4">{modalEmoji(modal.type)}</div>
-            <h3 className="text-2xl font-semibold mb-2 text-[var(--color-text)]">{modalTitle(modal.type)}</h3>
-            <p className="text-[var(--color-text-secondary)] mb-6 whitespace-pre-line">{modal.message}</p>
-            <div className="flex gap-3 justify-center">
-              {modal.onConfirm ? (
-                <>
-                  <button 
-                    onClick={() => {
-                      setModal({ show: false, type: "", message: "", onConfirm: null });
-                    }} 
-                    className="px-6 py-2 bg-gray-500 text-white font-medium rounded-xl hover:bg-gray-600 transition-all duration-300 shadow-md"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const confirmAction = modal.onConfirm;
-                      setModal({ show: false, type: "", message: "", onConfirm: null });
-                      confirmAction();
-                    }} 
-                    className="px-6 py-2 bg-[var(--color-primary)] text-white font-medium rounded-xl hover:bg-[var(--color-primary-dark)] transition-all duration-300 shadow-md"
-                  >
-                    OK, Continue
-                  </button>
-                </>
-              ) : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Start Date</label>
+                  <DatePicker 
+                    value={form.fromDate} 
+                    onChange={(val) => setForm(f => ({ ...f, fromDate: val }))} 
+                    placeholder="DD/MM/YYYY" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">End Date</label>
+                  <DatePicker 
+                    value={form.toDate} 
+                    onChange={(val) => setForm(f => ({ ...f, toDate: val }))} 
+                    placeholder="DD/MM/YYYY" 
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-secondary font-bold text-xs uppercase tracking-tight">
+                  <Info size={14} /> Total Duration
+                </div>
+                <div className="text-lg font-black text-primary">
+                  {calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "0"} <span className="text-[10px] uppercase font-black opacity-40">Days</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Purpose of Leave</label>
+                <textarea 
+                  value={form.reason} 
+                  onChange={(e) => setForm(f => ({ ...f, reason: e.target.value }))}
+                  className="w-full bg-gray-50/50 border border-gray-200 text-primary font-bold text-sm p-4 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 transition-all min-h-[120px] resize-none"
+                  placeholder="Tell us why you need this time..."
+                />
+              </div>
+
+              <div className="flex gap-4">
                 <button 
-                  onClick={closeModal} 
-                  className="px-6 py-2 bg-[var(--color-primary)] text-white font-medium rounded-xl hover:bg-[var(--color-primary-dark)] transition-all duration-300 shadow-md"
+                  onClick={apply}
+                  className="flex-1 py-4 bg-primary text-white font-black rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/20 active:scale-95"
                 >
-                  OK
+                  SUBMIT APPLICATION
                 </button>
-              )}
+                <button 
+                  onClick={() => setForm({ fromDate: "", toDate: "", reason: "" })}
+                  className="px-6 bg-gray-50 text-secondary font-black rounded-2xl border border-gray-200 hover:bg-gray-50 transition-all"
+                >
+                  RESET
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      )}
+
+        <div className="lg:col-span-7">
+          <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-200 overflow-hidden">
+            <div className="p-8 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-secondary/10 rounded-xl text-secondary">
+                  <History size={20} />
+                </div>
+                <h3 className="text-xl font-black text-primary tracking-tight">Recent Logs</h3>
+              </div>
+              <span className="text-[10px] font-black text-secondary uppercase tracking-widest">{leaves.length} Applications</span>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-gray-50/50">
+                  <tr>
+                    <th className="p-5 text-[10px] font-black text-secondary uppercase tracking-widest">Duration</th>
+                    <th className="p-5 text-[10px] font-black text-secondary uppercase tracking-widest">Type / Reason</th>
+                    <th className="p-5 text-[10px] font-black text-secondary uppercase tracking-widest">Status</th>
+                    <th className="p-5 text-[10px] font-black text-secondary uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {leaves.length === 0 ? (
+                    <tr><td colSpan="4" className="p-10 text-center text-secondary font-bold italic opacity-40">No leave applications found</td></tr>
+                  ) : (
+                    leaves.map((l) => (
+                      <tr key={l._id} className="hover:bg-gray-50 transition-colors group">
+                        <td className="p-5">
+                          <div className="text-xs font-black text-primary">{formatDateDMY(l.fromDate)}</div>
+                          <div className="text-[9px] font-bold text-secondary flex items-center gap-1 mt-1 opacity-60">
+                            <ArrowRight size={10} /> {formatDateDMY(l.toDate)}
+                          </div>
+                        </td>
+                        <td className="p-5">
+                          <div className="text-[10px] font-black text-primary truncate max-w-[150px] uppercase tracking-tighter">{l.reason || "Casual Leave"}</div>
+                          <div className="text-[9px] font-bold text-secondary mt-1">{l.totalDays || 0} Days Requested</div>
+                        </td>
+                        <td className="p-5">
+                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
+                            l.status === "Approved" ? "bg-green-50 text-green-600 border border-green-200" :
+                            l.status === "Pending" ? "bg-amber-50 text-amber-600 border border-amber-200" : "bg-red-50 text-red-500 border border-red-200"
+                          }`}>
+                            {l.status}
+                          </span>
+                        </td>
+                        <td className="p-5 text-right">
+                          {l.status === "Pending" ? (
+                            <button 
+                              onClick={() => openEdit(l)}
+                              className="p-2 text-primary hover:bg-primary/5 rounded-xl transition-all active:scale-95"
+                            >
+                              <FileText size={16} />
+                            </button>
+                          ) : <span className="text-[9px] font-bold text-secondary/30 italic">Locked</span>}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {editing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEditing(null)}
+              className="absolute inset-0 bg-primary/20 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-lg p-8 rounded-[2.5rem] shadow-2xl border border-gray-200 overflow-hidden"
+            >
+              <h3 className="text-2xl font-black text-primary tracking-tight mb-8">Refine Application</h3>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Start Date</label>
+                    <DatePicker value={editForm.fromDate} onChange={(val) => setEditForm(f => ({ ...f, fromDate: val }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">End Date</label>
+                    <DatePicker value={editForm.toDate} onChange={(val) => setEditForm(f => ({ ...f, toDate: val }))} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Reason</label>
+                  <textarea 
+                    value={editForm.reason} 
+                    onChange={(e) => setEditForm(f => ({ ...f, reason: e.target.value }))}
+                    className="w-full bg-gray-50/50 border border-gray-200 text-primary font-bold text-sm p-4 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 transition-all min-h-[100px]"
+                  />
+                </div>
+                <div className="flex gap-4 pt-4">
+                  <button onClick={saveEdit} disabled={savingEdit} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 active:scale-95 disabled:opacity-50">
+                    {savingEdit ? "SAVING..." : "UPDATE APPLICATION"}
+                  </button>
+                  <button onClick={() => setEditing(null)} className="px-6 bg-gray-50 text-secondary font-black rounded-2xl border border-gray-200 hover:bg-gray-50 transition-all">CANCEL</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modal.show && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-primary/40 backdrop-blur-md" />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-white w-full max-w-sm p-10 rounded-[3rem] shadow-2xl text-center border border-gray-200"
+            >
+              <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center mb-6 shadow-lg ${
+                modal.type === 'success' ? 'bg-green-50 text-green-600' : 
+                modal.type === 'error' ? 'bg-red-50 text-red-500' : 'bg-primary/5 text-primary'
+              }`}>
+                {modal.type === 'success' ? <CheckCircle2 size={40} /> : modal.type === 'error' ? <XCircle size={40} /> : <Info size={40} />}
+              </div>
+              <h4 className="text-xl font-black text-primary tracking-tight mb-2 uppercase">
+                {modal.type === 'success' ? 'All Set!' : modal.type === 'error' ? 'Notice' : 'Allocation Note'}
+              </h4>
+              <p className="text-secondary font-bold text-sm leading-relaxed mb-8 opacity-70 whitespace-pre-line">{modal.message}</p>
+              <div className="flex gap-3">
+                {modal.onConfirm && (
+                  <button onClick={() => { setModal(m => ({ ...m, show: false })); modal.onConfirm(); }} className="flex-1 py-4 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 active:scale-95">PROCEED</button>
+                )}
+                <button onClick={() => setModal({ show: false, type: "", message: "", onConfirm: null })} className={`${modal.onConfirm ? 'px-6 bg-gray-50 text-secondary' : 'w-full bg-primary text-white shadow-primary/20'} py-4 font-black rounded-2xl border border-gray-200 active:scale-95`}>
+                  {modal.onConfirm ? 'CANCEL' : 'ACKNOWLEDGE'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
 export default Leaves;
-

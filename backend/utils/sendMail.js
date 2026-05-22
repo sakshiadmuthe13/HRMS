@@ -1,6 +1,6 @@
 import { getTransporter } from "../config/nodemailer.js";
 
-export const sendMail = async (to, subject, text, html) => {
+export const sendMail = async (to, subject, text, html, attachments = []) => {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
@@ -9,6 +9,7 @@ export const sendMail = async (to, subject, text, html) => {
       subject,
       text,
       html,
+      attachments,
     });
     console.log(`✅ Email sent to ${to}`);
   } catch (error) {

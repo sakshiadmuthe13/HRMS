@@ -9,7 +9,7 @@ import Project from "../models/Project.js";
 import Holiday from "../models/Holiday.js";
 import mongoose from "mongoose";
 import { createNotification } from "./notificationController.js";
-import PDFDocument from "pdfkit";
+import { generateAndSendSalarySlip, generateSalarySlipBuffer } from "../utils/salarySlipGenerator.js";
 import { startOfDay, endOfDay } from "date-fns";
 
 // Helper: IST start/end of the given day
@@ -405,6 +405,82 @@ export const deleteAdminAdmin = async (req, res) => {
     res.status(500).json({ message: "Failed to delete admin" });
   }
 };
+
+// ---------------- HR CRUD for Admin ----------------
+// Get all HRs
+export const getAllHRsAdmin = async (req, res) => {
+  try {
+    const hrs = await User.find({ role: "hr" });
+    res.json(hrs);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch HRs" });
+  }
+};
+
+// Create a new HR
+export const createHRAdmin = async (req, res) => {
+  try {
+    const { name, email, password, phone, address, position, salary } =
+      req.body;
+
+    const existing = await User.findOne({ email });
+    if (existing)
+      return res.status(400).json({ message: "Email already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const hr = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      phone,
+      address,
+      position,
+      salary,
+      role: "hr",
+    });
+
+    res.status(201).json(hr);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to create HR" });
+  }
+};
+
+// Update HR details
+export const updateHRAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    const hr = await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
+    if (!hr) return res.status(404).json({ message: "HR not found" });
+
+    res.json(hr);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update HR" });
+  }
+};
+
+// Delete HR
+export const deleteHRAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const hr = await User.findByIdAndDelete(id);
+    if (!hr) return res.status(404).json({ message: "HR not found" });
+
+    res.json({ message: "HR deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to delete HR" });
+  }
+};
+
 
 
 // ---------------- Attendance  ----------------
@@ -1387,6 +1463,29 @@ export const getAllSalaries = async (req, res) => {
   }
 };
 
+// GET /api/admin/salary/slip/:id
+export const previewSalarySlip = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const record = await Salary.findById(id).populate("user");
+    if (!record) return res.status(404).json({ message: "Salary record not found" });
+
+    // Recompute salary breakdown for this record so the PDF uses the same
+    // detailed calculation (present/absent, daily rate, deductions) as the
+    // calculate endpoint.
+    const salaryDetails = await calculateSalaryDetails(record.user._id, record.month, record.year);
+
+    const pdfBuffer = await generateSalarySlipBuffer(record.user, salaryDetails, record);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="Salary_Slip_${record.month}_${record.year}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error("Error previewing salary slip:", err);
+    res.status(500).json({ message: "Failed to generate preview", error: err.message });
+  }
+};
+
 // POST /api/admin/salary/credit
 export const creditSalary = async (req, res) => {
   try {
@@ -1424,9 +1523,21 @@ export const creditSalary = async (req, res) => {
       year: numericYear,
       creditedOn: new Date(),
       isCredited: true,
+      presentDays: salaryDetails.presentDays,
+      absentDays: salaryDetails.absentDays,
+      dailyRate: salaryDetails.dailyRate,
+      daysInMonth: salaryDetails.daysInMonth,
     });
 
     const populated = await record.populate("user", "name email");
+
+    // Generate and send the PDF salary slip via email
+    try {
+      await generateAndSendSalarySlip(user, salaryDetails, record);
+    } catch (emailErr) {
+      console.error("Salary credited but failed to send email:", emailErr);
+    }
+
     res.status(201).json(populated);
   } catch (err) {
     console.error("Error crediting salary:", err);
@@ -2089,5 +2200,80 @@ export const unverifyDocument = async (req, res) => {
   } catch (error) {
     console.error("Error unverifying document:", error);
     res.status(500).json({ message: "Failed to unverify document" });
+  }
+};
+
+// ---------------- All Tasks (Admin View) ----------------
+// GET /api/admin/all-tasks
+// Returns every task in the system with full population so admin can monitor all assignments.
+export const getAllTasksAdmin = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    const filter = {};
+    if (status && status !== "All") filter.status = status;
+
+    const tasks = await Task.find(filter)
+      .populate("assignedTo", "name email")
+      .populate("assignedBy", "name email")
+      .populate("project", "name")
+      .sort({ assignedAt: -1 });
+
+    let result = tasks;
+
+    // Optional full-text search on description or employee name
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = tasks.filter(
+        (t) =>
+          (t.description && t.description.toLowerCase().includes(q)) ||
+          (t.assignedTo?.name && t.assignedTo.name.toLowerCase().includes(q)) ||
+          (t.project?.name && t.project.name.toLowerCase().includes(q)) ||
+          (t.assignedBy?.name && t.assignedBy.name.toLowerCase().includes(q))
+      );
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error fetching all tasks (admin):", err);
+    res.status(500).json({ message: "Failed to fetch tasks" });
+  }
+};
+
+// ---------------- Contact Employee Search (Admin View) ----------------
+// GET /api/admin/contact?query=...
+// Admin can search ALL active users (employees, leaders, HRs) by name/email/phone.
+const escapeRegexAdmin = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export const searchEmployeesForAdmin = async (req, res) => {
+  try {
+    const { query = "" } = req.query;
+
+    if (!query.trim()) {
+      return res.status(400).json({ message: "Search query is required" });
+    }
+
+    const safeQuery = escapeRegexAdmin(query.trim());
+    const regex = new RegExp(safeQuery, "i");
+
+    const filters = { isActive: true };
+
+    if (/^\d{10}$/.test(query.trim())) {
+      filters.$or = [{ phone: query.trim() }, { email: regex }, { name: regex }];
+    } else if (query.includes("@")) {
+      filters.$or = [{ email: regex }, { name: regex }, { phone: regex }];
+    } else {
+      filters.$or = [{ name: regex }, { email: regex }, { phone: regex }];
+    }
+
+    const employees = await User.find(filters)
+      .select("name email phone address position dateOfBirth dateOfJoining role")
+      .sort({ name: 1 })
+      .limit(50);
+
+    return res.status(200).json(employees);
+  } catch (error) {
+    console.error("searchEmployeesForAdmin error:", error);
+    return res.status(500).json({ message: "Failed to search employees", error: error.message });
   }
 };

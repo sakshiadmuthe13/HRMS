@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, UserPlus, Edit2, Trash2, Mail, Phone, MapPin, Briefcase, IndianRupee, X, Save, AlertTriangle, Calendar, Award, UserCheck } from "lucide-react";
 import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -104,174 +106,268 @@ const LeadersPage = () => {
   const cancelDelete = () => setDeleteTarget(null);
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-primary animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8 mt-2 sm:mt-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">🤝 Leaders</h2>
-        <button onClick={handleCreate} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200">+ Create Leader</button>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <h2 className="text-4xl font-black text-primary tracking-tight mb-2 flex items-center gap-3">
+            <Users size={32} className="text-primary" />
+            Leadership Registry
+          </h2>
+          <p className="text-secondary font-medium opacity-80">Oversee team leaders, reporting structures, and organizational hierarchy.</p>
+        </div>
+        <button
+          onClick={handleCreate}
+          className="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300 active:scale-95"
+        >
+          <UserPlus size={20} />
+          Appoint Team Leader
+        </button>
       </div>
 
-      {/* Error */}
-      {error && <p className="text-red-400 bg-[var(--color-surface)] border border-[var(--color-danger)] px-3 py-2 rounded mb-4">⚠️ {error}</p>}
+      {error && (
+        <div className="bg-red-50 text-red-500 border border-red-200 p-4 rounded-2xl mb-6 font-bold flex items-center gap-2">
+          <AlertTriangle size={20} />
+          {error}
+        </div>
+      )}
 
-      {/* Table */}
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg">
+      {/* Leaders Table */}
+      <div className="bg-white rounded-[2.5rem] shadow-xl shadow-primary/5 border border-gray-200 overflow-hidden">
         {loading ? (
-          <p className="p-6 text-center text-[var(--color-text-secondary)] animate-pulse">Loading leaders...</p>
+          <div className="p-20 text-center text-secondary font-bold animate-pulse">
+            Compiling leadership data...
+          </div>
         ) : leaders.length > 0 ? (
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-[var(--color-text-secondary)] text-sm">
-              <tr>
-                <th className="p-4">Name</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Phone</th>
-                <th className="p-4">Position</th>
-                <th className="p-4">Date of Joining</th>
-                <th className="p-4 text-center">Leave Allowance</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaders.map((e, i) => (
-                <tr key={e._id || i} className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all">
-                  <td className="p-4 font-medium">{e.name}</td>
-                  <td className="p-4">{e.email}</td>
-                  <td className="p-4">{e.phone}</td>
-                  <td className="p-4">{e.position}</td>
-                  <td className="p-4">{e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</td>
-                  <td className="p-4 text-center">
-                    <button onClick={() => { setLeaveAllowanceModal({ userId: e._id, currentAllowance: e.leaveAllowance || 12, name: e.name }); setNewAllowance(e.leaveAllowance || 12); }} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-sm font-medium">
-                      {e.leaveAllowance || 12} days
-                    </button>
-                  </td>
-                  <td className="p-4 flex justify-end gap-5">
-                    <button onClick={() => handleEdit(e)} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-sm font-medium">Edit</button>
-                    <button onClick={() => handleDeleteClick(e)} className="text-[var(--color-danger)] hover:underline text-sm font-medium">Delete</button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-200">
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Leader</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden lg:table-cell">Contact</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Authority</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-center">Allowance</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : <p className="text-center py-6 text-[var(--color-text-secondary)]">No leaders found.</p>}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {leaders.map((e, i) => (
+                  <tr key={e._id || i} className="hover:bg-primary/5 transition-colors group">
+                    <td className="p-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary font-black text-lg">
+                          {e.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-primary text-lg">{e.name}</div>
+                          <div className="text-xs text-secondary font-medium mt-0.5">EST: {e.dateOfJoining ? new Date(e.dateOfJoining).getFullYear() : 'N/A'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-5 hidden lg:table-cell">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-secondary font-medium">
+                          <Mail size={12} className="text-primary/60" />
+                          {e.email}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-secondary font-medium">
+                          <Phone size={12} className="text-primary/60" />
+                          {e.phone || "No terminal linked"}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-5">
+                      <div className="flex flex-col gap-1">
+                        <span className="px-3 py-1 bg-primary/10 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest w-fit">
+                          {e.position || "Team Lead"}
+                        </span>
+                        {e.reportingManager && (
+                          <span className="text-[10px] text-secondary font-medium italic">Reports to Admin</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-5 text-center">
+                      <button 
+                        onClick={() => { setLeaveAllowanceModal({ userId: e._id, currentAllowance: e.leaveAllowance || 12, name: e.name }); setNewAllowance(e.leaveAllowance || 12); }}
+                        className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-primary font-black text-xs hover:border-primary transition-all flex items-center gap-2 mx-auto"
+                      >
+                        <Award size={14} className="text-secondary" />
+                        {e.leaveAllowance || 12} DAYS
+                      </button>
+                    </td>
+                    <td className="p-5 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <Edit2 size={18} />
+                        </button>
+                        <button onClick={() => handleDeleteClick(e)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-20 text-center text-secondary font-medium">No team leaders registered in the system.</div>
+        )}
       </div>
 
-      {/* Modals */}
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-semibold mb-4 text-[var(--color-primary)]">{editing === "new" ? "Create New Leader" : "Edit Leader"}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {["name","email","password","phone","address","position","salary"].map(k => (
-                <div key={k}>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
-                  <input type={k==="password"?"password":"text"} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={`Enter ${k.replace(/([A-Z])/g, ' $1').toLowerCase()}`} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"/>
+      {/* Edit/Create Modal */}
+      <AnimatePresence>
+        {editing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white p-8 rounded-[2.5rem] w-full max-w-4xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-3xl font-black text-primary tracking-tight">
+                    {editing === "new" ? "New Leadership Appointment" : "Amend Leadership Profile"}
+                  </h3>
+                  <p className="text-secondary font-medium text-sm">Configure permissions and reporting lines.</p>
                 </div>
-              ))}
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Date of birth</label>
-                <DatePicker value={form.dateOfBirth||""} onChange={e=>setForm({...form,dateOfBirth:e})} placeholder="dd/mm/yyyy" />
+                <button onClick={() => setEditing(null)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+                  <X size={24} className="text-secondary" />
+                </button>
               </div>
-              {/* Leave Allowance */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Leave Allowance (days/year)
-                </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Full Name</label>
+                  <input type="text" value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. John Doe" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Email Terminal</label>
+                  <input type="email" value={form.email||""} onChange={e=>setForm({...form,email:e.target.value})} placeholder="leader@org.com" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Security Key</label>
+                  <input type="password" value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder="••••••••" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Contact No.</label>
+                  <input type="text" value={form.phone||""} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="+91 00000 00000" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Authority Level</label>
+                  <input type="text" value={form.position||""} onChange={e=>setForm({...form,position:e.target.value})} placeholder="e.g. Senior Team Lead" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Compensation (₹)</label>
+                  <input type="number" value={form.salary||""} onChange={e=>setForm({...form,salary:e.target.value})} placeholder="Annual CTC" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Birth Date</label>
+                  <DatePicker value={form.dateOfBirth||""} onChange={e=>setForm({...form,dateOfBirth:e})} placeholder="dd/mm/yyyy" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Leave Allowance (Days)</label>
+                  <input type="number" value={form.leaveAllowance ?? 12} onChange={e=>setForm({...form, leaveAllowance: parseInt(e.target.value) || 0})} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5 lg:col-span-1">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Direct Manager</label>
+                  <select value={form.reportingManager||""} onChange={e=>setForm({...form,reportingManager:e.target.value})} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all">
+                    <option value="">Select Manager</option>
+                    {allUsers.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Workplace Address</label>
+                  <input type="text" value={form.address||""} onChange={e=>setForm({...form,address:e.target.value})} placeholder="Office coordinates / Personal address" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+              </div>
+
+              <div className="mt-10 flex justify-end gap-4">
+                <button onClick={() => setEditing(null)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard Changes</button>
+                <button
+                  onClick={handleSave}
+                  className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300 flex items-center gap-2"
+                >
+                  <Save size={20} />
+                  {editing === "new" ? "Appoint Leader" : "Synchronize Data"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Leave Allowance Inline Modal */}
+      <AnimatePresence>
+        {leaveAllowanceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-gray-200"
+            >
+              <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                <Award size={32} />
+              </div>
+              <h3 className="text-2xl font-black text-primary tracking-tight mb-2">Leave Allocation</h3>
+              <p className="text-secondary font-medium mb-8">Update yearly leave credits for <span className="text-primary font-black">{leaveAllowanceModal.name}</span>.</p>
+              
+              <div className="space-y-1.5 mb-8 text-left">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Yearly Days</label>
                 <input
                   type="number"
                   min="0"
-                  value={form.leaveAllowance !== undefined ? form.leaveAllowance : 12}
-                  onChange={e=>setForm({...form, leaveAllowance: parseInt(e.target.value) || 0})}
-                  placeholder="Enter yearly leave allowance"
-                  className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"
+                  value={newAllowance}
+                  onChange={e => setNewAllowance(e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-black text-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                 />
-                <p className="text-xs text-[var(--color-text-secondary)] mt-1">Default: 12 days</p>
               </div>
-              {/* Reporting Manager Dropdowns */}
-              {["reportingManager","technicalReporting","administrativeReporting"].map(k => (
-                <div key={k}>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
-                  <select value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all">
-                    <option value="">-- Select {k.replace(/([A-Z])/g, ' $1')} --</option>
-                    {allUsers.map(u => (
-                      <option key={u._id} value={u._id}>{u.name} ({u.role})</option>
-                    ))}
-                  </select>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={handleSave} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-5 py-2 rounded-lg shadow-md transition-all">💾 Save</button>
-              <button onClick={() => setEditing(null)} className="px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition">✖ Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-[var(--color-danger)]">⚠️ Confirm Deletion</h3>
-            <p className="text-[var(--color-text-secondary)] mb-6">Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={cancelDelete} className="px-4 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition">Cancel</button>
-              <button onClick={confirmDelete} className="bg-[var(--color-danger)] hover:bg-[rgba(255,70,56,0.8)] text-white px-4 py-2 rounded-lg shadow-md transition-all">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Leave Allowance Modal */}
-      {leaveAllowanceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-[var(--color-primary)]">📅 Update Leave Allowance</h3>
-            <p className="text-[var(--color-text-secondary)] mb-4">
-              Update yearly leave allowance for <span className="font-medium text-[var(--color-text-primary)]">{leaveAllowanceModal.name}</span>
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Yearly Leave Allowance (days)</label>
-              <input
-                type="number"
-                min="0"
-                value={newAllowance}
-                onChange={e => setNewAllowance(e.target.value)}
-                className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"
-                placeholder="Enter leave allowance"
-              />
-              <p className="text-xs text-[var(--color-text-secondary)] mt-2">Current allowance: {leaveAllowanceModal.currentAllowance} days</p>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={async () => {
-                  try {
+              <div className="flex gap-4">
+                <button onClick={() => setLeaveAllowanceModal(null)} className="flex-1 px-6 py-4 font-bold text-secondary border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all">Cancel</button>
+                <button 
+                  onClick={async () => {
                     const allowance = parseInt(newAllowance);
-                    if (isNaN(allowance) || allowance < 0) {
-                      setError("Please enter a valid positive number");
-                      return;
-                    }
+                    if (isNaN(allowance) || allowance < 0) return setError("Invalid allowance");
                     await apiPut(`/admin/users/${leaveAllowanceModal.userId}/leave-allowance`, { leaveAllowance: allowance });
                     setLeaveAllowanceModal(null);
-                    setNewAllowance("");
                     fetchLeaders();
-                  } catch (err) {
-                    setError(err.message || "Failed to update leave allowance");
-                    setLeaveAllowanceModal(null);
-                  }
-                }}
-                className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-5 py-2 rounded-lg shadow-md transition-all"
-              >
-                💾 Save
-              </button>
-              <button
-                onClick={() => { setLeaveAllowanceModal(null); setNewAllowance(""); }}
-                className="px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition"
-              >
-                ✖ Cancel
-              </button>
-            </div>
+                  }}
+                  className="flex-1 bg-primary hover:bg-secondary text-white px-6 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-50 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-red-50 text-center"
+            >
+              <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-2xl font-black mb-3 text-primary tracking-tight">Revoke Leadership?</h3>
+              <p className="text-secondary font-medium mb-8">Are you sure you want to remove <span className="text-primary font-black">{deleteTarget.name}</span>? All leadership data will be purged.</p>
+              <div className="flex gap-4">
+                <button onClick={cancelDelete} className="flex-1 px-6 py-4 font-bold text-secondary border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all">Cancel</button>
+                <button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-bold shadow-xl shadow-red-500/20 transition-all">Remove</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -27,6 +27,8 @@ const taskSchema = new mongoose.Schema({
       reason: { type: String },
     },
   ],
+  completionDescription: { type: String },
+  deployedLink: { type: String },
 });
 
 const Task = mongoose.model("Task", taskSchema);

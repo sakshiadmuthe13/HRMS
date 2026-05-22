@@ -33,7 +33,13 @@ const calcTotalDays = (fromStr, toStr) => {
   return Math.floor((to - from) / oneDay) + 1;
 };
 
-const AdminLeaves = () => {
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2, XCircle, Clock, AlertCircle, ClipboardList } from "lucide-react";
+
+const LeavesPage = () => {
+  const role = localStorage.getItem("role") || "admin";
+  const isHr = role === "hr";
+
   const [leaves, setLeaves] = useState([]);
   const [modal, setModal] = useState({ show: false, type: "", message: "" });
   const [pendingAction, setPendingAction] = useState({ id: null, type: "" });
@@ -44,7 +50,8 @@ const AdminLeaves = () => {
 
   const fetchAllLeaves = async () => {
     try {
-      const res = await fetchJson("/admin/leave/all");
+      const endpoint = isHr ? "/hr/manage/leaves" : "/admin/leave/all";
+      const res = await fetchJson(endpoint);
       setLeaves(res || []);
     } catch (e) {
       console.error(e);
@@ -55,9 +62,20 @@ const AdminLeaves = () => {
   const handleAction = async (id, action) => {
     try {
       setPendingAction({ id, type: action });
-      await fetchJson(`/admin/leave/${id}/${action}`, { method: "PATCH" });
+      if (isHr) {
+        const statusMap = {
+          approve: "Approved",
+          reject: "Rejected"
+        };
+        await fetchJson(`/hr/manage/leave/${id}/status`, {
+          method: "PUT",
+          body: JSON.stringify({ status: statusMap[action] })
+        });
+      } else {
+        await fetchJson(`/admin/leave/${id}/${action}`, { method: "PATCH" });
+      }
       await fetchAllLeaves();
-      setModal({ show: true, type: "success", message: `Leave ${action} successfully! ✅` });
+      setModal({ show: true, type: "success", message: `Leave ${action}ed successfully!` });
     } catch (e) {
       console.error(e);
       setModal({ show: true, type: "error", message: "Failed to perform action." });
@@ -69,132 +87,159 @@ const AdminLeaves = () => {
   const closeModal = () => setModal({ show: false, type: "", message: "" });
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
-      <h2 className="text-2xl sm:text-3xl font-bold text-[#A756FA] mb-4 sm:mb-6">📝 Leaves</h2>
+    <div className={`min-h-screen bg-background text-primary animate-fadeIn ${isHr ? "max-w-6xl mx-auto space-y-10" : ""}`}>
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 mb-10">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+            <ClipboardList size={28} />
+          </div>
+          <div>
+            <h2 className="text-4xl font-black text-primary tracking-tight mb-2">
+              {isHr ? "Review Applications" : "Leave Applications"}
+            </h2>
+            <p className="text-secondary font-medium opacity-80">
+              {isHr ? "Review and manage employee leave requests." : "Review and manage employee leave requests."}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <div className="card-glow bg-[var(--color-surface)] p-6 rounded-xl">
+      <div className="bg-white rounded-[2rem] shadow-xl shadow-primary/5 border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full table-auto text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="text-sm text-gray-400">
-                <th className="py-3">Applicant</th>
-                <th>Role</th>
-                <th>From</th>
-                <th>To</th>
-                <th>Days</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th className="text-center">Actions</th>
+              <tr className="bg-gray-50/50 border-b border-gray-200">
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Applicant</th>
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden md:table-cell">Role</th>
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Duration</th>
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Days</th>
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Reason</th>
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Status</th>
+                <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-center">Decision</th>
               </tr>
             </thead>
-            <tbody>
-              {leaves.length === 0 && (
+            <tbody className="divide-y divide-gray-100">
+              {leaves.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-6 text-center text-sm text-gray-400">
-                    No leave applications yet
+                  <td colSpan="7" className="p-20 text-center text-secondary font-medium">
+                    No leave applications pending review.
                   </td>
                 </tr>
+              ) : (
+                leaves.map((l) => {
+                  const from = new Date(l.fromDate).toLocaleDateString('en-GB');
+                  const to = new Date(l.toDate).toLocaleDateString('en-GB');
+                  const applicant = l.user || {};
+                  const isProcessing = pendingAction.id === l._id;
+                  
+                  const statusColors = {
+                    "Pending": "bg-amber-50 text-amber-600 border-amber-200",
+                    "Approved": "bg-green-50 text-green-600 border-green-200",
+                    "Rejected": "bg-red-50 text-red-500 border-red-200"
+                  };
+
+                  return (
+                    <motion.tr 
+                      layout
+                      key={l._id} 
+                      className="hover:bg-primary/5 transition-colors group"
+                    >
+                      <td className="p-5">
+                        <div className="font-bold text-primary">{applicant.name || "Unknown"}</div>
+                      </td>
+                      <td className="p-5 hidden md:table-cell">
+                        <span className="px-3 py-1 bg-gray-50 text-secondary rounded-full text-xs font-bold uppercase tracking-wider">
+                          {applicant.role || "—"}
+                        </span>
+                      </td>
+                      <td className="p-5 text-secondary font-medium">
+                        <div className="text-xs opacity-60">FROM</div>
+                        <div className="text-primary font-bold">{from}</div>
+                        <div className="text-xs opacity-60 mt-1">TO</div>
+                        <div className="text-primary font-bold">{to}</div>
+                      </td>
+                      <td className="p-5">
+                        <span className="text-lg font-black text-primary">
+                          {l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}
+                        </span>
+                        <span className="text-xs font-bold text-secondary ml-1">DAYS</span>
+                      </td>
+                      <td className="p-5 max-w-xs">
+                        <p className="text-secondary font-medium line-clamp-3 text-sm italic">
+                          "{l.reason}"
+                        </p>
+                      </td>
+                      <td className="p-5">
+                        <span className={`px-4 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest border flex items-center gap-2 w-fit ${statusColors[l.status] || "bg-gray-50 text-gray-500"}`}>
+                          {l.status === "Pending" && <Clock size={14} />}
+                          {l.status === "Approved" && <CheckCircle2 size={14} />}
+                          {l.status === "Rejected" && <XCircle size={14} />}
+                          {isProcessing ? "Updating..." : l.status}
+                        </span>
+                      </td>
+                      <td className="p-5">
+                        {l.status === "Pending" ? (
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              disabled={Boolean(pendingAction.id)}
+                              onClick={() => handleAction(l._id, "approve")}
+                              className="p-3 bg-green-50 text-green-600 rounded-2xl hover:bg-green-500 hover:text-white transition-all shadow-lg shadow-green-500/10 active:scale-95"
+                              title="Approve"
+                            >
+                              <CheckCircle2 size={20} />
+                            </button>
+                            <button
+                              disabled={Boolean(pendingAction.id)}
+                              onClick={() => handleAction(l._id, "reject")}
+                              className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/10 active:scale-95"
+                              title="Reject"
+                            >
+                              <XCircle size={20} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-center text-secondary opacity-20">—</div>
+                        )}
+                      </td>
+                    </motion.tr>
+                  );
+                })
               )}
-              {leaves.map((l) => {
-                const from = new Date(l.fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const to = new Date(l.toDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const applicant = l.user || {};
-                const isProcessing = pendingAction.id === l._id;
-                const statusLabel = isProcessing
-                  ? (pendingAction.type === 'approve' ? 'Approving…' : 'Rejecting…')
-                  : l.status;
-                const statusClass = isProcessing
-                  ? "px-2 py-1 rounded bg-yellow-600/40 text-sm animate-pulse"
-                  : l.status === "Pending"
-                  ? "px-2 py-1 rounded bg-yellow-600/40 text-sm"
-                  : l.status === "Approved"
-                  ? "px-2 py-1 rounded bg-green-600/30 text-sm"
-                  : "px-2 py-1 rounded bg-red-600/30 text-sm";
-                return (
-                  <tr key={l._id} className="border-t">
-                    <td className="py-4">{applicant.name ?? "Unknown"}</td>
-                    <td>{applicant.role ?? "—"}</td>
-                    <td>{from}</td>
-                    <td>{to}</td>
-                    <td>{l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}</td>
-                    <td className="max-w-[320px]">{l.reason}</td>
-                    <td>
-                      <span className={statusClass}>
-                        {statusLabel}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      {l.status === "Pending" ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            disabled={Boolean(pendingAction.id)}
-                            onClick={() => handleAction(l._id, "approve")}
-                            className="px-3 py-1 rounded bg-green-500 text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-                          >
-                            {isProcessing && pendingAction.type === 'approve' ? (
-                              <>
-                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                </svg>
-                                Approving…
-                              </>
-                            ) : (
-                              "Approve"
-                            )}
-                          </button>
-                          <button
-                            disabled={Boolean(pendingAction.id)}
-                            onClick={() => handleAction(l._id, "reject")}
-                            className="px-3 py-1 rounded bg-red-500 text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-                          >
-                            {isProcessing && pendingAction.type === 'reject' ? (
-                              <>
-                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                </svg>
-                                Rejecting…
-                              </>
-                            ) : (
-                              "Reject"
-                            )}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-400">—</div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* MODAL */}
-      {modal.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] border border-[var(--color-accent)] rounded-2xl shadow-lg p-6 sm:p-8 w-full max-w-md text-center card-glow animate-scaleIn">
-            <div className="text-5xl mb-4">
-              {modal.type === "success" ? "✅" : "❌"}
-            </div>
-            <h3 className="text-2xl font-semibold mb-2">
-              {modal.type === "success" ? "Success!" : "Error!"}
-            </h3>
-            <p className="text-[var(--color-text-secondary)] mb-6">{modal.message}</p>
-            <button
-              onClick={closeModal}
-              className="px-6 py-2 bg-[var(--color-primary)] text-white font-medium rounded-xl hover:bg-[var(--color-primary-dark)] transition-all duration-300 shadow-md"
+      <AnimatePresence>
+        {modal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-gray-200 text-center"
             >
-              OK
-            </button>
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl ${modal.type === "success" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500"}`}>
+                {modal.type === "success" ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
+              </div>
+              <h3 className="text-2xl font-black mb-3 text-primary tracking-tight">
+                {modal.type === "success" ? "Action Complete" : "Error Occurred"}
+              </h3>
+              <p className="text-secondary font-medium mb-8 leading-relaxed">{modal.message}</p>
+              <button
+                onClick={closeModal}
+                className="w-full py-4 bg-primary text-white font-bold rounded-2xl hover:bg-secondary transition-all shadow-xl shadow-primary/20"
+              >
+                Continue
+              </button>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
-export default AdminLeaves;
+export default LeavesPage;

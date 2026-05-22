@@ -91,96 +91,123 @@ const EmployeesPage = () => {
   const cancelDelete = () => setDeleteTarget(null);
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-primary animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8 mt-2 sm:mt-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">👥 Employees</h2>
-        <button onClick={handleCreate} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200">
-          + Create Employee
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <h2 className="text-4xl font-black text-primary tracking-tight mb-2">Employees</h2>
+          <p className="text-secondary font-medium opacity-80">Manage your organization's workforce.</p>
+        </div>
+        <button 
+          onClick={handleCreate} 
+          className="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300 active:scale-95"
+        >
+          + Add Employee
         </button>
       </div>
 
       {/* Error */}
-      {error && <p className="text-red-400 bg-[var(--color-surface)] border border-[var(--color-danger)] px-3 py-2 rounded mb-4">⚠️ {error}</p>}
+      {error && (
+        <div className="bg-red-50 text-red-500 border border-red-200 p-4 rounded-2xl mb-6 font-bold flex items-center gap-2">
+          <span>⚠️</span> {error}
+        </div>
+      )}
 
       {/* Table */}
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg">
+      <div className="bg-white rounded-[2rem] shadow-xl shadow-primary/5 border border-gray-200 overflow-hidden">
         {loading ? (
-          <p className="p-6 text-center text-[var(--color-text-secondary)] animate-pulse">Loading employees...</p>
+          <div className="p-20 text-center text-secondary font-bold animate-pulse">
+            Retrieving personnel records...
+          </div>
         ) : employees.length > 0 ? (
-          <table className="w-full text-left min-w-[350px] md:min-w-[600px] text-xs md:text-sm">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-[var(--color-text-secondary)] text-xs md:text-sm sticky top-0">
-              <tr>
-                <th className="p-2 md:p-4">Name</th>
-                <th className="p-2 md:p-4 hidden md:table-cell">Email</th>
-                <th className="p-2 md:p-4 hidden lg:table-cell">Phone</th>
-                <th className="p-2 md:p-4">Position</th>
-                <th className="p-2 md:p-4 hidden lg:table-cell">Date of Joining</th>
-                <th className="p-2 md:p-4 text-center hidden sm:table-cell">Leave</th>
-                <th className="p-2 md:p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((e, i) => (
-                <tr key={e._id || i} className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all">
-                  <td className="p-2 md:p-4 font-medium truncate">{e.name}</td>
-                  <td className="p-2 md:p-4 hidden md:table-cell truncate text-xs md:text-sm">{e.email}</td>
-                  <td className="p-2 md:p-4 hidden lg:table-cell text-xs md:text-sm">{e.phone}</td>
-                  <td className="p-2 md:p-4 text-xs md:text-sm">{e.position}</td>
-                  <td className="p-2 md:p-4 hidden lg:table-cell text-xs md:text-sm">{e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</td>
-                  <td className="p-2 md:p-4 text-center hidden sm:table-cell">
-                    <button onClick={() => { setLeaveAllowanceModal({ userId: e._id, currentAllowance: e.leaveAllowance || 12, name: e.name }); setNewAllowance(e.leaveAllowance || 12); }} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-xs md:text-sm font-medium">
-                      {e.leaveAllowance || 12} d
-                    </button>
-                  </td>
-                  <td className="p-2 md:p-4 flex justify-end gap-2 md:gap-6">
-                    <button onClick={() => handleEdit(e)} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-xs md:text-sm font-medium">Edit</button>
-                    <button onClick={() => handleDeleteClick(e)} className="text-[var(--color-danger)] hover:underline text-xs md:text-sm font-medium">Delete</button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-200">
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Name</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden md:table-cell">Email</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Position</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden lg:table-cell">Joining Date</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-center hidden sm:table-cell">Leave</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : <p className="text-center py-6 text-[var(--color-text-secondary)]">No employees found.</p>}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {employees.map((e, i) => (
+                  <tr key={e._id || i} className="hover:bg-primary/5 transition-colors group">
+                    <td className="p-5">
+                      <div className="font-bold text-primary">{e.name}</div>
+                      <div className="text-xs text-secondary md:hidden">{e.email}</div>
+                    </td>
+                    <td className="p-5 hidden md:table-cell text-secondary font-medium">{e.email}</td>
+                    <td className="p-5">
+                      <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold uppercase tracking-wider">
+                        {e.position}
+                      </span>
+                    </td>
+                    <td className="p-5 hidden lg:table-cell text-secondary font-medium">
+                      {e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB') : "-"}
+                    </td>
+                    <td className="p-5 text-center hidden sm:table-cell font-bold text-primary">
+                      <button onClick={() => { setLeaveAllowanceModal({ userId: e._id, currentAllowance: e.leaveAllowance || 12, name: e.name }); setNewAllowance(e.leaveAllowance || 12); }} className="hover:text-secondary transition">
+                        {e.leaveAllowance || 12}d
+                      </button>
+                    </td>
+                    <td className="p-5 text-right">
+                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold">Edit</button>
+                        <button onClick={() => handleDeleteClick(e)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all font-bold">Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-20 text-center text-secondary font-medium">No employees found in the directory.</div>
+        )}
       </div>
 
-      {/* Modals */}
+      {/* Create/Edit Modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl md:text-2xl font-semibold mb-4 text-[var(--color-primary)]">{editing === "new" ? "Create New Employee" : "Edit Employee"}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+          <div className="bg-white p-8 rounded-[2.5rem] w-full max-w-3xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar">
+            <h3 className="text-3xl font-black mb-8 text-primary tracking-tight">
+              {editing === "new" ? "New Professional Profile" : "Refine Profile"}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {["name","email","password","phone","address","position","salary"].map(k => (
-                <div key={k}>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
-                  <input type={k==="password"?"password":"text"} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={`Enter ${k.replace(/([A-Z])/g, ' $1').toLowerCase()}`} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"/>
+                <div key={k} className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">{k.replace(/([A-Z])/g, ' $1')}</label>
+                  <input 
+                    type={k==="password"?"password":"text"} 
+                    value={form[k]||""} 
+                    onChange={e=>setForm({...form,[k]:e.target.value})} 
+                    placeholder={`Employee ${k}`} 
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                  />
                 </div>
               ))}
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">Date of birth</label>
-                <DatePicker value={form.dateOfBirth||""} onChange={e=>setForm({...form,dateOfBirth:e})} placeholder="dd/mm/yyyy" />
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Date of Birth</label>
+                <DatePicker value={form.dateOfBirth||""} onChange={e=>setForm({...form,dateOfBirth:e})} />
               </div>
-              {/* Leave Allowance */}
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  Leave Allowance (days/year)
-                </label>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Leave Allowance (Days)</label>
                 <input
                   type="number"
                   min="0"
                   value={form.leaveAllowance !== undefined ? form.leaveAllowance : 12}
                   onChange={e=>setForm({...form, leaveAllowance: parseInt(e.target.value) || 0})}
-                  placeholder="Enter yearly leave allowance"
-                  className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                 />
-                <p className="text-xs text-[var(--color-text-secondary)] mt-1">Default: 12 days</p>
               </div>
-              {/* Reporting Manager Dropdowns */}
               {["reportingManager","technicalReporting","administrativeReporting"].map(k => (
-                <div key={k}>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
-                  <select value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all">
-                    <option value="">-- Select {k.replace(/([A-Z])/g, ' $1')} --</option>
+                <div key={k} className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">{k.replace(/([A-Z])/g, ' $1')}</label>
+                  <select value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all">
+                    <option value="">-- Select Authority --</option>
                     {allUsers.map(u => (
                       <option key={u._id} value={u._id}>{u.name} ({u.role})</option>
                     ))}
@@ -188,22 +215,24 @@ const EmployeesPage = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-6 flex flex-col md:flex-row justify-end gap-2 md:gap-3">
-              <button onClick={handleSave} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 md:px-5 py-2 rounded-lg shadow-md transition-all text-sm md:text-base">💾 Save</button>
-              <button onClick={() => setEditing(null)} className="px-4 md:px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition text-sm md:text-base">✖ Cancel</button>
+            <div className="mt-10 flex justify-end gap-4">
+              <button onClick={() => setEditing(null)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
+              <button onClick={handleSave} className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300">Save Changes</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Delete Confirmation */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-lg md:text-xl font-semibold mb-4 text-[var(--color-danger)]">⚠️ Confirm Deletion</h3>
-            <p className="text-sm md:text-base text-[var(--color-text-secondary)] mb-6">Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.</p>
-            <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3">
-              <button onClick={cancelDelete} className="px-3 md:px-4 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition text-sm md:text-base order-2 md:order-1">Cancel</button>
-              <button onClick={confirmDelete} className="bg-[var(--color-danger)] hover:bg-[rgba(255,70,56,0.8)] text-white px-3 md:px-4 py-2 rounded-lg shadow-md transition-all text-sm md:text-base order-1 md:order-2">Delete</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-50 backdrop-blur-md p-4">
+          <div className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-red-50 animate-fadeIn text-center">
+            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">⚠️</div>
+            <h3 className="text-2xl font-black mb-3 text-primary tracking-tight">Confirm Deletion</h3>
+            <p className="text-secondary font-medium mb-8">Are you certain you want to remove <span className="text-primary font-black">{deleteTarget.name}</span> from the system? This process is irreversible.</p>
+            <div className="flex gap-4">
+              <button onClick={cancelDelete} className="flex-1 px-6 py-4 font-bold text-secondary border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all">Cancel</button>
+              <button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-bold shadow-xl shadow-red-500/20 transition-all">Delete</button>
             </div>
           </div>
         </div>
@@ -211,51 +240,34 @@ const EmployeesPage = () => {
 
       {/* Leave Allowance Modal */}
       {leaveAllowanceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-[var(--color-primary)]">📅 Update Leave Allowance</h3>
-            <p className="text-[var(--color-text-secondary)] mb-4">
-              Update yearly leave allowance for <span className="font-medium text-[var(--color-text-primary)]">{leaveAllowanceModal.name}</span>
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Yearly Leave Allowance (days)</label>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+          <div className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-gray-200 animate-fadeIn">
+            <h3 className="text-2xl font-black mb-2 text-primary tracking-tight">Update Allocation</h3>
+            <p className="text-secondary font-medium mb-8">Yearly leave allowance for <span className="text-primary font-black">{leaveAllowanceModal.name}</span>.</p>
+            <div className="space-y-4 mb-8">
+              <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Annual Allowance (Days)</label>
               <input
                 type="number"
                 min="0"
                 value={newAllowance}
                 onChange={e => setNewAllowance(e.target.value)}
-                className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all"
-                placeholder="Enter leave allowance"
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
               />
-              <p className="text-xs text-[var(--color-text-secondary)] mt-2">Current allowance: {leaveAllowanceModal.currentAllowance} days</p>
             </div>
-            <div className="flex flex-col md:flex-row justify-end gap-2 md:gap-3">
+            <div className="flex gap-4">
+              <button onClick={() => { setLeaveAllowanceModal(null); setNewAllowance(""); }} className="flex-1 px-6 py-4 font-bold text-secondary border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all">Discard</button>
               <button
                 onClick={async () => {
                   try {
                     const allowance = parseInt(newAllowance);
-                    if (isNaN(allowance) || allowance < 0) {
-                      setError("Please enter a valid positive number");
-                      return;
-                    }
+                    if (isNaN(allowance) || allowance < 0) { setError("Please enter a valid positive number"); return; }
                     await apiPut(`/admin/users/${leaveAllowanceModal.userId}/leave-allowance`, { leaveAllowance: allowance });
-                    setLeaveAllowanceModal(null);
-                    setNewAllowance("");
-                    fetchEmployees();
-                  } catch (err) {
-                    setError(err.message || "Failed to update leave allowance");
-                    setLeaveAllowanceModal(null);
-                  }
+                    setLeaveAllowanceModal(null); setNewAllowance(""); fetchEmployees();
+                  } catch (err) { setError(err.message || "Failed to update leave allowance"); setLeaveAllowanceModal(null); }
                 }}
-                className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 md:px-5 py-2 rounded-lg shadow-md transition-all text-sm md:text-base order-2 md:order-1"
+                className="flex-1 bg-primary hover:bg-secondary text-white px-6 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all"
               >
-                💾 Save
-              </button>
-              <button
-                onClick={() => { setLeaveAllowanceModal(null); setNewAllowance(""); }}
-                className="px-4 md:px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition text-sm md:text-base order-1 md:order-2"
-              >
-                ✖ Cancel
+                Save
               </button>
             </div>
           </div>

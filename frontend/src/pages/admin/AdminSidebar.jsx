@@ -21,6 +21,8 @@ import {
   BarChart3,
   Menu,
   X,
+  ClipboardList,
+  PhoneCall,
 } from "lucide-react";
 import NotificationDropdown from "../../components/NotificationDropdown";
 
@@ -30,6 +32,7 @@ const tabIcons = {
   Dashboard: <Home size={18} />,
   Employees: <Users size={18} />,
   Leaders: <UserCheck size={18} />,
+  HRs: <Users size={18} />,
   Admins: <UserPlus size={18} />,
   Attendance: <Calendar size={18} />,
   "Holiday Calendar": <CalendarDays size={18} />,
@@ -37,9 +40,14 @@ const tabIcons = {
   Salary: <DollarSign size={18} />,
   Teams: <Layers size={18} />,
   Projects: <Briefcase size={18} />,
+  Tasks: <ClipboardList size={18} />,
+  "Contact Employee": <PhoneCall size={18} />,
   "Profile Verification": <CheckCircle size={18} />,
   Issues: <AlertTriangle size={18} />,
   "Threat Details": <Shield size={18} />,
+  "Hiring & Vacancies": <Briefcase size={18} />,
+  Hiring: <UserPlus size={18} />,
+  "Generate Letter": <FileText size={18} />,
   Reports: <BarChart3 size={18} />,
 };
 
@@ -66,7 +74,7 @@ const AdminSidebar = ({ tabs = [], active, onChange }) => {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition"
+        className="fixed top-4 left-4 z-50 md:hidden p-2 text-primary hover:bg-gray-50 rounded-lg transition"
       >
         {!isOpen && <Menu size={24} />}
       </button>
@@ -79,55 +87,63 @@ const AdminSidebar = ({ tabs = [], active, onChange }) => {
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 flex flex-col bg-gradient-to-b from-[#0F0F1E] to-[#141428] text-white shadow-[0_0_20px_rgba(167,86,250,0.15)] border-r border-[#1C1436] overflow-hidden transition-all duration-300 ${
+        className={`fixed left-0 top-0 h-screen w-60 flex flex-col bg-white text-primary shadow-2xl border-r border-gray-100 overflow-hidden transition-all duration-500 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
         style={{ zIndex: 40 }}
       >
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute top-4 right-4 z-50 md:hidden p-2 text-white hover:bg-white/10 rounded-lg transition"
+          className="absolute top-6 right-6 z-50 md:hidden p-2 text-primary hover:bg-gray-100 rounded-xl transition-all"
         >
           <X size={24} />
         </button>
 
-      {/* Brand */}
-      <div className="pt-16 md:pt-6 pb-8 px-4">
-        <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-          QiroTech Innovation
-        </h3>
-        <p className="text-sm text-gray-400 mt-1 ml-2">Admin Portal</p>
+      <div className="pt-6 pb-6 px-8">
+        <div className="flex items-center gap-4 mb-3">
+          <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-transform hover:rotate-12">
+            <img src="/qiro-logo.png" alt="Logo" className="w-6 h-6 object-contain invert brightness-0" />
+          </div>
+          <h3 className="text-2xl font-black tracking-tighter text-primary">
+            QiroTech
+          </h3>
+        </div>
+        <div className="h-1 w-12 bg-primary rounded-full mb-2"></div>
+        <p className="text-[10px] font-black text-secondary uppercase tracking-[0.3em] ml-1 opacity-60">Master Admin</p>
       </div>
 
-      {/* Tabs */}
-      <ul className="space-y-1 flex-1 px-3">
-        {tabs.map((t) => (
-          <li key={t}>
-            <button
-              onClick={() => handleTabChange(t)}
-              className={`flex items-center gap-3 w-full px-4 py-2 rounded-lg text-md font-medium transition-all duration-200 relative ${
-                active === t
-                  ? "bg-gradient-to-r from-purple-500 to-blue-500 text-black font-semibold shadow-lg"
-                  : "text-gray-300 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {tabIcons[t] || null}
-              <span className="truncate">{t}</span>
-              {active === t && (
-                <span className="absolute left-0 top-0 h-full w-[3px] bg-blue-400 rounded-r-lg"></span>
-              )}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <nav className="flex-1 px-4 overflow-y-auto ">
+        <ul className="space-y-2">
+          {tabs.map((t, idx) => (
+            <li key={t} className="animate-slideUp" style={{ animationDelay: `${idx * 0.05}s` }}>
+              <button
+                onClick={() => handleTabChange(t)}
+                className={`flex items-center gap-4 w-full px-5 py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative ${
+                  active === t
+                    ? "bg-primary text-white shadow-xl shadow-primary/25 scale-[1.02]"
+                    : "text-secondary hover:text-primary hover:bg-primary/5"
+                }`}
+              >
+                <span className={`transition-transform duration-300 group-hover:scale-110 ${active === t ? "text-white" : "text-primary/70"}`}>
+                  {tabIcons[t] || null}
+                </span>
+                <span className="truncate tracking-tight">{t}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      {/* Bottom actions */}
-      <div className="mt-auto px-3 pb-6 space-y-1">
-        <div className="flex items-center gap-3 w-full px-2 rounded-lg text-gray-300 transition">
-          <NotificationDropdown />
-        </div>
-        <button onClick={doLogout} className="flex items-center gap-3 w-full px-4 py-2 rounded-lg text-gray-300 hover:text-red-400 hover:bg-red-500/10 transition">
-          <LogOut size={18} /> Logout
+      <div className="mt-auto px-2 pb-2 space-y-2 border-t border-gray-100 pt-2">
+        <NotificationDropdown />
+        <button 
+          onClick={doLogout} 
+          className="flex items-center gap-4 w-full px-5 py-2 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all duration-300 border border-transparent hover:border-red-100 group"
+        >
+          <div className="p-2 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
+            <LogOut size={18} /> 
+          </div>
+          Logout
         </button>
       </div>
     </aside>

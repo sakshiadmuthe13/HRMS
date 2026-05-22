@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Users, Plus, Edit2, Trash2, UserCheck, ShieldAlert, CheckCircle2 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -104,7 +106,6 @@ const TeamsPage = () => {
       name: team.name,
       leader: team.leader?._id || "",
       members: team.members.map((m) => m._id),
-      projects: team.projects.map((p) => p._id),
     });
     setIsModalOpen(true);
   };
@@ -132,175 +133,196 @@ const TeamsPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-primary animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8 mt-2 sm:mt-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#0EA6F0]">👥 Teams</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <h2 className="text-4xl font-black text-primary tracking-tight mb-2">Team Management</h2>
+          <p className="text-secondary font-medium opacity-80">Organize your workforce into high-performance units.</p>
+        </div>
         <button
           onClick={handleCreate}
-          className="bg-[#0EA6F0] hover:bg-[#A756FA] text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200"
+          className="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300 active:scale-95"
         >
-          + Add Team
+          <Plus size={20} />
+          Create Team
         </button>
       </div>
 
       {error && (
-        <p className="text-red-400 bg-[#111828] border border-red-500/30 px-3 py-2 rounded mb-4">
-          ⚠️ {error}
-        </p>
+        <div className="bg-red-50 text-red-500 border border-red-200 p-4 rounded-2xl mb-6 font-bold flex items-center gap-2">
+          <ShieldAlert size={20} />
+          {error}
+        </div>
       )}
 
       {/* Teams Table */}
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg">
+      <div className="bg-white rounded-[2.5rem] shadow-xl shadow-primary/5 border border-gray-200 overflow-hidden">
         {loading ? (
-          <p className="p-6 text-center text-gray-400 animate-pulse">
-            Loading teams...
-          </p>
+          <div className="p-20 text-center text-secondary font-bold animate-pulse">
+            Retrieving team structures...
+          </div>
         ) : teams.length > 0 ? (
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-gray-400 text-sm">
-              <tr>
-                <th className="p-4">Team Name</th>
-                <th className="p-4">Leader</th>
-                <th className="p-4">Members</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.map((team, i) => (
-                <tr
-                  key={team._id || i}
-                  className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all"
-                >
-                  <td className="p-4 font-medium">{team.name}</td>
-                  <td className="p-4">{team.leader?.name || "-"}</td>
-                  <td className="p-4 text-sm text-gray-300">
-                    {team.members.map((m) => m.name).join(", ") || "-"}
-                  </td>
-                  <td className="p-4 flex justify-end gap-5">
-                    <button
-                      onClick={() => handleEdit(team)}
-                      className="text-blue-400 hover:text-blue-500 text-sm font-medium"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(team)}
-                      className="text-red-400 hover:text-red-500 text-sm font-medium"
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-200">
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Team Name</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Team Lead</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden md:table-cell">Members</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {teams.map((team, i) => (
+                  <tr key={team._id || i} className="hover:bg-primary/5 transition-colors group">
+                    <td className="p-5">
+                      <div className="font-bold text-primary text-lg flex items-center gap-2">
+                        <Users size={18} className="text-primary/40" />
+                        {team.name}
+                      </div>
+                    </td>
+                    <td className="p-5">
+                      <div className="flex items-center gap-2 font-medium text-secondary">
+                        <UserCheck size={16} className="text-primary" />
+                        {team.leader?.name || "-"}
+                      </div>
+                    </td>
+                    <td className="p-5 hidden md:table-cell max-w-xs">
+                      <div className="flex flex-wrap gap-1">
+                        {team.members.map((m, idx) => (
+                          <span key={idx} className="px-2 py-0.5 bg-gray-50 text-secondary rounded-lg text-[10px] font-bold">
+                            {m.name}
+                          </span>
+                        ))}
+                        {team.members.length === 0 && <span className="text-secondary opacity-40 italic">No members</span>}
+                      </div>
+                    </td>
+                    <td className="p-5 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(team)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <Edit2 size={18} />
+                        </button>
+                        <button onClick={() => handleDeleteClick(team)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <p className="text-center py-6 text-gray-400">No teams found.</p>
+          <div className="p-20 text-center text-secondary font-medium">No teams defined yet.</div>
         )}
       </div>
 
       {/* Create/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[#111828] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-semibold mb-4 text-[#0EA6F0]">
-              {editingTeam ? "Edit Team" : "Create New Team"}
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Team Name</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Enter team name"
-                  className="w-full p-3 bg-[#030712] border border-gray-700 rounded-md text-white focus:ring-2 focus:ring-[#0EA6F0] outline-none transition-all"
-                />
-              </div>
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white p-8 rounded-[2.5rem] w-full max-w-xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar"
+            >
+              <h3 className="text-3xl font-black mb-8 text-primary tracking-tight">
+                {editingTeam ? "Refine Team Structure" : "Assemble New Team"}
+              </h3>
+              <div className="space-y-6">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Team Designation</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="e.g. Frontend Development"
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Team Leader</label>
-                <select
-                  value={form.leader}
-                  onChange={(e) => setForm({ ...form, leader: e.target.value })}
-                  className="w-full p-3 bg-[#030712] border border-gray-700 rounded-md text-white focus:ring-2 focus:ring-[#0EA6F0] outline-none transition-all"
-                >
-                  <option value="">Select Leader</option>
-                  {leaders.map((l) => (
-                    <option key={l._id} value={l._id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Assigned Team Lead</label>
+                  <select
+                    value={form.leader}
+                    onChange={(e) => setForm({ ...form, leader: e.target.value })}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                  >
+                    <option value="">Select an Authority</option>
+                    {leaders.map((l) => (
+                      <option key={l._id} value={l._id}>{l.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Members</label>
-                <div className="bg-[#030712] border border-gray-700 rounded-md max-h-40 overflow-y-auto p-2">
-                  {employees.map((e) => (
-                    <label
-                      key={e._id}
-                      className="flex items-center gap-2 p-1 text-gray-300 hover:text-white hover:bg-[#0EA6F0]/10 rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.members.includes(e._id)}
-                        onChange={() => toggleMember(e._id)}
-                      />
-                      {e.name}
-                    </label>
-                  ))}
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Personnel Allocation</label>
+                  <div className="bg-gray-50 border border-gray-200 rounded-[1.5rem] p-4 max-h-60 overflow-y-auto no-scrollbar">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {employees.map((e) => (
+                        <button
+                          key={e._id}
+                          type="button"
+                          onClick={() => toggleMember(e._id)}
+                          className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${
+                            form.members.includes(e._id)
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/10"
+                              : "bg-white text-secondary border-gray-200 hover:border-primary/30"
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                            form.members.includes(e._id) ? "bg-white border-gray-200 text-primary" : "border-gray-200"
+                          }`}>
+                            {form.members.includes(e._id) && <CheckCircle2 size={12} />}
+                          </div>
+                          <span className="text-sm font-bold truncate">{e.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-secondary font-medium ml-1">Selected: {form.members.length} members</p>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={handleSave}
-                className="bg-[#0EA6F0] hover:bg-[#A756FA] text-white px-5 py-2 rounded-lg shadow-md transition-all"
-              >
-                {editingTeam ? "💾 Update" : "💾 Save"}
-              </button>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 transition text-gray-300"
-              >
-                ✖ Cancel
-              </button>
-            </div>
+              <div className="mt-10 flex justify-end gap-4">
+                <button onClick={() => setIsModalOpen(false)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
+                <button
+                  onClick={handleSave}
+                  className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300"
+                >
+                  {editingTeam ? "Update Team" : "Finalize Team"}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Delete Confirmation */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[#111828] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-red-400">
-              ⚠️ Confirm Deletion
-            </h3>
-            <p className="text-gray-400 mb-6">
-              Are you sure you want to delete{" "}
-              <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={cancelDelete}
-                className="px-4 py-2 border border-gray-700 rounded-lg hover:bg-gray-800 transition text-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition-all"
-              >
-                Delete
-              </button>
-            </div>
+      <AnimatePresence>
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-50 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-red-50 text-center"
+            >
+              <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-2xl font-black mb-3 text-primary tracking-tight">Disband Team?</h3>
+              <p className="text-secondary font-medium mb-8">Are you certain you want to delete <span className="text-primary font-black">{deleteTarget.name}</span>? This action will remove the team designation.</p>
+              <div className="flex gap-4">
+                <button onClick={cancelDelete} className="flex-1 px-6 py-4 font-bold text-secondary border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all">Cancel</button>
+                <button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-bold shadow-xl shadow-red-500/20 transition-all">Disband</button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

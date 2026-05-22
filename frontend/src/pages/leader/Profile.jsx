@@ -1,105 +1,84 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
-import { User, Upload, CheckCircle, XCircle, Eye, Download, X } from "lucide-react";
+import { User, Upload, CheckCircle2, XCircle, Eye, Download, Phone, MapPin, Briefcase, Calendar as CalendarIcon, ShieldCheck, Mail, Building, Landmark, FileText, Camera, ArrowRight } from "lucide-react";
 import DatePicker from "../../components/DatePicker";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
-const formatDateDMY = (value) => {
-  if (!value) return "";
-  const dateStr = typeof value === "string" ? value.split("T")[0] : value;
-  if (typeof dateStr !== "string") return "";
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return "";
-  const [yyyy, mm, dd] = parts;
-  const d = String(dd).padStart(2, "0");
-  const m = String(mm).padStart(2, "0");
-  return `${d}/${m}/${yyyy}`;
+const fetchJson = async (path, opts = {}) => {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const headers = { ...(opts.headers || {}) };
+  if (token && !headers.Authorization && !headers.authorization) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    ...opts,
+    headers,
+  });
+  if (!res.ok) {
+    let text = await res.text();
+    try { text = JSON.parse(text); } catch { }
+    throw new Error(text?.message || res.statusText || "API error");
+  }
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
 };
 
-const parseDateDMY = (dateStr) => {
-  if (!dateStr) return "";
-  try {
-    if (dateStr.includes("/")) {
-      const [d, m, yyyy] = dateStr.split("/");
-      return `${yyyy}-${m}-${d}`;
-    }
-    return dateStr;
-  } catch {
-    return "";
-  }
+const apiGet = (p) => fetchJson(p);
+
+const convertDMYToYMD = (dmy) => {
+  if (!dmy) return "";
+  const parts = dmy.split("/");
+  if (parts.length !== 3) return "";
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+};
+
+const formatDateDMY = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d)) return "";
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState({
-    phone: "",
-    address: "",
-    bankIFSC: "",
-    bankAccountNumber: "",
-    isMarried: false,
-    marriageAnniversary: "",
-  });
-  const [files, setFiles] = useState({
-    passportPhoto: null,
-    tenthMarksheet: null,
-    twelthDiplomaMarksheet: null,
-    graduationMarksheet: null,
-    bankPassbookPhoto: null,
-    aadharFront: null,
-    aadharBack: null,
-    panCard: null,
-    cv: null,
-  });
+  const [activeTab, setActiveTab] = useState("overview");
+  const [formData, setFormData] = useState({ phone: "", address: "", bankIFSC: "", bankAccountNumber: "", isMarried: false, marriageAnniversary: "" });
+  const [files, setFiles] = useState({ passportPhoto: null, tenthMarksheet: null, twelthDiplomaMarksheet: null, graduationMarksheet: null, bankPassbookPhoto: null, aadharFront: null, aadharBack: null, panCard: null, cv: null });
 
   const documentLabels = {
-    passportPhoto: "Passport Size Photograph",
+    passportPhoto: "Profile Photograph",
     tenthMarksheet: "10th Marksheet",
-    twelthDiplomaMarksheet: "12th/Diploma Marksheet",
-    graduationMarksheet: "Graduation Marksheet",
-    bankPassbookPhoto: "Bank Passbook Photo",
-    aadharFront: "Aadhar Card (Front)",
-    aadharBack: "Aadhar Card (Back)",
-    panCard: "Pan Card",
-    cv: "Updated CV",
+    twelthDiplomaMarksheet: "12th/Diploma",
+    graduationMarksheet: "Graduation Cert",
+    bankPassbookPhoto: "Bank Passbook",
+    aadharFront: "Aadhar Front",
+    aadharBack: "Aadhar Back",
+    panCard: "PAN Card",
+    cv: "Professional CV",
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
+  useEffect(() => { fetchProfile(); }, []);
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/leader/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await apiGet("/leader/profile");
+      setProfile(response);
+      setFormData({
+        phone: response.phone || "",
+        address: response.address || "",
+        bankIFSC: response.documents?.bankIFSC || "",
+        bankAccountNumber: response.documents?.bankAccountNumber || "",
+        isMarried: !!response.isMarried,
+        marriageAnniversary: response.marriageAnniversary ? formatDateDMY(response.marriageAnniversary) : "",
       });
-      const data = await response.json();
-      if (response.ok) {
-        setProfile(data);
-        setFormData({
-          phone: data.phone || "",
-          address: data.address || "",
-          bankIFSC: data.documents?.bankIFSC || "",
-          bankAccountNumber: data.documents?.bankAccountNumber || "",
-          isMarried: !!data.isMarried,
-          marriageAnniversary: data.marriageAnniversary ? formatDateDMY(data.marriageAnniversary.split("T")[0]) : "",
-        });
-      } else {
-        toast.error(data.message || "Failed to fetch profile");
-      }
-    } catch (error) {
-      console.error("Fetch profile error:", error);
-      toast.error("Failed to fetch profile");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFileChange = (field, file) => {
-    setFiles(prev => ({ ...prev, [field]: file }));
+    } catch (error) { toast.error("Failed to fetch profile"); }
+    finally { setLoading(false); }
   };
 
   const handleInputChange = (e) => {
@@ -107,330 +86,470 @@ const Profile = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (field, file) => {
+    setFiles(prev => ({ ...prev, [field]: file }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
-
     const data = new FormData();
     data.append("phone", formData.phone);
     data.append("address", formData.address);
     data.append("bankIFSC", formData.bankIFSC);
     data.append("bankAccountNumber", formData.bankAccountNumber);
     data.append("isMarried", String(formData.isMarried));
-    if (formData.isMarried && formData.marriageAnniversary) {
-      data.append("marriageAnniversary", parseDateDMY(formData.marriageAnniversary));
-    }
-
-    Object.keys(files).forEach(field => {
-      if (files[field]) {
-        data.append(field, files[field]);
-      }
-    });
+    if (formData.isMarried && formData.marriageAnniversary) data.append("marriageAnniversary", convertDMYToYMD(formData.marriageAnniversary));
+    Object.keys(files).forEach(f => { if (files[f]) data.append(f, files[f]); });
 
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE}/leader/profile`, {
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/leader/profile`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
         body: data,
       });
-      const result = await response.json();
-      if (response.ok) {
+      const result = await res.json();
+      if (res.ok) {
         toast.success("Profile updated successfully");
         setProfile(result.user);
-        setFiles({
-          passportPhoto: null,
-          tenthMarksheet: null,
-          twelthDiplomaMarksheet: null,
-          graduationMarksheet: null,
-          bankPassbookPhoto: null,
-          aadharFront: null,
-          aadharBack: null,
-          panCard: null,
-          cv: null,
-        });
-      } else {
-        toast.error(result.message || "Failed to update profile");
-      }
-    } catch (error) {
-      console.error("Update profile error:", error);
-      toast.error("Failed to update profile");
-    } finally {
-      setUploading(false);
-    }
+        setFiles(Object.keys(files).reduce((acc, k) => ({ ...acc, [k]: null }), {}));
+      } else { toast.error(result.message); }
+    } catch (error) { toast.error("Update failed"); }
+    finally { setUploading(false); }
   };
 
-  const getVerificationStatus = (doc) => {
-    if (!doc || !doc.path) return "Not Uploaded";
-    if (doc.verified) return "Verified";
-    return "Pending Verification";
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Verified": return "text-green-600";
-      case "Pending Verification": return "text-yellow-600";
-      default: return "text-gray-600";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "Verified": return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case "Pending Verification": return <XCircle className="w-4 h-4 text-yellow-600" />;
-      default: return <XCircle className="w-4 h-4 text-gray-600" />;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex justify-center items-center h-screen">
+      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-12 h-12 border-4 border-primary/10 border-t-primary rounded-full" />
+    </div>
+  );
 
   return (
-    <section className="p-3 sm:p-6 bg-[var(--color-surface)] min-h-screen text-[var(--color-text-primary)] relative">
-      <div className="max-w-6xl mx-auto">
-        {/* <button
-          onClick={() => window.history.back()}
-          className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
-          title="Close"
-        >
-          <X size={24} />
-        </button> */}
-        <div className="flex items-center gap-3 mb-8 pr-10 sm:pr-0">
-          <User className="w-6 sm:w-8 h-6 sm:h-8 text-[var(--color-primary)]" />
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">My Profile</h1>
+    <div className="animate-fadeIn max-w-7xl mx-auto space-y-6 pb-20 px-4 md:px-0">
+      {/* Banner / Cover & Profile Header Card */}
+      <div className="relative rounded-3xl overflow-hidden bg-white border border-gray-150 shadow-md mb-8 transition-all duration-300 hover:shadow-lg">
+        {/* Decorative Cover Background */}
+        <div className="h-44 md:h-52 bg-gradient-to-r from-[#0c4052] via-[#12637E] to-[#1d82a1] relative overflow-hidden">
+          {/* Technical Grid Pattern Overlay */}
+          <svg className="absolute inset-0 w-full h-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+            <defs>
+              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="white" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+          
+          {/* Subtle Glowing Abstract Shapes */}
+          <div className="absolute -top-20 -left-20 w-72 h-72 bg-cyan-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: "6s" }}></div>
+          <div className="absolute top-10 right-20 w-60 h-60 bg-teal-300/10 rounded-full blur-2xl"></div>
+          <div className="absolute -bottom-10 right-1/4 w-80 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
+          
+          {/* Premium diagonal decorative element */}
+          <div className="absolute right-0 bottom-0 top-0 w-1/3 bg-gradient-to-l from-white/5 to-transparent transform -skew-x-12"></div>
         </div>
 
-        {/* Profile Status */}
-        <div className="card-glow p-4 sm:p-6 mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <img
-                src={profile?.documents?.passportPhoto?.path || "/default-avatar.png"}
-                alt="Profile"
-                className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-2 border-[var(--color-primary)]"
-              />
-              <div className="text-center sm:text-left">
-                <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)]">{profile?.name}</h2>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Email: {profile?.email}</p>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Position: {profile?.position}</p>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">DOJ: {profile?.dateOfJoining ? new Date(profile.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</p>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Phone: {profile?.phone}</p>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">DOB: {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</p>
-                <p className="text-xs sm:text-sm text-[var(--color-text-secondary)]">Salary: {profile?.salary}</p>
-              </div>
-            </div>
-            <div className="text-center w-full sm:w-auto">
-              <div className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium ${
-                profile?.profileVerified
-                  ? "bg-green-900/30 text-green-400 border border-green-800"
-                  : "bg-yellow-900/30 text-yellow-400 border border-yellow-800"
-              }`}>
-                {profile?.profileVerified ? (
-                  <>
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Verified
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Unverified
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Reporting Information */}
-        <div className="card-glow p-4 sm:p-6 mb-8">
-          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-6">Reporting Structure</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
-            <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-              <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Reporting Manager</h3>
-              <p className="text-[var(--color-text-secondary)]">
-                {profile?.reportingManager?.name || "Not assigned"}
-              </p>
-              {profile?.reportingManager?.email && (
-                <p className="text-xs text-[var(--color-text-secondary)]">{profile.reportingManager.email}</p>
-              )}
-            </div>
-            <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-              <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Technical Reporting</h3>
-              <p className="text-[var(--color-text-secondary)]">
-                {profile?.technicalReporting?.name || "Not assigned"}
-              </p>
-              {profile?.technicalReporting?.email && (
-                <p className="text-xs text-[var(--color-text-secondary)]">{profile.technicalReporting.email}</p>
-              )}
-            </div>
-            <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-              <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">Administrative Reporting</h3>
-              <p className="text-[var(--color-text-secondary)]">
-                {profile?.administrativeReporting?.name || "Not assigned"}
-              </p>
-              {profile?.administrativeReporting?.email && (
-                <p className="text-xs text-[var(--color-text-secondary)]">{profile.administrativeReporting.email}</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Update Profile Form */}
-        <form onSubmit={handleSubmit} className="card-glow p-4 sm:p-6 mb-8">
-          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-6">Update Profile Information</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Phone</label>
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                placeholder="Enter phone number"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Address</label>
-              <textarea
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                rows={1}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                placeholder="Enter address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Bank IFSC Code</label>
-              <input
-                type="text"
-                name="bankIFSC"
-                value={formData.bankIFSC}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                placeholder="Enter IFSC code"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Bank Account Number</label>
-              <input
-                type="text"
-                name="bankAccountNumber"
-                value={formData.bankAccountNumber}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                placeholder="Enter account number"
-              />
-            </div>
-          </div>
-
-          {/* Marital Information */}
-          <h3 className="text-base sm:text-lg font-medium text-[var(--color-text-primary)] mb-4">Marital Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Married?</label>
-              <select
-                name="isMarried"
-                value={formData.isMarried ? "true" : "false"}
-                onChange={(e) => setFormData(prev => ({ ...prev, isMarried: e.target.value === "true" }))}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-              >
-                <option value="false">No</option>
-                <option value="true">Yes</option>
-              </select>
-            </div>
-            {formData.isMarried && (
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">Marriage Anniversary</label>
-                <DatePicker
-                  value={formData.marriageAnniversary}
-                  onChange={(value) => setFormData(prev => ({ ...prev, marriageAnniversary: value }))}
-                  placeholder="dd/mm/yyyy"
+        {/* Profile Card Header Info */}
+        <div className="px-6 pb-6 md:px-10 md:pb-8 -mt-16 md:-mt-20 relative z-10 flex flex-col md:flex-row items-center md:items-end gap-6 text-center md:text-left">
+          {/* Avatar Container */}
+          <div className="relative group">
+            <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-white flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
+              {profile?.documents?.passportPhoto?.path ? (
+                <img 
+                  src={profile?.documents?.passportPhoto?.path} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
                 />
-              </div>
-            )}
-          </div>
-
-          {/* Document Uploads */}
-          <h3 className="text-base sm:text-lg font-medium text-[var(--color-text-primary)] mb-4">Upload Documents</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-            {Object.entries(documentLabels).map(([field, label]) => (
-              <div key={field} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2">{label}</label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => handleFileChange(field, e.target.files[0])}
-                  className="w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)]/20 file:text-[var(--color-primary)] hover:file:bg-[var(--color-primary)]/30"
-                />
-                {files[field] && (
-                  <p className="text-xs text-[var(--color-text-secondary)] mt-1">Selected: {files[field].name}</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <button
-            type="submit"
-            disabled={uploading}
-            className="w-full bg-[var(--color-primary)] text-white py-2 px-4 rounded-md text-sm sm:text-base hover:bg-[var(--color-primary)]/80 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {uploading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Updating...
-              </>
-            ) : (
-              <>
-                <Upload className="w-4 h-4" />
-                Update Profile
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Document Status */}
-        <div className="card-glow p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-[var(--color-text-primary)] mb-6">Document Verification Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            {Object.entries(documentLabels).map(([field, label]) => {
-              const doc = profile?.documents?.[field];
-              const status = getVerificationStatus(doc);
-              return (
-                <div key={field} className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface)]">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-[var(--color-text-primary)]">{label}</h3>
-                    {getStatusIcon(status)}
-                  </div>
-                  <p className={`text-sm font-medium ${getStatusColor(status)}`}>{status}</p>
-                  {doc?.path && (
-                    <div className="mt-2">
-                      <a
-                        href={doc.path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 text-sm"
-                      >
-                        <Eye className="w-3 h-3" />
-                        View Document
-                      </a>
-                    </div>
-                  )}
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-gray-400">
+                  <User size={56} className="stroke-[1.5]" />
                 </div>
-              );
-            })}
+              )}
+            </div>
+            {profile?.profileVerified && (
+              <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-xl shadow-lg border-2 border-white" title="Verified Personnel">
+                <ShieldCheck size={18} />
+              </div>
+            )}
+          </div>
+
+          {/* Profile Name & Quick Info */}
+          <div className="flex-1 min-w-0 md:mb-2">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2.5 justify-center md:justify-start">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight truncate">
+                {profile?.name}
+              </h1>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-wide border ${
+                profile?.profileVerified 
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                  : "bg-amber-50 text-amber-700 border-amber-200"
+              }`}>
+                {profile?.profileVerified ? "Verified Leader" : "Awaiting Audit"}
+              </span>
+            </div>
+            
+            {/* Position and Department Badges */}
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-4">
+              <span className="bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-lg border border-gray-200">
+                {profile?.position || "Team Leader"}
+              </span>
+              <span className="bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-lg border border-gray-200">
+                Department: Leader
+              </span>
+            </div>
+
+            {/* Quick Contact Grid */}
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-y-2 gap-x-6 text-sm text-gray-600">
+              <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer">
+                <Mail size={16} className="text-gray-400" />
+                <span>{profile?.email}</span>
+              </span>
+              {profile?.phone && (
+                <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer">
+                  <Phone size={16} className="text-gray-400" />
+                  <span>{profile?.phone}</span>
+                </span>
+              )}
+              {profile?.address && (
+                <span className="flex items-center gap-1.5 max-w-xs truncate" title={profile?.address}>
+                  <MapPin size={16} className="text-gray-400 shrink-0" />
+                  <span className="truncate">{profile?.address}</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </section>
+
+      {/* Modern Tabs */}
+      <div className="flex border-b border-gray-200 gap-6 mb-8 overflow-x-auto pb-px">
+        {[
+          { id: "overview", label: "Overview", icon: <User size={18} /> },
+          { id: "documents", label: "Documents Repository", icon: <FileText size={18} /> },
+          { id: "edit", label: "Update Profile", icon: <Camera size={18} /> }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            id={`tab-btn-${tab.id}`}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 py-3 px-1 border-b-2 font-semibold text-sm transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === tab.id
+                ? "border-primary text-primary"
+                : "border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-300"
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Panels */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.25 }}
+        >
+          {activeTab === "overview" && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Personal details info card */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2.5">
+                    <User size={20} className="text-primary" /> Personal Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Full Name</span>
+                      <p className="text-sm font-semibold text-gray-800">{profile?.name || "N/A"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Email Address</span>
+                      <p className="text-sm font-semibold text-gray-800">{profile?.email || "N/A"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Mobile Phone</span>
+                      <p className="text-sm font-semibold text-gray-800">{profile?.phone || "N/A"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Current Residence</span>
+                      <p className="text-sm font-semibold text-gray-800">{profile?.address || "N/A"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Marital Status</span>
+                      <p className="text-sm font-semibold text-gray-800">{profile?.isMarried ? "Married" : "Single"}</p>
+                    </div>
+                    {profile?.isMarried && (
+                      <div className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Anniversary Date</span>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {profile?.marriageAnniversary ? formatDateDMY(profile?.marriageAnniversary) : "N/A"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financial Identity card */}
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2.5">
+                    <Landmark size={20} className="text-primary" /> Financial Profile
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Bank IFSC Code</span>
+                      <span className="text-sm font-bold text-gray-800 tracking-wide uppercase">{profile?.documents?.bankIFSC || "Not Provided"}</span>
+                    </div>
+                    <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-1">Bank Account Number</span>
+                      <span className="text-sm font-bold text-gray-800 tracking-widest">
+                        {profile?.documents?.bankAccountNumber 
+                          ? `•••• •••• ${profile.documents.bankAccountNumber.slice(-4)}`
+                          : "Not Provided"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Administrative reporting chain card */}
+              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2.5">
+                    <Building size={20} className="text-primary" /> Organization Hierarchy
+                  </h3>
+                  <div className="space-y-5">
+                    {[
+                      { label: "Executive Head", person: profile?.reportingManager, role: "Primary Approver" },
+                      { label: "Technical Lead", person: profile?.technicalReporting, role: "Functional Lead" },
+                      { label: "Compliance Admin", person: profile?.administrativeReporting, role: "Compliance Controller" }
+                    ].map((chain, i) => (
+                      <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {chain.person?.name ? chain.person.name.charAt(0) : <User size={16} />}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs text-gray-400 block font-medium uppercase tracking-wider">{chain.label}</span>
+                          <span className="text-sm font-bold text-gray-800 block truncate">{chain.person?.name || "Unassigned"}</span>
+                          <span className="text-[11px] text-gray-400 block truncate">{chain.person?.email || chain.role}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "documents" && (
+            <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-sm">
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Credential & Verification Registry</h3>
+                  <p className="text-sm text-gray-500">Upload, review, and monitor validation statuses for your administrative and identity documents.</p>
+                </div>
+                {Object.values(files).some(file => file !== null) && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={uploading}
+                    id="commit-staged-docs"
+                    className="btn btn-primary text-xs py-2 px-4 shadow-sm"
+                  >
+                    {uploading ? "Uploading..." : "Commit Staged Files"}
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Object.entries(documentLabels).map(([f, label]) => {
+                  const doc = profile?.documents?.[f];
+                  const stagedFile = files[f];
+                  return (
+                    <div 
+                      key={f} 
+                      className="p-5 bg-gray-50/50 rounded-xl border border-gray-200 hover:border-primary/20 hover:bg-white transition-all flex flex-col justify-between h-[160px] relative group"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-xs font-bold text-gray-800 uppercase tracking-wide truncate pr-8">{label}</div>
+                          {/* File status badge */}
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            doc?.verified 
+                              ? "bg-green-500/10 text-green-700 border-green-200" 
+                              : doc?.path 
+                              ? "bg-amber-500/10 text-amber-700 border-amber-200" 
+                              : "bg-gray-100 text-gray-600 border-gray-300"
+                          }`}>
+                            {doc?.verified ? "Verified" : doc?.path ? "Pending" : "Missing"}
+                          </span>
+                        </div>
+
+                        {/* Staged file notice */}
+                        {stagedFile ? (
+                          <div className="mt-3 flex items-center gap-1.5 text-xs text-secondary font-semibold">
+                            <CheckCircle2 size={14} className="text-green-500" />
+                            <span className="truncate max-w-[180px]" title={stagedFile.name}>{stagedFile.name}</span>
+                            <button 
+                              onClick={() => handleFileChange(f, null)} 
+                              className="text-red-500 hover:text-red-700 ml-auto cursor-pointer"
+                              title="Clear staging"
+                            >
+                              <XCircle size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] text-gray-400 mt-2">
+                             {doc?.path ? "Document uploaded & saved." : "No document registered."}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
+                        {doc?.path && (
+                          <a 
+                            href={doc.path} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            id={`view-${f}`}
+                            className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-primary transition-all shadow-sm border border-gray-100 flex items-center justify-center"
+                            title="View Document"
+                          >
+                            <Eye size={16} />
+                          </a>
+                        )}
+                        <label 
+                          className="p-2 bg-white hover:bg-gray-100 rounded-lg text-primary cursor-pointer border border-gray-100 hover:border-primary/20 transition-all shadow-sm flex items-center justify-center"
+                          title="Upload new file"
+                        >
+                          <Upload size={16} />
+                          <input 
+                            id={`upload-input-${f}`}
+                            type="file" 
+                            className="hidden" 
+                            onChange={(e) => handleFileChange(f, e.target.files[0])} 
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "edit" && (
+            <div className="max-w-3xl mx-auto">
+              <form onSubmit={handleSubmit} className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 shadow-sm space-y-8">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Personnel Information Update</h3>
+                  <p className="text-sm text-gray-500">Update your primary contact information, residence, marital details, and bank credentials.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Contact Number */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="phone-input">Primary Contact Number</label>
+                    <input 
+                      id="phone-input"
+                      type="text"
+                      name="phone" 
+                      value={formData.phone} 
+                      onChange={handleInputChange} 
+                      placeholder="Enter mobile phone number"
+                      className="input" 
+                    />
+                  </div>
+
+                  {/* Residence Address */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="address-input">Current Residence Address</label>
+                    <input 
+                      id="address-input"
+                      type="text"
+                      name="address" 
+                      value={formData.address} 
+                      onChange={handleInputChange} 
+                      placeholder="Enter current residential address"
+                      className="input" 
+                    />
+                  </div>
+
+                  {/* Marital Status */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="married-select">Marital Status</label>
+                    <select 
+                      id="married-select"
+                      value={String(formData.isMarried)} 
+                      onChange={(e) => setFormData(p => ({ ...p, isMarried: e.target.value === "true" }))} 
+                      className="input"
+                    >
+                      <option value="false">Single</option>
+                      <option value="true">Married</option>
+                    </select>
+                  </div>
+
+                  {/* Anniversary Date */}
+                  {formData.isMarried && (
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">Anniversary Date</label>
+                      <DatePicker 
+                        value={formData.marriageAnniversary} 
+                        onChange={(v) => setFormData(p => ({ ...p, marriageAnniversary: v }))} 
+                      />
+                    </div>
+                  )}
+
+                  {/* Bank IFSC */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="ifsc-input">Bank IFSC Code</label>
+                    <input 
+                      id="ifsc-input"
+                      type="text"
+                      name="bankIFSC" 
+                      value={formData.bankIFSC} 
+                      onChange={handleInputChange} 
+                      placeholder="Enter IFSC code (e.g. SBIN0001234)"
+                      className="input" 
+                    />
+                  </div>
+
+                  {/* Bank Account Number */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="account-input">Bank Account Number</label>
+                    <input 
+                      id="account-input"
+                      type="text"
+                      name="bankAccountNumber" 
+                      value={formData.bankAccountNumber} 
+                      onChange={handleInputChange} 
+                      placeholder="Enter account number"
+                      className="input" 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <button 
+                    type="submit"
+                    disabled={uploading} 
+                    id="submit-profile-changes"
+                    className="btn btn-primary min-w-[160px] text-sm font-semibold tracking-wide disabled:opacity-50 py-3 rounded-xl flex items-center justify-center gap-2"
+                  >
+                    {uploading ? "Updating..." : "Save Changes"}
+                    {!uploading && <ArrowRight size={18} />}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };
 

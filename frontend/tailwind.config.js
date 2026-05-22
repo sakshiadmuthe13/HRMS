@@ -7,15 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: 'var(--color-primary)',
-        secondary: 'var(--color-secondary)',
-        'accent-pink': 'var(--color-accent-pink)',
-        'accent-blue': 'var(--color-accent-blue)',
-        background: 'var(--color-background)',
-        surface: 'var(--color-surface)',
+        primary: 'var(--color-accent-primary)',
+        secondary: 'var(--color-accent-secondary)',
+        background: 'var(--color-bg-app)',
+        surface: 'var(--color-bg-card)',
+        elevated: 'var(--color-bg-elevated)',
+        accent: 'var(--color-bg-elevated)',
         danger: 'var(--color-danger)',
+        success: 'var(--color-success)',
+        warning: 'var(--color-warning)',
         text: 'var(--color-text-primary)',
-        'text-secondary': 'var(--color-text-secondary)'
+        'text-secondary': 'var(--color-text-secondary)',
+        border: 'var(--color-border)',
       },
       keyframes: {
         'slide-in-right': {

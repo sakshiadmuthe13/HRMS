@@ -11,12 +11,13 @@ import {
   getDay,
   isSameMonth,
 } from "date-fns";
-import { createPortal } from "react-dom"
+import { createPortal } from "react-dom";
 
 const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [displayDate, setDisplayDate] = useState(new Date());
   const pickerRef = useRef(null);
+  const portalRef = useRef(null);
 
   const parseDate = (dateString) => {
     if (!dateString) return null;
@@ -46,18 +47,16 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
-        const portal = document.querySelector('[class*="z-\\[999999\\]"]');
-        if (!portal || !portal.contains(e.target)) {
-          setShowPicker(false);
-        }
+      const clickedInsidePicker = pickerRef.current?.contains(e.target);
+      const clickedInsidePortal = portalRef.current?.contains(e.target);
+
+      if (!clickedInsidePicker && !clickedInsidePortal) {
+        setShowPicker(false);
       }
     };
 
     if (showPicker) {
-      setTimeout(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-      }, 0);
+      document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
@@ -90,6 +89,10 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
     setDisplayDate(addMonths(displayDate, 1));
   };
 
+  const pickerRect = pickerRef.current?.getBoundingClientRect();
+  const pickerTop = pickerRect ? pickerRect.bottom + window.scrollY + 8 : 0;
+  const pickerLeft = pickerRect ? pickerRect.left + window.scrollX : 0;
+
   return (
     <div className="relative w-full" ref={pickerRef}>
       <input
@@ -105,27 +108,31 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
         }}
         onClick={() => setShowPicker(!showPicker)}
         placeholder={placeholder}
-        className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all cursor-pointer"
+        className="w-full p-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all cursor-pointer"
       />
 
       {showPicker &&
         createPortal(
           <div
-            className="fixed z-[999999] left-0 top-0 flex justify-center items-start mt-2"
+            ref={portalRef}
+            className="fixed inset-0 z-[2147483647] pointer-events-none"
             style={{
-              position: "absolute",
-              top:
-                pickerRef.current?.getBoundingClientRect().bottom +
-                window.scrollY,
-              left: pickerRef.current?.getBoundingClientRect().left,
+              top: 0,
+              left: 0,
             }}
           >
-            <div className="bg-[var(--color-surface)] border border-[rgba(14,166,240,0.3)] rounded-lg shadow-lg p-4 w-72">
+            <div
+              className="pointer-events-auto absolute bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl shadow-2xl shadow-primary/10 p-4 w-72 max-w-[calc(100vw-1rem)]"
+              style={{
+                top: pickerTop,
+                left: pickerLeft,
+              }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <button
                   type="button"
                   onClick={handlePrevMonth}
-                  className="p-1 hover:bg-[rgba(14,166,240,0.2)] rounded"
+                  className="p-1 hover:bg-[rgba(18,99,126,0.08)] rounded"
                 >
                   <ChevronLeft
                     size={20}
@@ -138,7 +145,7 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
                 <button
                   type="button"
                   onClick={handleNextMonth}
-                  className="p-1 hover:bg-[rgba(14,166,240,0.2)] rounded"
+                  className="p-1 hover:bg-[rgba(18,99,126,0.08)] rounded"
                 >
                   <ChevronRight
                     size={20}
@@ -176,7 +183,7 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
                         isSelected
                           ? "bg-[var(--color-primary)] text-white font-semibold"
                           : isCurrentMonth
-                          ? "text-[var(--color-text-primary)] hover:bg-[rgba(14,166,240,0.2)]"
+                          ? "text-[var(--color-text-primary)] hover:bg-[rgba(18,99,126,0.08)]"
                           : "text-[var(--color-text-secondary)] opacity-50 cursor-not-allowed"
                       }`}
                     >

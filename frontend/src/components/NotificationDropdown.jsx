@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Bell, X } from "lucide-react";
+import { Bell, X, BellOff } from "lucide-react";
 import { useNotifications } from "../contexts/NotificationContext";
 
-const NotificationDropdown = () => {
+const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 md:bottom-24" }) => {
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -56,18 +56,7 @@ const NotificationDropdown = () => {
     };
   }, [isOpen]);
 
-  // Calculate dropdown position
-  const getDropdownStyle = () => {
-    return {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      width: "400px",
-      maxHeight: "600px",
-      zIndex: 999999,
-    };
-  };
+  // Positioning handled via responsive Tailwind utility classes
 
   // Toast notification component
   const toastComponent = toastNotification ? (
@@ -76,19 +65,19 @@ const NotificationDropdown = () => {
       style={{ zIndex: 999999, maxWidth: "350px" }}
     >
       <div className="p-4 flex items-start gap-3">
-        <Bell className="text-blue-500 flex-shrink-0 mt-1" size={20} />
+        <Bell className="text-[#1A9DC2] flex-shrink-0 mt-1" size={20} />
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-800 mb-1">
+          <p className="text-sm font-semibold text-gray-900 mb-1">
             New Notification
           </p>
-          <p className="text-sm text-gray-600">{toastNotification.message}</p>
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="text-sm text-gray-500">{toastNotification.message}</p>
+          <p className="text-xs text-gray-500 mt-2">
             {new Date(toastNotification.timestamp).toLocaleString()}
           </p>
         </div>
         <button
           onClick={() => setToastNotification(null)}
-          className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+          className="text-gray-500 hover:text-gray-500 flex-shrink-0"
         >
           <X size={18} />
         </button>
@@ -96,10 +85,10 @@ const NotificationDropdown = () => {
     </div>
   ) : null;
 
-  // Backdrop overlay when dropdown is open
+  // Backdrop overlay when dropdown is open (mobile only)
   const backdropOverlay = isOpen ? (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50"
+      className="fixed inset-0 bg-black/20 backdrop-blur-xs md:hidden"
       style={{ zIndex: 999998 }}
       onClick={() => setIsOpen(false)}
     />
@@ -109,50 +98,72 @@ const NotificationDropdown = () => {
   const dropdownContent = isOpen ? (
     <div
       ref={dropdownRef}
-      className="bg-white border border-gray-200 rounded-lg shadow-2xl"
-      style={getDropdownStyle()}
+      className={`fixed z-[999999] flex flex-col bg-white border border-gray-300 shadow-premium transition-all duration-300 md:w-96 w-full max-h-[500px] md:rounded-3xl rounded-t-3xl bottom-0 left-0 right-0 animate-slideUp overflow-hidden ${positionClasses}`}
     >
-      <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-purple-500 to-blue-500">
-        <h3 className="text-lg font-semibold text-white">Notifications</h3>
+      <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white">
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">Notifications</h3>
+          {unreadCount > 0 && (
+            <p className="text-xs text-[#1A9DC2] font-semibold mt-0.5">
+              You have {unreadCount} unread message{unreadCount > 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
         <button
           onClick={() => setIsOpen(false)}
-          className="text-white hover:text-gray-200 transition-colors"
+          className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
           aria-label="Close notifications"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
       </div>
       <div className="max-h-96 overflow-y-auto">
         {displayNotifications.length === 0 ? (
-          <p className="p-4 text-gray-500 text-center">No notifications</p>
+          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 mb-3">
+              <BellOff size={24} />
+            </div>
+            <p className="text-sm font-semibold text-gray-900">All caught up!</p>
+            <p className="text-xs text-gray-400 mt-1">
+              You don't have any notifications right now.
+            </p>
+          </div>
         ) : (
           displayNotifications.map((notification) => (
             <div
               key={notification._id}
-              className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                !notification.readStatus
-                  ? "bg-blue-50 border-l-4 border-l-blue-500"
-                  : ""
-              }`}
+              className={`px-6 py-4 border-b border-gray-50 hover:bg-gray-50/70 transition-all duration-200 cursor-pointer flex gap-4 items-start ${!notification.readStatus ? "bg-primary/5" : ""
+                }`}
               onClick={() => {
                 markAsRead(notification._id);
               }}
             >
-              <p className="text-sm text-gray-800">{notification.message}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {new Date(notification.timestamp).toLocaleString()}
-              </p>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${!notification.readStatus ? "bg-primary/10 text-primary" : "bg-gray-50 text-gray-400"
+                }`}>
+                <Bell size={14} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm text-gray-800 leading-normal ${!notification.readStatus ? "font-semibold" : "font-normal"}`}>
+                  {notification.message}
+                </p>
+                <span className="text-[11px] text-gray-400 font-medium mt-1 block">
+                  {new Date(notification.timestamp).toLocaleString()}
+                </span>
+              </div>
+              {!notification.readStatus && (
+                <span className="w-2 h-2 rounded-full bg-[#1A9DC2] mt-1.5 flex-shrink-0" />
+              )}
             </div>
           ))
         )}
       </div>
       {notifications.length > 5 && (
-        <div className="p-3 border-t border-gray-200">
+        <div className="px-6 py-3 border-t border-gray-50 bg-gray-50/30 flex justify-center">
           <button
             onClick={() => setShowAll(!showAll)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            className="text-xs font-bold text-primary hover:text-secondary transition-colors py-1.5 px-4 rounded-xl hover:bg-primary/5"
           >
-            {showAll ? "Show Less" : "Show All"}
+            {showAll ? "Show Less" : `View All (${notifications.length})`}
           </button>
         </div>
       )}
@@ -161,21 +172,38 @@ const NotificationDropdown = () => {
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative flex items-center gap-2 p-2 text-gray-300 hover:text-white transition-colors"
-        aria-label="Notifications"
-      >
-        <Bell size={20} />
-        <h3 className="text-md">Notifications</h3>
-
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </button>
+      {showText ? (
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-4 w-full px-5 py-2 rounded-2xl text-sm font-bold text-primary hover:bg-primary/5 transition-all duration-300 border border-transparent hover:border-primary/10 group relative"
+          aria-label="Notifications"
+        >
+          <div className="px-2 bg-primary/5 rounded-lg group-hover:bg-primary/10 transition-colors relative">
+            <Bell size={18} className="text-primary" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-secondary text-white text-[9px] rounded-full h-4.5 w-4.5 flex items-center justify-center font-bold">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </div>
+          Notifications
+        </button>
+      ) : (
+        <button
+          ref={buttonRef}
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-12 h-12 rounded-2xl flex items-center justify-center text-secondary hover:bg-primary/5 hover:text-primary transition-all relative group"
+          aria-label="Notifications"
+        >
+          <Bell size={22} />
+          {unreadCount > 0 && (
+            <span className="absolute top-2 right-2 bg-secondary text-white text-[9px] rounded-full h-4.5 w-4.5 flex items-center justify-center font-bold">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Render toast notification via portal */}
       {toastComponent && createPortal(toastComponent, document.body)}

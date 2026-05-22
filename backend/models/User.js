@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
   address: { type: String },
   position: { type: String },
   salary: { type: Number },
-  role: { type: String, enum: ["admin", "leader", "employee"], default: "employee" },
+  role: { type: String, enum: ["admin", "hr", "leader", "employee"], default: "employee" },
   dateOfJoining: { type: Date, default: Date.now },
   dateOfBirth: { type: Date },
   reportingManager: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

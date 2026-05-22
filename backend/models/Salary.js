@@ -6,6 +6,10 @@ const salarySchema = new mongoose.Schema({
   baseSalary: { type: Number, required: true },
   bonus: { type: Number, default: 0 },
   totalCredited: { type: Number },
+  presentDays: { type: Number },
+  absentDays: { type: Number },
+  dailyRate: { type: Number },
+  daysInMonth: { type: Number },
   month: { type: String }, // e.g., "October"
   year: { type: Number }, // e.g., 2025
   creditedOn: { type: Date },

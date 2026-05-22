@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, CheckCircle, Clock, FolderOpen } from "lucide-react";
-
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { Calendar, CheckCircle, Clock, FolderOpen, AlertCircle, ArrowUpRight, TrendingUp, Target, Layout, User, Layers, FileText, CheckSquare, Phone } from "lucide-react";
+import { motion } from "framer-motion";
+import { format } from "date-fns";
 import EmployeeSidebar from "./EmployeeSidebar";
 import Attendance from "./Attendance";
 import Leaves from "./Leaves";
@@ -11,6 +11,8 @@ import Tasks from "./Tasks";
 import Projects from "./Projects";
 import Profile from "./Profile";
 import ContactEmployeePage from "./ContactEmployee";
+
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const fetchJson = async (path, opts = {}) => {
   const token = localStorage.getItem("token");
@@ -36,7 +38,16 @@ const fetchJson = async (path, opts = {}) => {
 
 const apiGet = (p) => fetchJson(p);
 
-const TABS = ["Dashboard", "Profile", "Attendance", "My Tasks", "My Teams", "My Projects", "Contact Employee", "Apply Leave"];
+const TABS = [
+  { id: "Dashboard", label: "Dashboard", icon: Layout },
+  { id: "Profile", label: "Profile", icon: User },
+  { id: "Attendance", label: "Attendance", icon: Calendar },
+  { id: "My Tasks", label: "My Tasks", icon: CheckSquare },
+  { id: "My Teams", label: "My Teams", icon: Layers },
+  { id: "My Projects", label: "My Projects", icon: FolderOpen },
+  { id: "Contact Employee", label: "Contact Employee", icon: Phone },
+  { id: "Apply Leave", label: "Apply Leave", icon: FileText },
+];
 
 const EmployeeDashboard = () => {
   const [active, setActive] = useState("Dashboard");
@@ -66,13 +77,11 @@ const EmployeeDashboard = () => {
         apiGet("/employee/projects").catch(() => []),
       ]);
       setSummary(summaryRes);
-      // Handle the new response format { leaves, leaveAllowance }
       const myLeaves = leavesRes?.leaves || leavesRes || [];
       setLeaves(myLeaves);
       const allowance = leavesRes?.leaveAllowance ?? 12;
       setLeaveAllowance(allowance);
 
-      // compute approved days this calendar year (bound to year)
       try {
         const now = new Date();
         const yearStart = new Date(now.getFullYear(), 0, 1);
@@ -113,8 +122,6 @@ const EmployeeDashboard = () => {
     }
   };
 
-
-
   const leavesTaken = leaves.filter(l => l.status === 'Approved').reduce((sum, l) => sum + (l.totalDays || 0), 0);
   const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
   const tasksCompleted = tasks.filter(t => t.status === 'Completed').length;
@@ -132,145 +139,156 @@ const EmployeeDashboard = () => {
     { name: 'Rejected', value: leaves.filter(l => l.status === 'Rejected').length },
   ];
 
-  const COLORS = ['#FFBB28', '#00C49F', '#FF8042'];
+  const COLORS = ['#12637E', '#1A9DC2', '#242736'];
 
   return (
-    <div className="min-h-screen flex bg-[var(--color-surface)] text-[var(--color-text-primary)]">
+    <div className="min-h-screen flex bg-gray-50/50">
       <EmployeeSidebar tabs={TABS} active={active} onChange={setActive} />
 
-      <main className="flex-1 px-4 md:px-10 py-6 md:ml-64 h-screen overflow-y-auto pt-16 md:pt-6">
+      <main className="flex-1 md:ml-60 min-h-screen overflow-x-hidden transition-all duration-300">
+        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-12">
         {active === "Dashboard" && (
-          <section>
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-8">
+          <div className="animate-fadeIn space-y-12">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slideUp">
               <div>
-                <h2 className="text-xl md:text-3xl font-extrabold mb-1 md:mb-2 text-[var(--color-primary)]">Welcome back, {summary?.employeeName}!</h2>
-                <p className="text-xs md:text-sm text-[var(--color-text-secondary)]">Your quick overview</p>
+                <h2 className="text-5xl font-black mb-3 text-primary tracking-tighter leading-tight">
+                  Welcome back, <span className="text-secondary">{summary?.employeeName || "Explorer"}</span>!
+                </h2>
+                <p className="text-lg font-semibold text-secondary/70 flex items-center gap-2">
+                  <Calendar size={18} />
+                  {format(new Date(), 'EEEE, MMMM do yyyy')}
+                </p>
               </div>
               {!profileVerified && (
-                <div className="w-full md:w-auto bg-yellow-900/30 text-yellow-400 border border-yellow-800 px-2 md:px-4 py-2 rounded-lg text-xs font-medium whitespace-nowrap">
-                  ⚠️ Profile Unverified
-                </div>
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2.5 rounded-xl text-[10px] font-black border border-amber-200 uppercase tracking-widest shadow-sm"
+                >
+                  <AlertCircle size={14} /> Verification Pending
+                </motion.div>
               )}
+            </header>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {[
+                { label: "Leaves Utilized", val: leavesTaken, icon: <Calendar />, color: "bg-cyan-50 text-[#12637E]", desc: "Approved days" },
+                { label: "Pending Requests", val: pendingLeaves, icon: <Clock />, color: "bg-amber-50 text-amber-600", desc: "Awaiting review" },
+                { label: "Tasks Finished", val: tasksCompleted, icon: <CheckCircle />, color: "bg-green-50 text-green-600", desc: "Milestones met" },
+                { label: "Active Projects", val: projectsAssigned, icon: <FolderOpen />, color: "bg-blue-50 text-[#1A9DC2]", desc: "Live assignments" },
+              ].map((stat, i) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }}
+                  className="card-premium p-8 group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    {React.cloneElement(stat.icon, { size: 80 })}
+                  </div>
+
+                  <div className="flex items-center justify-between mb-6">
+                    <div className={`p-4 rounded-2xl ${stat.color} shadow-inner group-hover:scale-110 transition-all duration-300`}>
+                      {React.cloneElement(stat.icon, { size: 28 })}
+                    </div>
+                    <ArrowUpRight className="text-gray-300 group-hover:text-primary transition-colors" size={20} />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-4xl font-black text-primary tracking-tight">
+                      {loading ? <span className="animate-pulse text-gray-200">---</span> : stat.val}
+                    </div>
+                    <div className="text-[11px] font-black text-secondary/60 uppercase tracking-[0.25em]">{stat.label}</div>
+                    <div className="text-[10px] text-secondary/60 mt-1 font-medium">{stat.desc}</div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
-              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Leaves Taken</div>
-                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : leavesTaken}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Approved leave days</div>
-                  </div>
-                  <Calendar size={32} className="text-green-500 flex-shrink-0" />
-                </div>
-              </div>
-
-              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Pending Leaves</div>
-                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : pendingLeaves}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Awaiting approval</div>
-                  </div>
-                  <Clock size={32} className="text-yellow-500 flex-shrink-0" />
-                </div>
-              </div>
-
-              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Tasks Completed</div>
-                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : tasksCompleted}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Finished tasks</div>
-                  </div>
-                  <CheckCircle size={32} className="text-blue-500 flex-shrink-0" />
-                </div>
-              </div>
-
-              <div className="p-4 md:p-6 card-glow shadow-lg rounded-xl transition-transform hover:scale-105">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-xs md:text-sm text-[var(--color-text-secondary)]">Projects Assigned</div>
-                    <div className="text-3xl md:text-4xl font-bold mt-2">{loading ? "--" : projectsAssigned}</div>
-                    <div className="text-xs text-[var(--color-text-secondary)] mt-1">Active projects</div>
-                  </div>
-                  <FolderOpen size={32} className="text-purple-500 flex-shrink-0" />
-                </div>
-              </div>
-            </div>
-
-            {/* Visualizations */}
-            <div className="mt-4 md:mt-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6">
-                <div>
-                  <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Tasks by Status</h3>
-                  <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg overflow-x-auto">
-                    <BarChart width={Math.min(280, window.innerWidth - 40)} height={200} data={taskStatusData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8884d8" />
+            {/* Visualization Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200">
+                <h3 className="text-xl font-black text-primary tracking-tight mb-8 flex items-center gap-3">
+                  <Target size={20} className="text-secondary" /> Task Distribution
+                </h3>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={taskStatusData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#12637E' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#12637E' }} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: '900' }}
+                        cursor={{ fill: 'rgba(18, 99, 126, 0.05)' }}
+                      />
+                      <Bar dataKey="value" fill="#12637E" radius={[10, 10, 0, 0]} barSize={40} />
                     </BarChart>
-                  </div>
+                  </ResponsiveContainer>
                 </div>
-                <div>
-                  <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">Leaves by Status</h3>
-                  <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg overflow-x-auto">
-                    <PieChart width={Math.min(280, window.innerWidth - 40)} height={200}>
+              </div>
+
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200">
+                <h3 className="text-xl font-black text-primary tracking-tight mb-8 flex items-center gap-3">
+                  <Calendar size={20} className="text-secondary" /> Leave Allocation
+                </h3>
+                <div className="h-[300px] w-full flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
                       <Pie
                         data={leaveStatusData}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                        outerRadius={50}
-                        fill="#8884d8"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
                         dataKey="value"
                       >
                         {leaveStatusData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: '900' }} />
+                      <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
                     </PieChart>
-                  </div>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
 
-            {/* Tables Grid */}
-            <div className="mt-6 md:mt-10 grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-8">
-              {/* My Tasks Table */}
-              <div>
-                <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">My Tasks</h3>
-                <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg">
-                  <div className="overflow-x-auto max-h-64 overflow-y-auto rounded-lg border border-gray-700">
-                    <table className="w-full table-auto text-left border-collapse text-xs md:text-sm">
-                    <thead className="bg-gray-800 sticky top-0">
+            {/* Live Feed Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* Task Feed */}
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-primary tracking-tight">Active Tasks</h3>
+                  <button onClick={() => setActive("My Tasks")} className="text-[10px] font-black text-primary uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-1">
+                    Full Log <ArrowUpRight size={14} />
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50/50">
                       <tr>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Project</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300 hidden sm:table-cell">Assigned By</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Status</th>
+                        <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest">Project</th>
+                        <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest hidden sm:table-cell">Initiator</th>
+                        <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest text-right">Status</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {tasks.length === 0 ? (
-                        <tr>
-                          <td colSpan="3" className="py-4 text-center text-xs md:text-sm text-gray-400">No tasks assigned</td>
-                        </tr>
+                        <tr><td colSpan="3" className="p-10 text-center text-secondary font-medium italic">No active tasks</td></tr>
                       ) : (
-                        tasks.map((t) => (
-                          <tr key={t._id} className="border-t border-gray-700 hover:bg-gray-800 transition-colors duration-200">
-                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm truncate">{t.project?.name || "-"}</td>
-                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm hidden sm:table-cell truncate">{t.assignedBy?.name || "-"}</td>
-                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">
-                              <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium inline-block ${
-                                t.status === "Completed"
-                                  ? "bg-green-500 text-white"
-                                  : t.status === "In Progress"
-                                  ? "bg-orange-500 text-white"
-                                  : "bg-red-500 text-white"
+                        tasks.slice(0, 5).map((t) => (
+                          <tr key={t._id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="p-4 font-bold text-primary text-sm">{t.project?.name || "System Task"}</td>
+                            <td className="p-4 hidden sm:table-cell text-secondary font-medium text-xs">{t.assignedBy?.name || "Admin"}</td>
+                            <td className="p-4 text-right">
+                              <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                t.status === "Completed" ? "bg-green-50 text-green-600" :
+                                t.status === "In Progress" ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"
                               }`}>
                                 {t.status}
                               </span>
@@ -280,40 +298,38 @@ const EmployeeDashboard = () => {
                       )}
                     </tbody>
                   </table>
-                  </div>
                 </div>
               </div>
 
-              {/* My Leaves Table */}
-              <div>
-                <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">My Leaves</h3>
-                <div className="card-glow bg-[var(--color-surface)] p-3 md:p-6 rounded-xl shadow-lg">
-                  <div className="overflow-x-auto max-h-64 overflow-y-auto rounded-lg border border-gray-700">
-                    <table className="w-full table-auto text-left border-collapse text-xs md:text-sm">
-                    <thead className="bg-gray-800 sticky top-0">
+              {/* Leave Feed */}
+              <div className="bg-white p-10 rounded-[3rem] shadow-2xl border border-gray-200 overflow-hidden flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-xl font-black text-primary tracking-tight">Recent Leave Logs</h3>
+                  <button onClick={() => setActive("Apply Leave")} className="text-[10px] font-black text-primary uppercase tracking-widest hover:translate-x-1 transition-transform flex items-center gap-1">
+                    Manage <ArrowUpRight size={14} />
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50/50">
                       <tr>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">From</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Days</th>
-                        <th className="px-2 md:px-4 py-2 md:py-3 text-left font-semibold text-gray-300">Status</th>
+                        <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest">Commencement</th>
+                        <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest">Duration</th>
+                        <th className="p-4 text-[10px] font-black text-secondary uppercase tracking-widest text-right">Authorization</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-gray-100">
                       {leaves.length === 0 ? (
-                        <tr>
-                          <td colSpan="3" className="py-4 text-center text-xs md:text-sm text-gray-400">No leaves applied yet</td>
-                        </tr>
+                        <tr><td colSpan="3" className="p-10 text-center text-secondary font-medium italic">No leave history detected</td></tr>
                       ) : (
-                        leaves.map((l) => (
-                          <tr key={l._id} className="border-t border-gray-700 hover:bg-gray-800 transition-colors duration-200">
-                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">{new Date(l.fromDate).toLocaleDateString()}</td>
-                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">{l.totalDays ?? 0}</td>
-                            <td className="py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm">
-                              <span className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium inline-block ${
-                                l.status === "Approved"
-                                  ? "bg-green-500 text-white"
-                                  : l.status === "Pending"
-                                  ? "bg-orange-500 text-white"
-                                  : "bg-red-500 text-white"
+                        leaves.slice(0, 5).map((l) => (
+                          <tr key={l._id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="p-4 font-bold text-primary text-sm">{new Date(l.fromDate).toLocaleDateString('en-GB')}</td>
+                            <td className="p-4 text-secondary font-black text-xs">{l.totalDays ?? 0} DAYS</td>
+                            <td className="p-4 text-right">
+                              <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                l.status === "Approved" ? "bg-green-50 text-green-600" :
+                                l.status === "Pending" ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"
                               }`}>
                                 {l.status}
                               </span>
@@ -323,11 +339,10 @@ const EmployeeDashboard = () => {
                       )}
                     </tbody>
                   </table>
-                  </div>
                 </div>
               </div>
             </div>
-          </section>
+          </div>
         )}
 
         {active === "Attendance" && <Attendance />}
@@ -337,6 +352,7 @@ const EmployeeDashboard = () => {
         {active === "My Projects" && <Projects />}
         {active === "Profile" && <Profile />}
         {active === "Contact Employee" && <ContactEmployeePage />}
+        </div>
       </main>
     </div>
   );

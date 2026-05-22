@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Shield, Plus, Edit2, Trash2, Mail, Phone, MapPin, Briefcase, IndianRupee, X, Save, AlertTriangle } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -71,80 +73,195 @@ const AdminsPage = () => {
   const cancelDelete = () => setDeleteTarget(null);
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-8 mt-2 sm:mt-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">🛡️ Admins</h2>
-        <button onClick={handleCreate} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-4 py-2 rounded-lg shadow-md transition-all duration-200">+ Create Admin</button>
+    <div className="min-h-screen bg-background text-primary animate-fadeIn">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+        <div>
+          <h2 className="text-4xl font-black text-primary tracking-tight mb-2 flex items-center gap-3">
+            <Shield size={32} className="text-primary" />
+            Administrative Council
+          </h2>
+          <p className="text-secondary font-medium opacity-80">Manage system administrators and high-level permissions.</p>
+        </div>
+        <button
+          onClick={handleCreate}
+          className="flex items-center gap-2 bg-primary hover:bg-secondary text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300 active:scale-95"
+        >
+          <Plus size={20} />
+          Add Administrator
+        </button>
       </div>
 
-      {error && <p className="text-red-400 bg-[var(--color-surface)] border border-[var(--color-danger)] px-3 py-2 rounded mb-4">⚠️ {error}</p>}
+      {error && (
+        <div className="bg-red-50 text-red-500 border border-red-200 p-4 rounded-2xl mb-6 font-bold flex items-center gap-2">
+          <AlertTriangle size={20} />
+          {error}
+        </div>
+      )}
 
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg">
+      {/* Admins Table */}
+      <div className="bg-white rounded-[2.5rem] shadow-xl shadow-primary/5 border border-gray-200 overflow-hidden">
         {loading ? (
-          <p className="p-6 text-center text-[var(--color-text-secondary)] animate-pulse">Loading admins...</p>
+          <div className="p-20 text-center text-secondary font-bold animate-pulse">
+            Establishing secure connection to admin registry...
+          </div>
         ) : admins.length > 0 ? (
-          <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-[var(--color-text-secondary)] text-sm">
-              <tr>
-                <th className="p-4">Name</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Phone</th>
-                <th className="p-4">Position</th>
-                <th className="p-4">Date of Joining</th>
-                <th className="p-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins.map((e, i) => (
-                <tr key={e._id || i} className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all">
-                  <td className="p-4 font-medium">{e.name}</td>
-                  <td className="p-4">{e.email}</td>
-                  <td className="p-4">{e.phone}</td>
-                  <td className="p-4">{e.position}</td>
-                  <td className="p-4">{e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}</td>
-                  <td className="p-4 flex justify-end gap-5">
-                    <button onClick={() => handleEdit(e)} className="text-[var(--color-primary)] hover:text-[var(--color-secondary)] text-sm font-medium">Edit</button>
-                    <button onClick={() => handleDeleteClick(e)} className="text-[var(--color-danger)] hover:underline text-sm font-medium">Delete</button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-200">
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Administrator</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden lg:table-cell">Contact</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs">Designation</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs hidden md:table-cell">Joined On</th>
+                  <th className="p-5 font-bold text-secondary uppercase tracking-widest text-xs text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : <p className="text-center py-6 text-[var(--color-text-secondary)]">No admins found.</p>}
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {admins.map((e, i) => (
+                  <tr key={e._id || i} className="hover:bg-primary/5 transition-colors group">
+                    <td className="p-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
+                          {e.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-primary text-lg">{e.name}</div>
+                          <div className="text-xs text-secondary font-medium mt-0.5">UID: {e._id.slice(-6).toUpperCase()}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-5 hidden lg:table-cell">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-secondary font-medium">
+                          <Mail size={12} className="text-primary/60" />
+                          {e.email}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-secondary font-medium">
+                          <Phone size={12} className="text-primary/60" />
+                          {e.phone || "No phone listed"}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-5">
+                      <span className="px-3 py-1 bg-gray-50 text-primary rounded-lg text-[10px] font-black uppercase tracking-widest">
+                        {e.position || "Administrator"}
+                      </span>
+                    </td>
+                    <td className="p-5 hidden md:table-cell text-secondary font-medium text-sm">
+                      {e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB') : "—"}
+                    </td>
+                    <td className="p-5 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <Edit2 size={18} />
+                        </button>
+                        <button onClick={() => handleDeleteClick(e)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-20 text-center text-secondary font-medium">No administrators found in the system.</div>
+        )}
       </div>
 
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-2xl shadow-lg card-glow animate-fadeIn max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-semibold mb-4 text-[var(--color-primary)]">{editing === "new" ? "Create New Admin" : "Edit Admin"}</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {["name","email","password","phone","address","position","salary"].map(k => (
-                <div key={k}>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1 capitalize">{k}</label>
-                  <input type={k==="password"?"password":"text"} value={form[k]||""} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder={`Enter ${k}`} className="w-full p-3 bg-[var(--color-background)] border border-[rgba(255,255,255,0.1)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all" />
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={handleSave} className="bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-white px-5 py-2 rounded-lg shadow-md transition-all">💾 Save</button>
-              <button onClick={() => setEditing(null)} className="px-5 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition">✖ Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Create/Edit Modal */}
+      <AnimatePresence>
+        {editing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-3xl font-black text-primary tracking-tight">
+                  {editing === "new" ? "New Admin Profile" : "Refine Admin Credentials"}
+                </h3>
+                <button onClick={() => setEditing(null)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+                  <X size={24} className="text-secondary" />
+                </button>
+              </div>
 
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
-          <div className="bg-[var(--color-surface)] p-4 sm:p-5 md:p-6 rounded-xl w-full max-w-md shadow-lg card-glow animate-fadeIn">
-            <h3 className="text-xl font-semibold mb-4 text-[var(--color-danger)]">⚠️ Confirm Deletion</h3>
-            <p className="text-[var(--color-text-secondary)] mb-6">Are you sure you want to delete <span className="font-medium">{deleteTarget.name}</span>? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={cancelDelete} className="px-4 py-2 border border-[rgba(255,255,255,0.1)] rounded-lg hover:bg-[rgba(255,255,255,0.05)] transition">Cancel</button>
-              <button onClick={confirmDelete} className="bg-[var(--color-danger)] hover:bg-[rgba(255,70,56,0.8)] text-white px-4 py-2 rounded-lg shadow-md transition-all">Delete</button>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Full Legal Name</label>
+                  <input type="text" value={form.name||""} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Alexander Pierce" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Email Address</label>
+                  <input type="email" value={form.email||""} onChange={e=>setForm({...form,email:e.target.value})} placeholder="admin@domain.com" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Security Access Key</label>
+                  <input type="password" value={form.password||""} onChange={e=>setForm({...form,password:e.target.value})} placeholder={editing === "new" ? "Create secure password" : "Leave blank to keep current"} className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Contact Terminal</label>
+                  <input type="text" value={form.phone||""} onChange={e=>setForm({...form,phone:e.target.value})} placeholder="+91 00000 00000" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Residential Coordinates</label>
+                  <input type="text" value={form.address||""} onChange={e=>setForm({...form,address:e.target.value})} placeholder="Full address details" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Position Authority</label>
+                  <input type="text" value={form.position||""} onChange={e=>setForm({...form,position:e.target.value})} placeholder="e.g. Chief Systems Officer" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Renumeration Scale</label>
+                  <div className="relative">
+                    <IndianRupee size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary" />
+                    <input type="number" value={form.salary||""} onChange={e=>setForm({...form,salary:e.target.value})} placeholder="Annual CTC" className="w-full p-4 pl-10 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10 flex justify-end gap-4">
+                <button onClick={() => setEditing(null)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
+                <button
+                  onClick={handleSave}
+                  className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300 flex items-center gap-2"
+                >
+                  <Save size={20} />
+                  {editing === "new" ? "Finalize Profile" : "Update Credentials"}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-50 backdrop-blur-md p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-red-50 text-center"
+            >
+              <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-2xl font-black mb-3 text-primary tracking-tight">Revoke Access?</h3>
+              <p className="text-secondary font-medium mb-8">Are you certain you want to delete <span className="text-primary font-black">{deleteTarget.name}</span>? This administrator will lose all system control.</p>
+              <div className="flex gap-4">
+                <button onClick={cancelDelete} className="flex-1 px-6 py-4 font-bold text-secondary border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all">Cancel</button>
+                <button onClick={confirmDelete} className="flex-1 bg-red-500 hover:bg-red-500 text-white px-6 py-4 rounded-2xl font-bold shadow-xl shadow-red-500/20 transition-all">Revoke</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

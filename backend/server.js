@@ -9,7 +9,9 @@ import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import leaderRoutes from "./routes/leaderRoutes.js";
 import employeeRoutes from "./routes/employeeRoutes.js";
+import hrRoutes from "./routes/hrRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import vacancyRoutes from "./routes/vacancyRoutes.js";
 import { startCelebrationJob } from "./utils/celebrationJob.js";
 
 connectDB();
@@ -58,7 +60,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/leader", leaderRoutes);
 app.use("/api/employee", employeeRoutes);
+app.use("/api/hr", hrRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/vacancies", vacancyRoutes);
 
 // Socket.io connection
 io.on("connection", (socket) => {

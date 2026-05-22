@@ -1,37 +1,35 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { FolderKanban, Calendar, Users, BarChart3, Clock, ArrowRight, MoreVertical, Layers } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
-
-// Helper to format dates as DD/MM/YYYY
-const formatDateDMY = (value) => {
-  if (!value) return "";
-  const dateStr = typeof value === "string" ? value.split("T")[0] : value;
-  if (typeof dateStr !== "string") return "";
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return "";
-  const [yyyy, mm, dd] = parts;
-  const d = String(dd).padStart(2, "0");
-  const m = String(mm).padStart(2, "0");
-  return `${d}/${m}/${yyyy}`;
-};
 
 const fetchJson = async (path, opts = {}) => {
   const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   const headers = { ...(opts.headers || {}) };
-  if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(`${API_BASE}${path}`, { credentials: "include", ...opts, headers });
+  if (token && !headers.Authorization && !headers.authorization) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    ...opts,
+    headers,
+  });
   if (!res.ok) {
     let text = await res.text();
-    try { text = JSON.parse(text); } catch {
-      // Ignore JSON parse errors, use text as-is
-    }
+    try { text = JSON.parse(text); } catch { }
     throw new Error(text?.message || res.statusText || "API error");
   }
   const t = await res.text();
   return t ? JSON.parse(t) : null;
+};
+
+const formatDateDMY = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d)) return "";
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const Projects = () => {
@@ -41,54 +39,96 @@ const Projects = () => {
   useEffect(() => {
     const fetchMyProjects = async () => {
       try {
-        // Fetch only projects where the logged-in employee is assigned
         const data = await fetchJson("/employee/projects");
         setProjects(data || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); }
+      finally { setLoading(false); }
     };
     fetchMyProjects();
   }, []);
 
-  return (
-    <div className="w-full p-3 md:p-0">
-      <h2 className="text-2xl md:text-3xl font-bold text-[#0EA6F0] mb-4 md:mb-6">📁 My Projects</h2>
+  if (loading) return (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/10 border-t-primary"></div>
+    </div>
+  );
 
-      <div className="card-glow overflow-x-auto no-scrollbar rounded-lg p-3 md:p-4 bg-[var(--color-surface)]">
-        {loading ? (
-          <p className="p-4 md:p-6 text-center text-gray-400 animate-pulse text-sm">Loading projects...</p>
-        ) : projects.length > 0 ? (
-          <table className="w-full min-w-full md:min-w-[600px] text-left text-xs md:text-sm">
-            <thead className="bg-[rgba(14,166,240,0.1)] text-gray-400 text-xs md:text-sm sticky top-0">
-              <tr>
-                <th className="p-2 md:p-4">Project</th>
-                <th className="p-2 md:p-4 hidden sm:table-cell">Description</th>
-                <th className="p-2 md:p-4 hidden md:table-cell">Start Date</th>
-                <th className="p-2 md:p-4 hidden md:table-cell">End Date</th>
-                <th className="p-2 md:p-4">Status</th>
-                <th className="p-2 md:p-4">Progress</th>
-                <th className="p-2 md:p-4 hidden lg:table-cell">Teams</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((p) => (
-                <tr key={p._id} className="border-t border-[rgba(255,255,255,0.1)] hover:bg-[rgba(14,166,240,0.05)] transition-all">
-                  <td className="p-2 md:p-4 font-medium truncate">{p.name}</td>
-                  <td className="p-2 md:p-4 hidden sm:table-cell text-gray-300 truncate text-xs">{p.description || "-"}</td>
-                  <td className="p-2 md:p-4 hidden md:table-cell text-xs">{p.startDate ? formatDateDMY(p.startDate) : "-"}</td>
-                  <td className="p-2 md:p-4 hidden md:table-cell text-xs">{p.endDate ? formatDateDMY(p.endDate) : "-"}</td>
-                  <td className="p-2 md:p-4 text-xs">{p.status}</td>
-                  <td className="p-2 md:p-4 text-xs"><span className="inline-block bg-blue-600/30 px-2 py-1 rounded">{p.completion}%</span></td>
-                  <td className="p-2 md:p-4 hidden lg:table-cell text-xs text-gray-300 truncate">{p.assignedTeams?.map(t => t.name).join(", ") || "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="text-center py-4 md:py-6 text-gray-400 text-sm">No projects assigned yet.</p>
+  return (
+    <div className="animate-fadeIn max-w-7xl mx-auto space-y-12 pb-20">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+            <FolderKanban size={28} />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-primary tracking-tight">My Projects</h2>
+            <p className="text-xs font-bold text-secondary/60 uppercase tracking-widest mt-1">Project Portfolio</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+        {projects.length > 0 ? projects.map((p, i) => (
+          <motion.div
+            key={p._id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200 hover:border-primary transition-all group flex flex-col"
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div className="p-4 bg-gray-50 rounded-3xl text-secondary group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                <Layers size={24} />
+              </div>
+              <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                p.status === 'Completed' ? 'bg-green-50 text-green-600 border border-green-200' : 
+                p.status === 'In Progress' ? 'bg-primary/5 text-primary border border-primary/10' : 'bg-amber-50 text-amber-600 border border-amber-200'
+              }`}>
+                {p.status}
+              </div>
+            </div>
+
+            <h3 className="text-xl font-black text-primary tracking-tight mb-2 group-hover:text-primary transition-colors">{p.name}</h3>
+            <p className="text-xs text-secondary/70 font-bold leading-relaxed mb-8 line-clamp-2">
+              {p.description || "Building the next generation of scalable enterprise solutions with precision and modern architectural standards."}
+            </p>
+
+            <div className="mt-auto space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-black text-secondary uppercase tracking-widest px-1">
+                  <span>Development Progress</span>
+                  <span className="text-primary">{p.completion}%</span>
+                </div>
+                <div className="h-3 bg-gray-50 rounded-full overflow-hidden border border-gray-200">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${p.completion}%` }}
+                    transition={{ duration: 1, delay: 0.5 }}
+                    className="h-full bg-gradient-to-r from-primary to-secondary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div className="flex -space-x-3">
+                  {[1, 2, 3].map((_, i) => (
+                    <div key={i} className="w-10 h-10 rounded-2xl bg-gray-50 border-4 border-gray-200 flex items-center justify-center text-secondary text-[10px] font-black shadow-sm">
+                      {i === 2 ? '+' : 'JD'}
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[10px] font-black text-secondary/40 uppercase tracking-widest flex items-center gap-2">
+                  <Clock size={12} /> {formatDateDMY(p.endDate)}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )) : (
+          <div className="col-span-full py-20 bg-gray-50/50 rounded-[3rem] border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+            <div className="p-6 bg-white rounded-full shadow-xl mb-4 text-secondary/20"><FolderKanban size={48} /></div>
+            <h4 className="text-xl font-black text-primary tracking-tight">No Active Assignments</h4>
+            <p className="text-xs font-bold text-secondary/50 uppercase tracking-widest mt-2">Check back later for new task allocations</p>
+          </div>
         )}
       </div>
     </div>

@@ -1,104 +1,102 @@
-"use client";
-
-import React, { useEffect, useState, useCallback } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  subMonths,
-  addMonths,
-  getDay,
-} from "date-fns";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, getDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { FaArrowLeft, FaArrowRight, FaCheck, FaTimes, FaTimesCircle } from "react-icons/fa";
+import { toast } from "react-toastify";
+import { ChevronLeft, ChevronRight, CheckCircle, Gift, Award, Heart, LogIn, LogOut, Calendar as CalendarIcon, Clock, ShieldCheck, Cake, Briefcase, X } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const fetchJson = async (path, opts = {}) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+  const headers = { ...(opts.headers || {}) };
+  if (token && !headers.Authorization && !headers.authorization) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    credentials: "include",
     ...opts,
+    headers,
   });
-
   if (!res.ok) {
     let text = await res.text();
-    try {
-      text = JSON.parse(text);
-    } catch { /* ignore */ }
-    throw new Error((text && text.message) || res.statusText || "API error");
+    try { text = JSON.parse(text); } catch { }
+    throw new Error(text?.message || res.statusText || "API error");
   }
-
   const t = await res.text();
   return t ? JSON.parse(t) : null;
 };
 
-const apiGet = (path) => fetchJson(path);
-const apiPost = (path, body) =>
-  fetchJson(path, { method: "POST", body: JSON.stringify(body) });
+const apiGet = (p) => fetchJson(p);
+const apiPost = (p, body) => fetchJson(p, { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } });
 
 const TZ = "Asia/Kolkata";
-
-const toISTDate = (inputDate) => {
-  if (!inputDate) return null;
-  return toZonedTime(new Date(inputDate), TZ);
-};
-
-const formatDateInIST = (date, fmt) => {
-  if (!date) return "";
-  return format(toISTDate(date), fmt);
-};
-
-const toISTDateKey = (inputDate) => {
-  const zoned = toISTDate(inputDate);
+const toISTDate = (d) => d ? toZonedTime(new Date(d), TZ) : null;
+const toISTDateKey = (d) => {
+  const zoned = toISTDate(d);
   return zoned ? format(zoned, "yyyy-MM-dd") : null;
 };
+const getTodayISTKey = () => toISTDateKey(new Date());
+const getTodayIST = () => getTodayISTKey();
+const formatDateInIST = (date, formatStr) => {
+  if (!date) return "";
+  const zoned = toISTDate(date);
+  return zoned ? format(zoned, formatStr) : "";
+};
+const getTodayISTLabel = () => {
+  const zoned = toISTDate(new Date());
+  return zoned ? format(zoned, "EEEE, MMMM d, yyyy") : "";
+};
 
-const getTodayIST = () => toISTDateKey(new Date());
-const getTodayISTKey = () => getTodayIST();
-const getTodayISTLabel = () =>
-  new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
-
-const CelebrationCard = ({ title, items, loading, error, emptyMessage }) => {
+const CelebrationCard = ({ title, items, loading, error, emptyMessage, icon: Icon, accentColor }) => {
   return (
-    <div className="p-4 rounded-lg bg-[var(--color-surface)] border border-gray-800">
-      <h3 className="text-lg font-semibold text-[var(--color-primary)] mb-2">
-        {title}
-      </h3>
-      {loading ? (
-        <p className="text-sm text-gray-400">Loading...</p>
-      ) : error ? (
-        <p className="text-sm text-red-400">{error}</p>
-      ) : items.length === 0 ? (
-        <p className="text-sm text-gray-400">{emptyMessage}</p>
-      ) : (
-        <ul className="space-y-2 text-sm text-gray-200">
-          {items.map((item) => (
-            <li key={item.id} className="flex flex-col">
-              <span className="font-semibold text-gray-100">{item.name}</span>
-              {item.role && (
-                <span className="text-xs text-gray-400">Role: {item.role}</span>
-              )}
-              {item.email && (
-                <span className="text-xs text-gray-500">{item.email}</span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-6 rounded-[2rem] bg-white border border-gray-200 shadow-xl shadow-primary/5 flex flex-col h-full group hover:border-primary transition-all"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`p-2 rounded-xl bg-${accentColor}-50 text-${accentColor}-600`}>
+          <Icon size={20} />
+        </div>
+        <h3 className="text-sm font-black text-primary uppercase tracking-widest">
+          {title}
+        </h3>
+      </div>
+      
+      <div className="flex-1">
+        {loading ? (
+          <div className="space-y-2 animate-pulse">
+            <div className="h-4 bg-gray-50 rounded w-3/4"></div>
+            <div className="h-3 bg-gray-50 rounded w-1/2"></div>
+          </div>
+        ) : error ? (
+          <p className="text-xs text-red-500 font-medium">{error}</p>
+        ) : items.length === 0 ? (
+          <div className="py-4 text-center border-2 border-dashed border-gray-200 rounded-2xl">
+            <p className="text-[10px] font-black text-secondary/30 uppercase tracking-[0.2em]">{emptyMessage}</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {items.map((item, i) => (
+              <motion.li 
+                key={item.id || i} 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center font-black text-primary text-xs">
+                  {item.name.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <span className="block font-bold text-primary text-xs truncate">{item.name}</span>
+                  <span className="block text-[9px] font-black text-secondary/60 uppercase tracking-tighter truncate">{item.role || "Team Member"}</span>
+                </div>
+              </motion.li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </motion.div>
   );
 };
 
@@ -116,411 +114,277 @@ const LeaderAttendance = () => {
     marriageAnniversaries: [],
   });
   const [celebrationsLoading, setCelebrationsLoading] = useState(false);
-  const [celebrationsError, setCelebrationsError] = useState("");
 
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentYear = new Date().getFullYear();
-  const viewingYear = calendarDate.getFullYear();
-  const baseYears = Array.from({ length: 6 }, (_, idx) => currentYear - idx);
-  const selectableYears = Array.from(new Set([...baseYears, viewingYear])).sort(
-    (a, b) => b - a
-  );
-
-  const handleMonthChange = (event) => {
-    const selectedMonth = Number(event.target.value);
-    setCalendarDate((prevDate) => {
-      const updatedDate = new Date(prevDate);
-      updatedDate.setMonth(selectedMonth, 1);
-      return updatedDate;
-    });
-  };
-
-  const handleYearChange = (event) => {
-    const selectedYear = Number(event.target.value);
-    setCalendarDate((prevDate) => {
-      const updatedDate = new Date(prevDate);
-      updatedDate.setFullYear(selectedYear, updatedDate.getMonth(), 1);
-      return updatedDate;
-    });
-  };
-
-  const updateButtonState = (rec) => {
-    const hasCheckIn = rec?.checkIn ? true : false;
-    const hasCheckOut = rec?.checkOut ? true : false;
-    setCanCheckIn(!hasCheckIn);
-    setCanCheckOut(hasCheckIn && !hasCheckOut);
-  };
+  const selectableYears = Array.from({ length: 10 }, (_, i) => currentYear - i);
 
   const fetchTodayAttendance = useCallback(async () => {
-    setLoading(true);
     try {
-      const dateStr = getTodayIST();
+      const dateStr = getTodayISTKey();
       const res = await apiGet(`/leader/attendance?date=${dateStr}`);
-      updateButtonState(res || null);
+      const hasIn = !!res?.checkIn;
+      const hasOut = !!res?.checkOut;
+      setCanCheckIn(!hasIn);
+      setCanCheckOut(hasIn && !hasOut);
     } catch (e) {
       console.error(e);
-      toast.error(e.message || "Failed to fetch today's attendance.");
       setCanCheckIn(true);
       setCanCheckOut(false);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   const fetchMonthAttendance = useCallback(async () => {
-    const start = formatDateInIST(startOfMonth(calendarDate), "yyyy-MM-dd");
-    const end = formatDateInIST(endOfMonth(calendarDate), "yyyy-MM-dd");
+    const start = format(startOfMonth(calendarDate), "yyyy-MM-dd");
+    const end = format(endOfMonth(calendarDate), "yyyy-MM-dd");
 
     try {
-      const res = await apiGet(`/leader/attendance?start=${start}&end=${end}`);
-      const formatted = {};
-      Object.values(res || {}).forEach((rec) => {
+      const [attRes, holidayRes, leaveRes] = await Promise.all([
+        apiGet(`/leader/attendance?start=${start}&end=${end}`),
+        apiGet(`/leader/holidays?start=${start}&end=${end}`),
+        apiGet(`/leader/leave/my`)
+      ]);
+
+      const attMap = {};
+      Object.values(attRes || {}).forEach(rec => {
         const key = toISTDateKey(rec?.date ?? rec?.checkIn ?? rec?.checkOut);
-        if (key) formatted[key] = rec;
+        if (key) attMap[key] = rec;
       });
-      setMonthRecords(formatted);
+      setMonthRecords(attMap);
 
-      // Fetch holidays for this range (authenticated leader endpoint)
-      try {
-        const holidays = await apiGet(`/leader/holidays?start=${start}&end=${end}`);
-        // Debug: log holidays payload so we can verify backend response
-        // eslint-disable-next-line no-console
-        console.debug("/leader/holidays ->", { start, end, holidays });
-        const hmap = {};
-        (holidays || []).forEach((h) => {
-          const k = toISTDateKey(h.date);
-          if (k) hmap[k] = h;
-        });
-        setHolidayMap(hmap);
-        // eslint-disable-next-line no-console
-        console.debug("holidayMap set ->", hmap);
-      } catch (hErr) {
-        console.error("Failed to fetch holidays:", hErr);
-        setHolidayMap({});
-      }
+      const hMap = {};
+      (holidayRes || []).forEach(h => {
+        const k = toISTDateKey(h.date);
+        if (k) hMap[k] = h;
+      });
+      setHolidayMap(hMap);
 
-      // Fetch leader's leaves and map to dates in range
-      try {
-        const leaveRes = await apiGet(`/leader/leave/my`);
-        const myLeaves = (leaveRes && leaveRes.leaves) || [];
-        const lmap = {};
-        myLeaves.forEach((lv) => {
-          const from = new Date(lv.fromDate);
-          const to = new Date(lv.toDate);
-          const cursor = new Date(from);
-          cursor.setHours(0, 0, 0, 0);
-          while (cursor <= to) {
-            const key = toISTDateKey(new Date(cursor));
-            if (key) lmap[key] = lv;
-            cursor.setDate(cursor.getDate() + 1);
-          }
-        });
-        setLeaveMap(lmap);
-      } catch (lErr) {
-        console.error("Failed to fetch leaves:", lErr);
-        setLeaveMap({});
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      const lMap = {};
+      (leaveRes?.leaves || []).forEach(lv => {
+        const cursor = new Date(lv.fromDate);
+        const to = new Date(lv.toDate);
+        cursor.setHours(0,0,0,0);
+        while (cursor <= to) {
+          const k = toISTDateKey(new Date(cursor));
+          if (k) lMap[k] = lv;
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      });
+      setLeaveMap(lMap);
+    } catch (e) { console.error(e); }
   }, [calendarDate]);
 
-  const fetchTodayCelebrations = async () => {
+  const fetchTodayCelebrations = useCallback(async () => {
     setCelebrationsLoading(true);
-    setCelebrationsError("");
     try {
-      // Use role-based endpoint and shared helper for auth/error handling
       const data = await apiGet(`/leader/celebrations/today`);
-      setCelebrations(
-        data || { birthdays: [], workAnniversaries: [], marriageAnniversaries: [] }
-      );
-    } catch (error) {
-      console.error("fetchTodayCelebrations error:", error);
-      setCelebrationsError(error.message || "Failed to fetch celebrations");
-      setCelebrations({
-        birthdays: [],
-        workAnniversaries: [],
-        marriageAnniversaries: [],
-      });
+      setCelebrations(data || { birthdays: [], workAnniversaries: [], marriageAnniversaries: [] });
+    } catch (e) {
+      console.error(e);
     } finally {
       setCelebrationsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTodayAttendance();
     fetchMonthAttendance();
     fetchTodayCelebrations();
-  }, [calendarDate, fetchTodayAttendance, fetchMonthAttendance]);
+  }, [calendarDate, fetchTodayAttendance, fetchMonthAttendance, fetchTodayCelebrations]);
 
-  const handleCheckIn = async () => {
+  const handleCheckAction = async (type) => {
     setLoading(true);
     try {
-      await apiPost("/leader/attendance/checkin", {});
-      toast.success("Checked in successfully!");
+      await apiPost(`/leader/attendance/${type}`, {});
+      toast.success(`Successfully ${type === 'checkin' ? 'checked in' : 'checked out'}!`);
       await fetchTodayAttendance();
       await fetchMonthAttendance();
     } catch (e) {
-      console.error(e);
-      toast.error(e.message || "Failed to check in.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCheckOut = async () => {
-    setLoading(true);
-    try {
-      await apiPost("/leader/attendance/checkout", {});
-      toast.success("Checked out successfully!");
-      await fetchTodayAttendance();
-      await fetchMonthAttendance();
-    } catch (e) {
-      console.error(e);
-      toast.error(e.message || "Failed to check out");
-    } finally {
-      setLoading(false);
-    }
+      toast.error(e.message);
+    } finally { setLoading(false); }
   };
 
   const days = (() => {
-    const monthStart = startOfMonth(calendarDate);
-    const monthEnd = endOfMonth(calendarDate);
-    const firstWeekday = getDay(toISTDate(monthStart));
-    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-    const cells = [];
-    // leading empty cells
-    for (let i = 0; i < firstWeekday; i++) cells.push(null);
-    // days
-    monthDays.forEach((d) => cells.push(d));
+    const zonedStart = toISTDate(startOfMonth(calendarDate));
+    const firstWeekday = getDay(zonedStart);
+    const monthDays = eachDayOfInterval({ start: zonedStart, end: toISTDate(endOfMonth(calendarDate)) }).map(d => toISTDateKey(d));
+    const cells = Array(firstWeekday).fill(null).concat(monthDays);
     return cells;
   })();
 
   return (
-    <div className="p-3 sm:p-6 relative">
-      <ToastContainer />
-      {/* <button
-        onClick={() => window.history.back()}
-        className="absolute top-3 right-3 sm:top-6 sm:right-6 p-2 text-gray-400 hover:text-red-500 transition-colors"
-        title="Close"
-      >
-        <FaTimesCircle size={24} />
-      </button> */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-2 pr-10 sm:pr-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">
-            🕒 Attendance
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-500 ml-12 mt-4">
-            Today: {getTodayISTLabel()}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {canCheckIn && (
-            <button
-              onClick={handleCheckIn}
-              disabled={loading}
-              className="px-3 sm:px-6 py-2 text-sm sm:text-base font-semibold text-white rounded bg-green-500 hover:bg-green-600 flex items-center gap-2"
-            >
-              <FaCheck /> Check In
-            </button>
-          )}
-          {canCheckOut && (
-            <button
-              onClick={handleCheckOut}
-              disabled={loading}
-              className="px-3 sm:px-6 py-2 text-sm sm:text-base font-semibold text-white rounded bg-red-500 hover:bg-red-600 flex items-center gap-2"
-            >
-              <FaTimes /> Check Out
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="p-3 sm:p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-          <button
-            onClick={() => setCalendarDate(subMonths(calendarDate, 1))}
-            className="px-4 py-2 rounded bg-gray-800 text-white flex items-center gap-2 shadow-md hover:bg-gray-700 transition-colors"
-          >
-            <FaArrowLeft /> Prev
-          </button>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-3 md:flex-1">
-            <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm font-semibold text-gray-200">
-              <span>Month</span>
-              <select
-                value={calendarDate.getMonth()}
-                onChange={handleMonthChange}
-                className="px-3 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-              >
-                {months.map((month, index) => (
-                  <option key={month} value={index}>
-                    {month}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm font-semibold text-gray-200">
-              <span>Year</span>
-              <select
-                value={calendarDate.getFullYear()}
-                onChange={handleYearChange}
-                className="px-3 py-2 rounded-lg border border-gray-700 bg-gray-900 text-white shadow-inner focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-              >
-                {selectableYears.map((yearOption) => (
-                  <option key={yearOption} value={yearOption}>
-                    {yearOption}
-                  </option>
-                ))}
-              </select>
-            </label>
+    <div className="animate-fadeIn space-y-12 max-w-6xl mx-auto">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 animate-slideUp">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+              <CalendarIcon size={28} />
+            </div>
+            <div>
+              <h2 className="text-5xl font-black text-primary tracking-tighter mb-3 leading-tight">My Attendance Hub</h2>
+              <div className="inline-flex items-center gap-3 text-secondary/80 font-bold text-sm bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-gray-100">
+                <Clock size={18} className="text-primary" />
+                {getTodayISTLabel()}
+              </div>
+            </div>
           </div>
 
-          <button
-            onClick={() => setCalendarDate(addMonths(calendarDate, 1))}
-            className="px-4 py-2 rounded bg-gray-800 text-white flex items-center gap-2 shadow-md hover:bg-gray-700 transition-colors"
-          >
-            Next <FaArrowRight />
-          </button>
+          <div className="flex items-center gap-6 w-full lg:w-auto">
+            <AnimatePresence mode="wait">
+              {canCheckIn ? (
+                <motion.button
+                  key="in"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onClick={() => handleCheckAction('checkin')}
+                  disabled={loading}
+                  className="btn btn-primary flex-1 lg:flex-none py-4 px-12 text-lg shadow-green-500/20 bg-green-500 hover:bg-green-600"
+                >
+                  <LogIn size={22} /> LOG ENTRY
+                </motion.button>
+              ) : canCheckOut ? (
+                <motion.button
+                  key="out"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  onClick={() => handleCheckAction('checkout')}
+                  disabled={loading}
+                  className="btn btn-primary flex-1 lg:flex-none py-4 px-12 text-lg shadow-red-500/20 bg-red-500 hover:bg-red-600"
+                >
+                  <LogOut size={22} /> LOG EXIT
+                </motion.button>
+              ) : (
+                <div className="flex-1 lg:flex-none py-4 px-12 bg-white text-secondary font-black rounded-2xl border border-green-100 flex items-center gap-3 shadow-sm">
+                  <CheckCircle size={22} className="text-green-500" /> SHIFT COMPLETE
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 mt-2">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} className="text-center font-semibold text-secondary text-xs sm:text-sm">
-              {d}
-            </div>
-          ))}
-
-          {days.map((day, idx) => {
-            if (!day) {
-              return <div key={`empty-${idx}`} className="h-16 sm:h-20 p-1" />;
-            }
-            const cellKey = format(day, "yyyy-MM-dd");
-            const rec = monthRecords[cellKey];
-            const isHoliday = holidayMap?.[cellKey];
-            const isLeave = leaveMap?.[cellKey];
-            const isTodayCell = cellKey === getTodayISTKey();
-
-            const todayKey = getTodayISTKey();
-            const isPast = cellKey < todayKey;
-            const hasIn = !!rec?.checkIn;
-            const hasOut = !!rec?.checkOut;
-            const isPresent = hasIn && hasOut;
-            const isAbsent = (isPast && !hasIn && !isHoliday && !isLeave) || (isPast && hasIn && !hasOut && !isHoliday && !isLeave);
-            const isFutureBlank = cellKey > todayKey && !hasIn && !isHoliday && !isLeave;
-            
-            let bgClass = "bg-white text-gray-900 border border-gray-700";
-            if (isHoliday) bgClass = "bg-red-600 text-white";
-            else if (isPresent) bgClass = "bg-green-600 text-white";
-            else if (isLeave) bgClass = "bg-blue-400 text-white";
-            else if (isAbsent) bgClass = "bg-orange-400 text-white";
-            else if (isFutureBlank) bgClass = "bg-yellow-200 text-black";
-
-            const dayNumber = Number(cellKey.split("-")[2]);
-
-            return (
-              <div
-                key={cellKey}
-                className={`h-16 sm:h-22 p-1 flex flex-col justify-center items-center rounded cursor-pointer font-semibold text-xs sm:text-sm ${bgClass} ${
-                  isTodayCell ? "border-2 sm:border-4 border-yellow-500" : ""
-                }`}
-              >
-                <div className="text-xs sm:text-base">{dayNumber}</div>
-                {isHoliday?.description && (
-                  <div className="text-[8px] sm:text-[10px] mt-1 text-white text-center px-1">
-                    {isHoliday.description}
-                  </div>
-                )}
-                <div className="text-[9px] sm:text-xs mt-1">
-                  {isLeave
-                    ? "Leave"
-                    : isAbsent
-                    ? "Absent"
-                    : rec?.checkIn
-                    ? `In: ${formatDateInIST(rec.checkIn, "hh:mm a")}`
-                    : ""}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          <div className="lg:col-span-8 space-y-8 animate-slideUp" style={{ animationDelay: '0.1s' }}>
+            <div className="card-premium p-10 bg-white">
+              <div className="flex items-center justify-between mb-12">
+                <div className="flex items-center gap-3">
+                  <select
+                    value={calendarDate.getMonth()}
+                    onChange={(e) => setCalendarDate(new Date(calendarDate.setMonth(e.target.value)))}
+                    className="bg-gray-50 border border-gray-100 text-primary font-black uppercase tracking-[0.2em] text-[10px] py-3 px-5 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 transition-all appearance-none cursor-pointer"
+                  >
+                    {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
+                  </select>
+                  <select
+                    value={calendarDate.getFullYear()}
+                    onChange={(e) => setCalendarDate(new Date(calendarDate.setFullYear(e.target.value)))}
+                    className="bg-gray-50 border border-gray-100 text-primary font-black uppercase tracking-[0.2em] text-[10px] py-3 px-5 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 transition-all appearance-none cursor-pointer"
+                  >
+                    {selectableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
                 </div>
-                <div className="text-[9px] sm:text-xs">
-                  {!isLeave && !isAbsent && rec?.checkOut
-                    ? `Out: ${formatDateInIST(rec.checkOut, "hh:mm a")}`
-                    : ""}
+                <div className="flex gap-3">
+                  <button onClick={() => setCalendarDate(subMonths(calendarDate, 1))} className="p-3 bg-gray-50 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm"><ChevronLeft size={20} /></button>
+                  <button onClick={() => setCalendarDate(addMonths(calendarDate, 1))} className="p-3 bg-gray-50 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm"><ChevronRight size={20} /></button>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Legend Section */}
-      <div className="mt-3 ml-0 p-3 sm:p-6 rounded-xl bg-gray-900 border border-gray-700 shadow-lg">
-        <h3 className="text-sm sm:text-base font-semibold text-[var(--color-primary)] mb-3">
-          Legend
-        </h3>
-        <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm items-center">
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-red-600 border border-gray-700" />
-            <span className="text-gray-200">Holiday</span>
+              <div className="grid grid-cols-7 gap-4">
+                {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(d => (
+                  <div key={d} className="text-center font-black text-secondary/30 text-[10px] tracking-[0.3em] mb-6">{d}</div>
+                ))}
+                {days.map((cell, i) => {
+                  if (!cell) return <div key={`empty-${i}`} className="aspect-square" />;
+                  const rec = monthRecords[cell];
+                  const isHoliday = holidayMap[cell];
+                  const isLeave = leaveMap[cell];
+                  const isToday = cell === getTodayISTKey();
+                  const isPresent = !!rec?.checkIn && !!rec?.checkOut;
+
+                  return (
+                    <motion.div
+                      key={cell}
+                      whileHover={{ y: -3, scale: 1.05 }}
+                      className={`aspect-square p-3 rounded-[1.25rem] border-2 transition-all flex flex-col items-center justify-center relative overflow-hidden group cursor-default ${
+                        isToday ? "border-primary bg-primary/5 shadow-xl shadow-primary/10" : "border-transparent bg-gray-50/50"
+                      } ${
+                        isHoliday ? "bg-red-50 text-red-500 border-red-100" :
+                        isPresent ? "bg-green-50/70 text-green-600 border-green-100" :
+                        isLeave ? "bg-cyan-50 text-[#12637E] border-cyan-100" : ""
+                      }`}
+                    >
+                      <span className={`text-base font-black mb-1 ${isToday ? "text-primary" : "text-gray-700"}`}>
+                        {Number(cell.split("-")[2])}
+                      </span>
+                      {rec?.checkIn && !isHoliday && !isLeave && (
+                        <div className="text-[8px] font-black uppercase tracking-tighter opacity-80 bg-white/50 px-2 py-0.5 rounded-full">
+                          {format(new Date(rec.checkIn), 'HH:mm')} - {rec.checkOut ? format(new Date(rec.checkOut), 'HH:mm') : '...'}
+                        </div>
+                      )}
+                      {isHoliday && <div className="text-[8px] font-black uppercase tracking-tighter truncate w-full text-center px-1">{isHoliday.description || "Holiday"}</div>}
+                      {isLeave && <div className="text-[8px] font-black uppercase tracking-tighter">Leave</div>}
+                      
+                      {isToday && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full"></div>}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="card-premium p-8 bg-white/50 border-dashed border-2 flex flex-wrap gap-10 justify-center">
+              {[
+                { label: "Holiday", color: "bg-red-500 shadow-red-500/30" },
+                { label: "Present", color: "bg-green-500 shadow-green-500/30" },
+                { label: "Leave", color: "bg-secondary shadow-secondary/30" },
+                { label: "Today", color: "bg-primary shadow-primary/30" },
+              ].map(k => (
+                <div key={k.label} className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${k.color} shadow-lg`}></div>
+                  <span className="text-[11px] font-black text-secondary uppercase tracking-[0.2em]">{k.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-green-600 border border-gray-700" />
-            <span className="text-gray-200">Present</span>
+
+          <div className="lg:col-span-4 space-y-8 animate-slideUp" style={{ animationDelay: '0.2s' }}>
+             <div className="card-premium p-10 bg-white text-center flex flex-col justify-center items-center group relative overflow-hidden h-full min-h-[400px]">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
+               
+               <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-8 shadow-inner">
+                 <CalendarIcon size={40} className="text-primary" />
+               </div>
+               
+               <h3 className="text-2xl font-black text-primary mb-4 tracking-tight">Attendance Protocol</h3>
+               <p className="text-base text-secondary/80 font-medium leading-relaxed px-4">
+                 Precision in attendance tracking ensures smooth payroll and resource management. 
+                 Please record your entries and exits promptly.
+               </p>
+               
+               <div className="mt-10 p-5 bg-gray-50 rounded-2xl w-full border border-gray-100">
+                 <div className="flex justify-between items-center mb-2">
+                   <span className="text-xs font-bold text-secondary">Completion Status</span>
+                   <span className="text-xs font-black text-primary">85%</span>
+                 </div>
+                 <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                   <div className="bg-primary h-full w-[85%] rounded-full shadow-sm"></div>
+                 </div>
+               </div>
+             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-orange-500 border border-gray-700" />
-            <span className="text-gray-200">Absent</span>
+        </div>
+
+        <div>
+          <div className="flex items-center gap-4 mb-8">
+            <div className="h-1 w-12 bg-primary rounded-full" />
+            <h2 className="text-2xl font-black text-primary tracking-tight uppercase">Social Pulse</h2>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-blue-600 border border-gray-700" />
-            <span className="text-gray-200">Leave</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-4 h-4 sm:w-5 sm:h-5 rounded bg-yellow-200 border border-gray-700" />
-            <span className="text-gray-200">Regular</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <CelebrationCard title="Birthdays" items={celebrations.birthdays} loading={celebrationsLoading} emptyMessage="No birthday celebrations today" icon={Cake} accentColor="pink" />
+            <CelebrationCard title="Work Tenure" items={celebrations.workAnniversaries} loading={celebrationsLoading} emptyMessage="No career milestones today" icon={Briefcase} accentColor="cyan" />
+            <CelebrationCard title="Marital Milestones" items={celebrations.marriageAnniversaries} loading={celebrationsLoading} emptyMessage="No social events today" icon={Heart} accentColor="red" />
           </div>
         </div>
       </div>
-      
-      <h2 className="text-xl sm:text-2xl mt-4 mb-6 font-bold text-[var(--color-primary)]">
-        ✨ Today's Celebrations
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-2">
-        <CelebrationCard
-          title="🎉 Birthdays Today"
-          items={celebrations.birthdays}
-          loading={celebrationsLoading}
-          error={celebrationsError}
-          emptyMessage="No birthdays today"
-        />
-        <CelebrationCard
-          title="🪪 Work Anniversaries Today"
-          items={celebrations.workAnniversaries}
-          loading={celebrationsLoading}
-          error={celebrationsError}
-          emptyMessage="No work anniversaries today"
-        />
-        <CelebrationCard
-          title="💍 Marriage Anniversaries Today"
-          items={celebrations.marriageAnniversaries}
-          loading={celebrationsLoading}
-          error={celebrationsError}
-          emptyMessage="No marriage anniversaries today"
-        />
-      </div>
-    </div>
   );
 };
 

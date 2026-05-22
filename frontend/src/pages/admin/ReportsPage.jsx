@@ -3,8 +3,24 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { toast } from "react-toastify";
 import jsPDF from "jspdf";
-import { Users, UserCheck, Filter as FilterIcon, Download, RefreshCcw, User as UserIcon, FileText, Calendar, Briefcase, BarChart3 } from "lucide-react";
+import { 
+  Users, 
+  UserCheck, 
+  Filter as FilterIcon, 
+  Download, 
+  RefreshCcw, 
+  User as UserIcon, 
+  FileText, 
+  Calendar, 
+  Briefcase, 
+  BarChart3, 
+  ChevronRight, 
+  LayoutDashboard, 
+  Search, 
+  AlertCircle 
+} from "lucide-react";
 import DatePicker from "../../components/DatePicker";
+import { motion, AnimatePresence } from "framer-motion";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -125,14 +141,11 @@ const ReportsPage = () => {
 
   const generatePDF = () => {
     if (!reportData) return;
-
     const doc = new jsPDF();
     let yPosition = 20;
-
     doc.setFontSize(18);
     doc.text("Employee Performance Report", 20, yPosition);
     yPosition += 10;
-
     doc.setFontSize(14);
     doc.text(`Name: ${reportData.user.name}`, 20, yPosition);
     yPosition += 10;
@@ -142,7 +155,6 @@ const ReportsPage = () => {
     yPosition += 10;
     doc.text(`ID: ${reportData.user._id}`, 20, yPosition);
     yPosition += 15;
-
     doc.setFontSize(16);
     doc.text("Attendance Summary", 20, yPosition);
     yPosition += 10;
@@ -151,44 +163,32 @@ const ReportsPage = () => {
     yPosition += 10;
     doc.text(`Present Days: ${reportData.performanceSummary.presentDays}`, 20, yPosition);
     yPosition += 10;
-    // add overtime days
     const overtimeCount = (reportData.attendances || []).filter(a => {
       const s = (a.status || '').toLowerCase();
       return s === 'over-time' || s === 'overtime';
     }).length;
     doc.text(`Overtime Days: ${overtimeCount}`, 20, yPosition);
     yPosition += 15;
-    // doc.text(`Attendance Rate: ${reportData.performanceSummary.attendanceRate}%`, 20, yPosition);
-    // yPosition += 20;
-
     doc.setFontSize(16);
     doc.text("Leave History", 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
     reportData.leaves.slice(0, 10).forEach((leave, index) => {
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
+      if (yPosition > 270) { doc.addPage(); yPosition = 20; }
       doc.text(`${index + 1}. ${leave.reason} (${new Date(leave.fromDate).toLocaleDateString()} - ${new Date(leave.toDate).toLocaleDateString()}) - ${leave.status}`, 20, yPosition);
       yPosition += 8;
     });
     yPosition += 10;
-
     doc.setFontSize(16);
     doc.text("Project Assignments", 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
     reportData.projects.forEach((project, index) => {
-      if (yPosition > 270) {
-        doc.addPage();
-        yPosition = 20;
-      }
+      if (yPosition > 270) { doc.addPage(); yPosition = 20; }
       doc.text(`${index + 1}. ${project.name} - ${project.status}`, 20, yPosition);
       yPosition += 8;
     });
     yPosition += 15;
-
     doc.setFontSize(16);
     doc.text("Performance Summary", 20, yPosition);
     yPosition += 10;
@@ -202,7 +202,6 @@ const ReportsPage = () => {
     doc.text(`Paid Leaves: ${leaveStats.paid}`, 20, yPosition);
     yPosition += 10;
     doc.text(`Unpaid Leaves: ${leaveStats.unpaid}`, 20, yPosition);
-
     doc.save(`${reportData.user.name}_report.pdf`);
     toast.success("PDF downloaded successfully!");
   };
@@ -218,214 +217,257 @@ const ReportsPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-48px)] bg-[#111828] text-[var(--color-text-primary)] p-3 sm:p-4 md:p-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-primary animate-fadeIn">
       <div className="max-w-6xl mx-auto w-full">
-        <h1 className="text-2xl sm:text-3xl font-extrabold mb-6 sm:mb-8 flex items-center gap-2"><BarChart3 size={24} sm:size={28} className="text-[var(--color-primary)]" /><span className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] bg-clip-text text-transparent">Detailed Reports</span></h1>
+        {/* Header */}
+        <div className="mb-10">
+          <h2 className="text-4xl font-black text-primary tracking-tight mb-2 flex items-center gap-3">
+            <BarChart3 size={32} className="text-primary" />
+            Intelligence Reports
+          </h2>
+          <p className="text-secondary font-medium opacity-80">Generate comprehensive performance and data audit reports.</p>
+        </div>
 
-        {step === 1 && (
-          <div className="bg-[var(--color-surface)] rounded-lg p-4 sm:p-6 card-glow">
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-4">Select Role</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div
-                onClick={() => { setSelectedRole("employee"); setStep(2); }}
-                className="flex items-center gap-3 p-5 rounded-md cursor-pointer card-glow transition-transform hover:scale-[1.02]"
-             >
-                <Users size={28} className="text-[var(--color-primary)]" />
-                <span className="text-lg">Employee</span>
-              </div>
-              <div
-                onClick={() => { setSelectedRole("leader"); setStep(2); }}
-                className="flex items-center gap-3 p-5 rounded-md cursor-pointer card-glow transition-transform hover:scale-[1.02]"
-              >
-                <UserCheck size={28} className="text-[var(--color-secondary)]" />
-                <span className="text-lg">Leader</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="bg-[var(--color-surface)] rounded-lg p-4 sm:p-6 card-glow">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Select {selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)}</h2>
-              <button
-                onClick={resetSelection}
-                className="px-4 py-2 bg-[var(--color-danger)] text-[var(--color-text-primary)] rounded-md hover:bg-red-600 transition-colors btn"
-              >
-                Back
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {users.map((user) => (
-                <div
-                  key={user._id}
-                  onClick={() => { setSelectedUser(user); fetchUserData(); }}
-                  className="p-5 rounded-md cursor-pointer transition-transform hover:scale-[1.02] card-glow"
-                >
-                  <h3 className="font-semibold text-[var(--color-text-primary)]">{user.name}</h3>
-                  <p className="text-[var(--color-text-secondary)]">{user.email}</p>
-                  <p className="text-sm text-[var(--color-text-secondary)]">{user.position || user.role}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {step === 3 && selectedUser && (
-          <div className="space-y-4 sm:space-y-6">
-            <div className="bg-[var(--color-surface)] rounded-lg p-4 sm:p-6 card-glow">
-              <div className="flex items-center gap-2 mb-4">
-                <FilterIcon size={20} className="text-[var(--color-primary)]" />
-                <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Filters</h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative z-[99999]">
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Start Date</label>
-                  <DatePicker 
-                    value={displayStartDate} 
-                    onChange={(val) => {
-                      setDisplayStartDate(val);
-                      setFilters({ ...filters, startDate: convertDMYtoYMD(val) });
-                    }} 
-                    placeholder="dd/mm/yyyy" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">End Date</label>
-                  <DatePicker 
-                    value={displayEndDate} 
-                    onChange={(val) => {
-                      setDisplayEndDate(val);
-                      setFilters({ ...filters, endDate: convertDMYtoYMD(val) });
-                    }} 
-                    placeholder="dd/mm/yyyy" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Project Status</label>
-                  <select
-                    value={filters.projectStatus}
-                    onChange={(e) => setFilters({ ...filters, projectStatus: e.target.value })}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-surface)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] input"
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.div 
+              key="step1"
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+              className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-primary/5 border border-gray-200"
+            >
+              <h3 className="text-2xl font-black text-primary mb-8 tracking-tight">Select Organizational Role</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {[
+                  { id: 'employee', label: 'Employees', icon: Users, desc: 'Performance metrics for technical staff', color: 'bg-primary' },
+                  { id: 'leader', label: 'Team Leaders', icon: UserCheck, desc: 'Leadership and project management data', color: 'bg-[var(--color-secondary)]' }
+                ].map((role) => (
+                  <button
+                    key={role.id}
+                    onClick={() => { setSelectedRole(role.id); setStep(2); }}
+                    className="flex flex-col items-start text-left p-8 rounded-[2rem] bg-gray-50 border border-gray-200 hover:border-primary hover:bg-white transition-all group relative overflow-hidden"
                   >
-                    <option value="">All</option>
-                    <option value="Active">Active</option>
-                    <option value="Completed">Completed</option>
-                    <option value="On Hold">On Hold</option>
-                  </select>
+                    <div className={`p-4 rounded-2xl ${role.color} text-white mb-6 group-hover:scale-110 transition-transform`}>
+                      <role.icon size={32} />
+                    </div>
+                    <h4 className="text-xl font-black text-primary mb-2">{role.label}</h4>
+                    <p className="text-secondary font-medium text-sm opacity-70">{role.desc}</p>
+                    <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronRight size={24} className="text-primary" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div 
+              key="step2"
+              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-primary/5 border border-gray-200"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-black text-primary tracking-tight">Audit Source: {selectedRole === 'employee' ? 'Employee Index' : 'Leadership Registry'}</h3>
+                  <p className="text-secondary font-medium opacity-60">Select an individual to initiate data aggregation.</p>
+                </div>
+                <button onClick={resetSelection} className="px-6 py-3 font-bold text-secondary hover:text-primary transition-all">Back</button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto no-scrollbar pr-2">
+                {users.map((user) => (
+                  <button
+                    key={user._id}
+                    onClick={() => { setSelectedUser(user); fetchUserData(); }}
+                    className="flex items-center gap-4 p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-primary hover:bg-white transition-all text-left group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-primary group-hover:text-primary">{user.name}</h4>
+                      <p className="text-xs text-secondary font-medium truncate w-32 md:w-40">{user.email}</p>
+                      <span className="text-[10px] font-black uppercase text-primary/60 tracking-widest">{user.position || user.role}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {step === 3 && selectedUser && (
+            <motion.div 
+              key="step3"
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
+            >
+              {/* Filter Dashboard */}
+              <div className="bg-white rounded-[2.5rem] p-8 shadow-xl shadow-primary/5 border border-gray-200">
+                <div className="flex flex-col md:flex-row gap-6 items-end">
+                  <div className="flex-1 space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Reporting Period (Start)</label>
+                    <DatePicker 
+                      value={displayStartDate} 
+                      onChange={(val) => {
+                        setDisplayStartDate(val);
+                        setFilters({ ...filters, startDate: convertDMYtoYMD(val) });
+                      }} 
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Reporting Period (End)</label>
+                    <DatePicker 
+                      value={displayEndDate} 
+                      onChange={(val) => {
+                        setDisplayEndDate(val);
+                        setFilters({ ...filters, endDate: convertDMYtoYMD(val) });
+                      }} 
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Lifecycle Status</label>
+                    <select
+                      value={filters.projectStatus}
+                      onChange={(e) => setFilters({ ...filters, projectStatus: e.target.value })}
+                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="Active">Active</option>
+                      <option value="Completed">Completed</option>
+                      <option value="On Hold">On Hold</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={fetchUserData} className="p-4 bg-primary text-white rounded-2xl hover:bg-[var(--color-secondary)] transition-all shadow-lg shadow-primary/20">
+                      <Search size={24} />
+                    </button>
+                    <button onClick={generatePDF} className="p-4 bg-[var(--color-secondary)] text-white rounded-2xl hover:bg-primary transition-all shadow-lg shadow-[0_12px_30px_rgba(26,157,194,0.2)]">
+                      <Download size={24} />
+                    </button>
+                    <button onClick={resetSelection} className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all">
+                      <RefreshCcw size={24} />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-4 mt-4 justify-center">
-                <button
-                  onClick={fetchUserData}
-                  disabled={loading}
-                  className="px-6 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-md hover:bg-[var(--color-secondary)] disabled:opacity-50 btn flex items-center gap-2"
-                >
-                  <FilterIcon size={18} />
-                  {loading ? "Loading..." : "Apply Filters"}
-                </button>
-                <button
-                  onClick={generatePDF}
-                  disabled={!reportData}
-                  className="px-6 py-2 bg-[var(--color-secondary)] text-[var(--color-text-primary)] rounded-md hover:bg-[var(--color-primary)] disabled:opacity-50 btn flex items-center gap-2"
-                >
-                  <Download size={18} />
-                  Download PDF
-                </button>
-                <button
-                  onClick={resetSelection}
-                  className="px-6 py-2 bg-[var(--color-danger)] text-[var(--color-text-primary)] rounded-md hover:bg-red-600 btn flex items-center gap-2"
-                >
-                  <RefreshCcw size={18} />
-                  New Report
-                </button>
-              </div>
-            </div>
 
-            {reportData && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
-                  <div className="flex items-center gap-2 mb-4">
-                    <UserIcon size={20} className="text-[var(--color-primary)]" />
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">User Details</h3>
+              {reportData && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Performance Snapshot */}
+                  <div className="bg-primary p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-10 opacity-10">
+                      <LayoutDashboard size={140} />
+                    </div>
+                    <h3 className="text-xl font-black mb-8 flex items-center gap-2">
+                      <FileText size={20} />
+                      Performance Intelligence
+                    </h3>
+                    <div className="grid grid-cols-2 gap-6 relative z-10">
+                      {[
+                        { label: 'Tasks Assigned', val: reportData.performanceSummary.totalTasks },
+                        { label: 'Finalized', val: reportData.performanceSummary.completedTasks },
+                        { label: 'Delayed', val: reportData.performanceSummary.delayedTasks },
+                        { label: 'Attendance', val: reportData.performanceSummary.totalAttendance }
+                      ].map((item, idx) => (
+                        <div key={idx} className="bg-white/10 p-5 rounded-2xl border border-gray-200/5">
+                          <div className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">{item.label}</div>
+                          <div className="text-3xl font-black">{item.val}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-[var(--color-text-primary)]"><strong>Name:</strong> {reportData.user.name}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Email:</strong> {reportData.user.email}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Role:</strong> {reportData.user.role}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Position:</strong> {reportData.user.position || 'N/A'}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Phone:</strong> {reportData.user.phone || 'N/A'}</p>
-                  </div>
-                </div>
 
-                <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FileText size={20} className="text-[var(--color-primary)]" />
-                    <h3 className="text-lg font-semibold text=[var(--color-text-primary)]">Performance Summary</h3>
+                  {/* Profile Context */}
+                  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200">
+                    <h3 className="text-xl font-black mb-8 text-primary flex items-center gap-2">
+                      <UserIcon size={20} />
+                      Profile Metadata
+                    </h3>
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Full Name', val: reportData.user.name },
+                        { label: 'Primary Email', val: reportData.user.email },
+                        { label: 'Designation', val: reportData.user.position || 'Standard Personnel' },
+                        { label: 'Administrative Role', val: reportData.user.role }
+                      ].map((info, idx) => (
+                        <div key={idx} className="flex items-center justify-between py-3 border-b border-gray-200 last:border-0">
+                          <span className="text-xs font-bold text-secondary uppercase tracking-widest">{info.label}</span>
+                          <span className="text-sm font-bold text-primary">{info.val}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-[var(--color-text-primary)]"><strong>Total Tasks Assigned:</strong> {reportData.performanceSummary.totalTasks}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Completed Tasks:</strong> {reportData.performanceSummary.completedTasks}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Delayed Tasks:</strong> {reportData.performanceSummary.delayedTasks}</p>
-                    {/* <p className="text-[var(--color-text-primary)]"><strong>Completion Rate:</strong> {reportData.performanceSummary.completionRate}%</p> */}
-                    {/* <p className="text-[var(--color-text-primary)]"><strong>Attendance Rate:</strong> {reportData.performanceSummary.attendanceRate}%</p> */}
-                    <p className="text-[var(--color-text-primary)]"><strong>Paid Leaves:</strong> {leaveStats.paid}</p>
-                    <p className="text-[var(--color-text-primary)]"><strong>Unpaid Leaves:</strong> {leaveStats.unpaid}</p>
-                  </div>
-                </div>
 
-                <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Calendar size={20} className="text-[var(--color-primary)]" />
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Attendance</h3>
+                  {/* Attendance Log */}
+                  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200">
+                    <h3 className="text-xl font-black mb-6 text-primary flex items-center gap-2">
+                      <Calendar size={20} />
+                      Chronological Logs
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 h-64 overflow-y-auto no-scrollbar pr-2">
+                      {reportData.attendances.map((att, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex flex-col items-center">
+                          <span className="text-[10px] font-bold text-secondary">{new Date(att.date).toLocaleDateString()}</span>
+                          <span className={`text-[9px] font-black uppercase mt-1 ${att.status.toLowerCase() === 'present' ? 'text-green-600' : 'text-amber-600'}`}>{att.status}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="h-60 overflow-y-auto">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {reportData.attendances.slice(0, 366).map((att, index) => (
-                        <div key={index} className="text-sm p-2 rounded-md bg-[rgba(255,255,255,0.02)]">
-                          <p className="text-[var(--color-text-primary)]"><strong>{new Date(att.date).toLocaleDateString()}:</strong> {att.status}</p>
+
+                  {/* Leave Audit */}
+                  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200">
+                    <h3 className="text-xl font-black mb-6 text-primary flex items-center gap-2">
+                      <AlertCircle size={20} />
+                      Absence Audit
+                    </h3>
+                    <div className="space-y-3 h-64 overflow-y-auto no-scrollbar pr-2">
+                      {reportData.leaves.map((leave, idx) => (
+                        <div key={idx} className="p-4 rounded-2xl bg-gray-50 border border-gray-200 flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-primary text-sm">{leave.reason}</div>
+                            <div className="text-[10px] text-secondary font-medium">{new Date(leave.fromDate).toLocaleDateString()} — {new Date(leave.toDate).toLocaleDateString()}</div>
+                          </div>
+                          <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase border ${
+                            leave.status.toLowerCase() === 'approved' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-amber-50 text-amber-600 border-amber-200'
+                          }`}>{leave.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Project Allocations */}
+                  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200 lg:col-span-2">
+                    <h3 className="text-xl font-black mb-8 text-primary flex items-center gap-2">
+                      <Briefcase size={20} />
+                      Project Allocation Matrix
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {reportData.projects.map((project, idx) => (
+                        <div key={idx} className="p-6 rounded-[2rem] bg-gray-50 border border-gray-200 hover:border-primary/30 transition-all">
+                          <div className="flex justify-between items-start mb-4">
+                            <h4 className="font-black text-primary text-lg">{project.name}</h4>
+                            <span className="px-3 py-1 bg-white border border-gray-200 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{project.status}</span>
+                          </div>
+                          <p className="text-sm text-secondary font-medium mb-6 opacity-80 line-clamp-2">{project.description}</p>
+                          <div className="flex gap-6">
+                            <div>
+                              <div className="text-[9px] font-black text-secondary uppercase tracking-widest opacity-60">Initiation</div>
+                              <div className="text-xs font-bold text-primary">{new Date(project.startDate).toLocaleDateString()}</div>
+                            </div>
+                            <div>
+                              <div className="text-[9px] font-black text-secondary uppercase tracking-widest opacity-60">Deadline</div>
+                              <div className="text-xs font-bold text-primary">{new Date(project.endDate).toLocaleDateString()}</div>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-[var(--color-surface)] rounded-lg p-6 card-glow">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Calendar size={20} className="text-[var(--color-primary)]" />
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Leave History</h3>
-                  </div>
-                  <div className="h-60 overflow-y-auto space-y-2">
-                    {reportData.leaves.slice(0, 100).map((leave, index) => (
-                      <div key={index} className="text-sm p-2 rounded-md bg-[rgba(255,255,255,0.02)]">
-                        <p className="text-[var(--color-text-primary)]"><strong>{leave.reason}:</strong> {new Date(leave.fromDate).toLocaleDateString()} - {new Date(leave.toDate).toLocaleDateString()}</p>
-                        <p className="text-[var(--color-text-secondary)]">Status: {leave.status}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-[var(--color-surface)] rounded-lg p-6 lg:col-span-2 card-glow">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Briefcase size={20} className="text-[var(--color-primary)]" />
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Assignments</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {reportData.projects.map((project, index) => (
-                      <div key={index} className="p-4 rounded-md card-glow">
-                        <h4 className="font-semibold text-[var(--color-text-primary)]">{project.name}</h4>
-                        <p className="text-sm text-[var(--color-text-secondary)]">{project.description}</p>
-                        <p className="text-sm text-[var(--color-text-primary)]"><strong>Status:</strong> {project.status}</p>
-                        <p className="text-sm text-[var(--color-text-primary)]"><strong>Start:</strong> {new Date(project.startDate).toLocaleDateString()}</p>
-                        <p className="text-sm text-[var(--color-text-primary)]"><strong>End:</strong> {new Date(project.endDate).toLocaleDateString()}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

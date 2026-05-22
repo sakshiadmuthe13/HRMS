@@ -20,6 +20,12 @@ const upload = multer({
   },
 });
 
+// Middleware to upload single file (like PDF for emails)
+export const uploadSingleFile = upload.single("file");
+
+// Middleware to upload an array of files
+export const uploadArray = upload.array("files", 5);
+
 // Middleware to upload single file to ImageKit
 export const uploadToImageKit = async (req, res, next) => {
   try {

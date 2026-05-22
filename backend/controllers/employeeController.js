@@ -353,9 +353,17 @@ export const updateTaskStatus = async (req, res) => {
     task.status = status;
     if (status === "Completed") {
       task.completedAt = new Date();
+      if (req.body.completionDescription) {
+        task.completionDescription = req.body.completionDescription;
+      }
+      if (req.body.deployedLink) {
+        task.deployedLink = req.body.deployedLink;
+      }
     } else {
       // If reverting from Completed, clear completion time so UI shows '-' again
       task.completedAt = undefined;
+      task.completionDescription = undefined;
+      task.deployedLink = undefined;
     }
 
     await task.save();

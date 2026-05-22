@@ -8,6 +8,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import AdminDashboard from "./pages/admin/admin-dashboard";
 import EmployeeDashboard from "./pages/employee/employee-dashboard";
 import LeaderDashboard from "./pages/leader/Leader-dashboard";
+import HRDashboard from "./pages/hr/hr-dashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -25,9 +26,10 @@ function App() {
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
           <Route path="/leader-dashboard" element={<LeaderDashboard />} />
+          <Route path="/hr-dashboard" element={<HRDashboard />} />
         </Routes>
       </Router>
-      <ToastContainer position="top-right" autoClose={3000} theme="dark" />
+      <ToastContainer position="top-right" autoClose={3000} theme="light" />
     </NotificationProvider>
   )
 }
