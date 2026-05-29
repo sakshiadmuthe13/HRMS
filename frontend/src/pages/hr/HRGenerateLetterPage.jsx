@@ -66,7 +66,18 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
   const pPos = gender === "Female" ? "her" : "his";
   const pPosCap = gender === "Female" ? "Her" : "His";
 
-  const { name = "[Employee Name]", startDate = "[Start Date]", endDate = "[End Date]", reason = "[Reason]" } = formData;
+  const { 
+    name = "[Employee Name]", 
+    startDate = "[Start Date]", 
+    endDate = "[End Date]", 
+    reason = "[Reason]",
+    ctc = "3,40,000",
+    ctcInWords = "Three Lakh Forty Thousand Rupees Only",
+    ctcShort = "3.4 Lacs",
+    fixedSalary = "3 Lacs",
+    variableSalary = "40,000",
+    variablePerQuarter = "10,000"
+  } = formData;
 
   if (employeeType === "Full-Time" && category === "Termination Letter") {
     return [
@@ -89,6 +100,22 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
       `As your internship was temporary in nature and governed by the internship terms and conditions, the company has decided to discontinue the internship program with immediate effect. You are requested to complete all pending formalities and return any company assets, documents, or credentials in your possession.`,
       "",
       `We appreciate your time with the organization and wish you success in your future endeavors.`
+    ];
+  }
+
+  if (employeeType === "Full-Time" && category === "Offer Letter") {
+    return [
+      `We are pleased to make an offer as a **${position}** at **Qiro Tech Innovation Pvt. Ltd.**, effective from **${startDate}** at Pune location.`,
+      "",
+      `We propose to pay you an Annual (CTC) of Rs. ${ctc}/- (${ctcInWords}). ${ctcShort} CTC = ${fixedSalary} Fixed & ${variableSalary} Variable (${variablePerQuarter} Rs per quarter will be paid based on the performance against the given objectives). The Variable component can be converted to profit sharing after initial 6 months based-on the performance.`,
+      "",
+      `Subject to your performance, your CTC would be revised after 12 months, as per our appraisal circle. Your probation period would be three months.`,
+      "",
+      `On reporting, please bring two recent passport size photographs, photocopy of all educational certificates, address & photo IDproof, IT Declaration/Form16 from last employer, last 6-month salary slips and relieving letter of the last employer.`,
+      "",
+      `Offer validates with background check verification before/after your joining.  Please return a signed copy of this letter as your acceptance of the offer, confirming your date of joining.`,
+      "",
+      `We look forward to a mutually rewarding relationship`
     ];
   }
 
@@ -271,6 +298,12 @@ const HRGenerateLetterPage = () => {
     reason: "",
     hrFullName: "",
     hrDesignation: "People Operations Officer",
+    ctc: "3,40,000",
+    ctcInWords: "Three Lakh Forty Thousand Rupees Only",
+    ctcShort: "3.4 Lacs",
+    fixedSalary: "3 Lacs",
+    variableSalary: "40,000",
+    variablePerQuarter: "10,000",
   });
 
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -528,17 +561,6 @@ const HRGenerateLetterPage = () => {
     link.click();
   };
 
-  const handlePrint = () => {
-    if (!previewUrl) return;
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = previewUrl;
-    document.body.appendChild(iframe);
-    iframe.onload = () => {
-      iframe.contentWindow.print();
-    };
-  };
-
   const fetchUsers = async () => {
     try {
       const data = await fetchJson(`${prefix}/users`);
@@ -723,6 +745,70 @@ const HRGenerateLetterPage = () => {
                     />
                   </div>
                 )}
+                {employeeType === "Full-Time" && selectedCategory === "Offer Letter" && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-secondary uppercase tracking-wider">CTC (e.g. 3,40,000)</label>
+                      <input
+                        type="text"
+                        name="ctc"
+                        value={formData.ctc}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-secondary uppercase tracking-wider">CTC In Words</label>
+                      <input
+                        type="text"
+                        name="ctcInWords"
+                        value={formData.ctcInWords}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-secondary uppercase tracking-wider">CTC Short (e.g. 3.4 Lacs)</label>
+                      <input
+                        type="text"
+                        name="ctcShort"
+                        value={formData.ctcShort}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-secondary uppercase tracking-wider">Fixed Salary (e.g. 3 Lacs)</label>
+                      <input
+                        type="text"
+                        name="fixedSalary"
+                        value={formData.fixedSalary}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-secondary uppercase tracking-wider">Variable Salary (e.g. 40,000)</label>
+                      <input
+                        type="text"
+                        name="variableSalary"
+                        value={formData.variableSalary}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-secondary uppercase tracking-wider">Variable Per Quarter</label>
+                      <input
+                        type="text"
+                        name="variablePerQuarter"
+                        value={formData.variablePerQuarter}
+                        onChange={handleInputChange}
+                        className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
+                      />
+                    </div>
+                  </>
+                  )}
               </div>
             </div>
 
@@ -771,13 +857,6 @@ const HRGenerateLetterPage = () => {
               </button>
 
               <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-3 bg-white text-primary border-2 border-primary font-bold rounded-xl hover:bg-gray-50 transition-all shadow-md hover:-translate-y-0.5"
-              >
-                <Printer size={18} /> Print
-              </button>
-
-              <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 px-4 py-3 bg-white text-primary border-2 border-primary font-bold rounded-xl hover:bg-gray-50 transition-all shadow-md hover:-translate-y-0.5"
               >
@@ -794,7 +873,7 @@ const HRGenerateLetterPage = () => {
           </div>
 
           {/* Preview Section */}
-          <div className="bg-gray-50 rounded-2xl border border-gray-200 p-2 min-h-[500px] flex items-center justify-center">
+          <div className="bg-gray-50 rounded-2xl border border-gray-200 p-2 min-h-[500px] max-h-[720px] overflow-y-auto flex items-start justify-start">
             {previewUrl ? (
               <iframe
                 src={previewUrl}
