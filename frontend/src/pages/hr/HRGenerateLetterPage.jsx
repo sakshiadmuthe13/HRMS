@@ -66,7 +66,31 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
   const pPos = gender === "Female" ? "her" : "his";
   const pPosCap = gender === "Female" ? "Her" : "His";
 
-  const { name = "[Employee Name]", startDate = "[Start Date]", endDate = "[End Date]" } = formData;
+  const { name = "[Employee Name]", startDate = "[Start Date]", endDate = "[End Date]", reason = "[Reason]" } = formData;
+
+  if (employeeType === "Full-Time" && category === "Termination Letter") {
+    return [
+      `This letter serves as formal notice that your employment with **Qiro Tech Innovation Pvt. Ltd.** in the position of **${position}** will be terminated effective from **${endDate}**`,
+      "",
+      `This decision has been made due to **${reason || "[Reason]"}** Despite previous discussions/warnings/performance reviews, the required improvements and expectations have not been satisfactorily met.`,
+      "",
+      `You are requested to complete the handover process and return all company property including documents, devices, ID cards, and access credentials before your last working day. Any pending salary, benefits, or dues (if applicable) will be processed as per company policy.`,
+      "",
+      `We thank you for your contributions during your tenure and wish you success in your future endeavors.`
+    ];
+  }
+
+  if (employeeType === "Intern" && category === "Termination Letter") {
+    return [
+      `This letter is to formally inform you that your internship with **Qiro Tech Innovation Pvt. Ltd.** as a **${position}** is being terminated effective from **${endDate}**`,
+      "",
+      `The decision has been taken due to **${reason || "[Reason]"}** Despite prior discussions and feedback, the expected level of participation/performance/professional conduct has not been met during the internship period.`,
+      "",
+      `As your internship was temporary in nature and governed by the internship terms and conditions, the company has decided to discontinue the internship program with immediate effect. You are requested to complete all pending formalities and return any company assets, documents, or credentials in your possession.`,
+      "",
+      `We appreciate your time with the organization and wish you success in your future endeavors.`
+    ];
+  }
 
   if (employeeType === "Full-Time" && category === "Experience Letter") {
     return [
@@ -122,9 +146,9 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
     return [
       `This is to certify that **${name}** has successfully completed the internship with **Qiro Tech Innovation Pvt. Ltd.** as a **${position}** from **${startDate}** to **${endDate}**.`,
       "",
-      `During the internship tenure, ${p} was actively involved in department-related responsibilities and contributed effectively to assigned tasks and projects.`,
+      `During the internship tenure, ${p} was actively involved in department related responsibilities and contributed effectively to assigned tasks and projects.`,
       "",
-      `${P} carried out responsibilities with sincerity, dedication, professionalism, and a positive learning attitude. ${pPosCap} overall performance throughout the internship period was found to be satisfactory.`,
+      `${P} carried out responsibilities with sincerity, dedication, professionalism and a positive learning attitude. ${pPosCap} overall performance throughout the internship period was found to be satisfactory.`,
       "",
       `We appreciate the contribution made during the internship and wish ${pObj} success in future endeavors.`
     ];
@@ -244,6 +268,7 @@ const HRGenerateLetterPage = () => {
     startDate: "",
     endDate: "",
     date: format(new Date(), "dd MMMM yyyy"),
+    reason: "",
     hrFullName: "",
     hrDesignation: "People Operations Officer",
   });
@@ -346,7 +371,7 @@ const HRGenerateLetterPage = () => {
     const contentRight = pageWidth - pageMargin;
     const contentWidth = contentRight - contentLeft;
     const headerLineY = pageMargin + 9.6;
-    const footerLineY = pageHeight  - 10; // bring footer line closer to bottom
+    const footerLineY = pageHeight - 10; // bring footer line closer to bottom
     const footerTextY = pageHeight - 6; // place website URL at bottom area
     const contentStartY = pageMargin + 24.6;
     const contentBottomY = footerLineY - 2; // allow main content to extend closer to bottom
@@ -686,6 +711,18 @@ const HRGenerateLetterPage = () => {
                     className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium"
                   />
                 </div>
+                {selectedCategory === "Termination Letter" && (
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-secondary uppercase tracking-wider">Reason for Termination</label>
+                    <textarea
+                      name="reason"
+                      value={formData.reason}
+                      onChange={handleInputChange}
+                      placeholder="e.g. consistently poor performance and attendance issues"
+                      className="w-full bg-gray-50 border border-gray-200 text-primary text-sm rounded-xl focus:ring-4 focus:ring-primary/10 block p-3 font-medium min-h-[80px]"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 

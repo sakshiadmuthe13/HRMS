@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Banknote, TrendingUp, Calculator, History, ShieldCheck, Info, FileText, Download, Printer, X } from "lucide-react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -59,14 +57,14 @@ const calculatePayslipData = (totalSalary, presentDays, absentDays, month, year,
   const pf = pfEnabled ? Math.round(basic * 0.12) : 0;
 
   // LOP Calculation
-  const monthNames = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+  const monthNames = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
   const monthIndex = monthNames.indexOf((month || "").toLowerCase());
   const daysInMonth = monthIndex >= 0 ? new Date(year, monthIndex + 1, 0).getDate() : 30;
 
   const perDaySalary = totalSalary / daysInMonth;
   const lopDeduction = Math.round(perDaySalary * absentDays);
 
-  const totalEarnings = totalSalary + bonusAmount; 
+  const totalEarnings = totalSalary + bonusAmount;
   const totalDeductions = pt + pf + lopDeduction;
   const netSalary = totalEarnings - totalDeductions;
 
@@ -127,82 +125,51 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
     minute: "2-digit",
   });
 
-  const handleDownloadPDF = async () => {
-    setIsGenerating(true);
-    try {
-      const element = printRef.current;
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
+  const handleDownloadPDF = () => {
+    const element = printRef.current;
+    if (!element) return;
 
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      const finalHeight = Math.min(pdfHeight, pdf.internal.pageSize.getHeight());
-
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, finalHeight);
-      pdf.save(`Payslip_${employee?.name?.replace(/\s+/g, '_') || 'Employee'}_${month}_${year}.pdf`);
-    } catch (e) {
-      console.error("PDF generation failed:", e);
-      alert("Failed to generate PDF");
-    } finally {
-      setIsGenerating(false);
-    }
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payslip_${employee?.name?.replace(/\s+/g, '_') || 'Employee'}_${month}_${year}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            @page { size: A4; margin: 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; margin: 0; }
+              #payslip-content {
+                width: 100% !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+              }
+              table, tr, td, th { page-break-inside: avoid; }
+            }
+            body { background: white; font-family: 'Times New Roman', Times, serif; font-size: 12px; color: #000; }
+          </style>
+        </head>
+        <body>
+          ${element.outerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
-  const handlePrint = async () => {
-    setIsGenerating(true);
-    try {
-      const element = printRef.current;
-      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
+  const handlePrint = handleDownloadPDF;
 
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imageWidth = pageWidth;
-      const imageHeight = (canvas.height * imageWidth) / canvas.width;
-      const fittedHeight = Math.min(imageHeight, pageHeight);
-      const fittedWidth = (canvas.width * fittedHeight) / canvas.height;
-      const xOffset = (pageWidth - fittedWidth) / 2;
-
-      pdf.addImage(imgData, "PNG", xOffset, 0, fittedWidth, fittedHeight);
-
-      const pdfBlob = pdf.output("blob");
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.src = pdfUrl;
-      iframe.onload = () => {
-        setTimeout(() => {
-          try {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-          } finally {
-            setTimeout(() => {
-              URL.revokeObjectURL(pdfUrl);
-              iframe.remove();
-            }, 1000);
-          }
-        }, 300);
-      };
-      document.body.appendChild(iframe);
-    } catch (e) {
-      console.error("Print failed:", e);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   if (!data || !employee) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -214,19 +181,19 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
             Payslip Preview
           </h2>
           <div className="flex items-center gap-2 sm:gap-3">
-            <button 
-              onClick={handlePrint} 
+            <button
+              onClick={handlePrint}
               disabled={isGenerating}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-sm disabled:opacity-50"
             >
               <Printer size={18} /> Print
             </button>
-            <button 
-              onClick={handleDownloadPDF} 
+            <button
+              onClick={handleDownloadPDF}
               disabled={isGenerating}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 disabled:opacity-50"
             >
-              <Download size={18} /> {isGenerating ? "Processing..." : "Download PDF"}
+              <Download size={18} /> {isGenerating ? "Processing..." : "Save / Print PDF"}
             </button>
             <button onClick={onClose} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
               <X size={24} />
@@ -234,143 +201,156 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
           </div>
         </div>
 
-        <div className="overflow-y-auto p-4 sm:p-8 bg-gray-200/50 flex justify-center">
-          <div 
+        <div className="p-4 sm:p-8 bg-gray-200/50 flex justify-center min-w-max flex-1 overflow-auto">
+          <div
             ref={printRef}
-            className="bg-[#ffffff] shadow-[0_24px_80px_rgba(15,23,42,0.12)]"
-            style={{ 
-              width: "190mm", 
-              minHeight: "297mm", 
-              padding: "12mm 13mm 10mm", 
+            id="payslip-content"
+            className="bg-white shrink-0"
+            style={{
+              width: "794px",
+              minHeight: "1123px",
+              padding: "40px 48px",
               boxSizing: "border-box",
-              display: "flex",
-              flexDirection: "column",
               color: "#000",
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "'Times New Roman', Times, serif",
               fontSize: "12px",
-              lineHeight: 1.25,
+              lineHeight: "16px",
+              backgroundColor: "white",
+              position: "relative",
             }}
           >
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div className="w-28 pt-1">
-                {logoBase64 ? (
-                  <img src={logoBase64} alt="Company Logo" className="h-12 object-contain object-left" />
-                ) : (
-                  <div className="h-12 flex items-center text-[22px] font-black text-[#1872A3]">QIRO TECH</div>
-                )}
+            <div style={{ position: 'relative', backgroundColor: 'white', color: 'black' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ width: '128px', flexShrink: 0 }}>
+                  {logoBase64 ? (
+                    <img src={logoBase64} alt="Company Logo" style={{ height: '40px', objectFit: 'contain', objectPosition: 'left' }} />
+                  ) : (
+                    <div style={{ height: '40px', display: 'flex', alignItems: 'center', fontSize: '18px', fontWeight: 'bold' }}>QIRO TECH</div>
+                  )}
+                </div>
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '18px' }}>Qiro Tech Innovation Pvt. Ltd.</div>
+                  <div style={{ fontSize: '10px' }}>Unit 602, Floor 6th, The Business, AdvantEDGE, Hinjewadi Phase 1, Pune - 411057</div>
+                </div>
+                <div style={{ width: '128px' }}></div>
               </div>
 
-              <div className="flex-1 text-center pt-1">
-                <h1 className="text-[16px] font-bold text-[#111827] leading-tight tracking-wide">Qiro Tech Innovation Pvt. Ltd.</h1>
-                <p className="mt-1 text-[11px] text-[#374151] leading-tight">Unit 602, Floor 6th, The Business, AdvantEDGE, Hinjewadi Phase 1</p>
-                <p className="text-[11px] text-[#374151] leading-tight">Pune - 411057</p>
+              <div style={{ textAlign: 'center', fontWeight: 'bold', padding: '0px 0px', marginBottom: '8px', marginTop: '-6px' }}>
+                Payslip for the month of {displayMonth || "-"} {year || "-"}
               </div>
 
-              <div className="w-28" />
-            </div>
-
-            <div className="text-center mb-4 pt-1">
-              <h2 className="text-[14px] font-bold text-[#111827]">
-                Payslip for the month of {displayMonth || "-"} - {year || "-"}
-              </h2>
-            </div>
-
-            <div className="flex border border-[#d1d5db] mb-4 text-[11px]">
-              <div className="w-1/2 border-r border-[#d1d5db] p-2 ">
-                <table className="w-full text-left border-collapse">
-                  <tbody>
-                    <tr><td className="py-1.5 align-middle font-semibold w-35 text-[#1f2937] leading-tight">Name</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.name || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Employee No</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.employeeId || employee._id || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Designation</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.position || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Department</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.department || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Location</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.location || "Pune"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Emp Effective Workdays For Display</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {data.effectiveWorkDays}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">DAYS IN MONTH</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {data.daysInMonth}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <div className="w-1/2 p-2.5">
-                <table className="w-full text-left border-collapse">
-                  <tbody>
-                    <tr><td className="py-1.5 align-middle font-semibold w-40 text-[#1f2937] leading-tight">PAN Number</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.panNumber || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Employee Bank</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.bankName || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">Bank Account No</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.bankAccount || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">PF No</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.pfNumber || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">PF UAN</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {employee.uanNumber || "-"}</td></tr>
-                    <tr><td className="py-1.5 align-middle font-semibold text-[#1f2937] leading-tight">LOP</td><td className="py-1.5 align-middle text-[#374151] leading-tight">: {data.lopDays}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <table className="w-full text-[11px] border-collapse border border-[#d1d5db] mb-4">
-              <thead>
-                <tr className="bg-[#f3f4f6] border-b border-[#d1d5db]">
-                  <th className="px-2.5 py-2.5 align-middle text-left font-bold border-r border-[#d1d5db] w-1/2 text-[#111827] leading-tight">Earnings</th>
-                  <th className="px-2.5 py-2.5 align-middle text-right font-bold text-[#111827] leading-tight">Rs.</th>
-                  <th className="px-2.5 py-2.5 align-middle text-left font-bold border-x border-[#d1d5db] w-1/2 text-[#111827] leading-tight">Deductions</th>
-                  <th className="px-2.5 py-2.5 align-middle text-right font-bold text-[#111827] leading-tight">Rs.</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-[#e5e7eb]">
-                  <td className="px-2.5 py-2 align-middle border-r border-[#d1d5db] text-[#1f2937] leading-tight">Basic Pay</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.basic.toLocaleString("en-IN")}</td>
-                  <td className="px-2.5 py-2 align-middle border-x border-[#d1d5db] text-[#1f2937] leading-tight">Provident Fund</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.pf ? data.pf.toLocaleString("en-IN") : "-"}</td>
-                </tr>
-                <tr className="border-b border-[#e5e7eb]">
-                  <td className="px-2.5 py-2 align-middle border-r border-[#d1d5db] text-[#1f2937] leading-tight">House Rent Allowance</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.hra.toLocaleString("en-IN")}</td>
-                  <td className="px-2.5 py-2 align-middle border-x border-[#d1d5db] text-[#1f2937] leading-tight">Income Tax</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">-</td>
-                </tr>
-                <tr className="border-b border-[#e5e7eb]">
-                  <td className="px-2.5 py-2 align-middle border-r border-[#d1d5db] text-[#1f2937] leading-tight">Special Allowance</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.specialAllowance.toLocaleString("en-IN")}</td>
-                  <td className="px-2.5 py-2 align-middle border-x border-[#d1d5db] text-[#1f2937] leading-tight">Professional Tax</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.pt ? data.pt.toLocaleString("en-IN") : "-"}</td>
-                </tr>
-                <tr className="border-b border-[#e5e7eb]">
-                  <td className="px-2.5 py-2 align-middle border-r border-[#d1d5db] text-[#1f2937] leading-tight">Leave Travel Allowance</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.lta.toLocaleString("en-IN")}</td>
-                  <td className="px-2.5 py-2 align-middle border-x border-[#d1d5db] text-[#1f2937] leading-tight">Lop / Absence Deduction</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.lopDeduction ? data.lopDeduction.toLocaleString("en-IN") : "-"}</td>
-                </tr>
-                <tr className="border-b border-[#d1d5db]">
-                  <td className="px-2.5 py-2 align-middle border-r border-[#d1d5db] text-[#1f2937] leading-tight">Statutory Bonus</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{data.bonus.toLocaleString("en-IN")}</td>
-                  <td className="px-2.5 py-2 align-middle border-x border-[#d1d5db] text-[#1f2937]">&nbsp;</td>
-                  <td className="px-2.5 py-2 align-middle text-right text-[#1f2937]">&nbsp;</td>
-                </tr>
-                {Number(data.bonusAmount) > 0 && (
-                  <tr className="border-b border-[#e5e7eb]">
-                    <td className="px-2.5 py-2 align-middle border-r border-[#d1d5db] text-[#1f2937] leading-tight">Bonus Allocation</td>
-                    <td className="px-2.5 py-2 align-middle text-right text-[#1f2937] leading-tight">{Number(data.bonusAmount).toLocaleString("en-IN")}</td>
-                    <td className="px-2.5 py-2 align-middle border-x border-[#d1d5db] text-[#1f2937]">&nbsp;</td>
-                    <td className="px-2.5 py-2 align-middle text-right text-[#1f2937]">&nbsp;</td>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', marginBottom: '8px' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: '22%', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Name:</td>
+                    <td style={{ width: '31%', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.name || "-"}</td>
+                    <td style={{ width: '25%', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PAN Number:</td>
+                    <td style={{ width: '25%', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.panNumber || "-"}</td>
                   </tr>
-                )}
-                <tr className="border-b border-[#d1d5db] font-bold bg-[#f9fafb]">
-                  <td className="px-2.5 py-2.5 align-middle border-r border-[#d1d5db] text-[#111827] leading-tight">Total Earnings</td>
-                  <td className="px-2.5 py-2.5 align-middle text-right text-[#111827] leading-tight">{data.totalEarnings.toLocaleString("en-IN")}</td>
-                  <td className="px-2.5 py-2.5 align-middle border-x border-[#d1d5db] text-[#111827] leading-tight">Total Deductions</td>
-                  <td className="px-2.5 py-2.5 align-middle text-right text-[#111827] leading-tight">{data.totalDeductions ? data.totalDeductions.toLocaleString("en-IN") : "-"}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="flex items-start justify-between gap-6 text-[11px] font-semibold text-[#111827] leading-tight">
-              <div>Net Salary: (Rupees {convertNumberToWords(data.netSalary)} Only)</div>
-              <div>₹ {data.netSalary.toLocaleString("en-IN")}</div>
-            </div>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Employee No:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.employeeId || employee._id || "-"}</td>
+                    <td style={{ whiteSpace: 'nowrap', padding: '2px 4px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Emp Effective Workdays For Display:</td>
+                    <td style={{ padding: '2px 4px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.effectiveWorkDays}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '2px 4px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Designation:</td>
+                    <td style={{ padding: '2px 4px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.position || "-"}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>DAYS IN MONTH:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.daysInMonth}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Department:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.department || "-"}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PF No:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.pfNumber || "-"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Location:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.location || "Pune"}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PF UAN:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.uanNumber || "-"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Employee Bank:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.bankName || "-"}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>LOP:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.lopDays}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Bank Account No:</td>
+                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.bankAccount || "-"}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                  </tr>
+                </tbody>
+              </table>
 
-            <div className="mt-auto pt-6 border-t border-[#d1d5db] text-[11px] font-semibold text-[#111827] space-y-3">
-              <div className="flex items-end justify-end gap-4 text-[10px] text-[#4b5563]">
-                <div>Print Date: {printDate}</div>
-                {/* <div className="text-right">This is a system generated payslip and does not require signature.</div> */}
-              </div>
-            </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: '35%', textAlign: 'left', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Earnings</th>
+                    <th style={{ width: '15%', textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderRight: '1px solid black', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Rs.</th>
+                    <th style={{ width: '35%', textAlign: 'left', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Deductions</th>
+                    <th style={{ width: '15%', textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Rs.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Basic Pay</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.basic.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Provident Fund</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.pf ? data.pf.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>House Rent Allowance</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.hra.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Income Tax</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>-</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Special Allowance</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.specialAllowance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Professional Tax</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.pt ? data.pt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Leave Travel Allowance</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.lta.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Lop / Absence Deduction</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.lopDeduction ? data.lopDeduction.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Statutory Bonus</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.bonus.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                  </tr>
+                  {Number(data.bonusAmount) > 0 && (
+                    <tr>
+                      <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Bonus Allocation</td>
+                      <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{Number(data.bonusAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                      <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                    </tr>
+                  )}
+                  <tr>
+                    <td style={{ fontWeight: 'bold', padding: '4px 6px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Total Earnings:</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderRight: '1px solid black', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.totalEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ fontWeight: 'bold', padding: '4px 6px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Total Deductions:</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.totalDeductions ? data.totalDeductions.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={3} style={{ fontWeight: 'bold', padding: '3px 4px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Net Salary: {convertNumberToWords(data.netSalary)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '3px 4px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.netSalary.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </tbody>
+              </table>
 
+            </div>
+            <div style={{ position: 'absolute', bottom: '40px', left: '48px', fontSize: '11px', textAlign: 'left' }}>
+              Print Date: {printDate}
+            </div>
           </div>
         </div>
       </motion.div>
@@ -393,7 +373,7 @@ const HRSalaryPage = () => {
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [logoBase64, setLogoBase64] = useState(null);
-  
+
   const [previewData, setPreviewData] = useState(null);
   const [creditSummary, setCreditSummary] = useState(null);
 
@@ -625,7 +605,7 @@ const HRSalaryPage = () => {
               <Calculator size={20} className="text-primary" />
               Compensation Parameters
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5 md:col-span-2">
                 <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Personnel</label>
@@ -650,7 +630,7 @@ const HRSalaryPage = () => {
                   className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                 >
                   <option value="">Select Month</option>
-                  {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m)=> (
+                  {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                 </select>
@@ -753,7 +733,7 @@ const HRSalaryPage = () => {
         <div className="space-y-8">
           <AnimatePresence mode="wait">
             {isCalculating ? (
-              <motion.div 
+              <motion.div
                 key="calc"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200 text-center space-y-4"
@@ -762,7 +742,7 @@ const HRSalaryPage = () => {
                 <p className="text-secondary font-bold">Auditing Attendance...</p>
               </motion.div>
             ) : salaryDetails ? (
-              <motion.div 
+              <motion.div
                 key="details"
                 initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                 className="bg-primary p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden"
@@ -770,7 +750,7 @@ const HRSalaryPage = () => {
                 <div className="absolute top-0 right-0 p-8 opacity-10">
                   <TrendingUp size={120} />
                 </div>
-                
+
                 <h3 className="text-xl font-black mb-8 flex items-center gap-2">
                   <Info size={20} />
                   Calculated Payout
@@ -808,7 +788,7 @@ const HRSalaryPage = () => {
                       <div className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Final Net Payout</div>
                       <div className="text-4xl font-black tracking-tighter">₹{salaryDetails.calculatedSalary + Number(bonus || 0)}</div>
                     </div>
-                    <button 
+                    <button
                       onClick={handlePreviewCurrent}
                       className="w-full bg-white text-primary hover:bg-gray-50 p-4 rounded-2xl font-bold shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
@@ -831,7 +811,7 @@ const HRSalaryPage = () => {
       <AnimatePresence>
         {showSuccess && selected && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -842,7 +822,7 @@ const HRSalaryPage = () => {
               </div>
               <h3 className="text-2xl font-black mb-3 text-primary tracking-tight">Funds Credited</h3>
               <p className="text-secondary font-medium mb-8">Salary for <span className="text-primary font-black">{selected.name}</span> has been processed for <span className="text-primary font-black">{selectedMonth} {selectedYear}</span>.</p>
-              
+
               <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-left space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-secondary uppercase tracking-widest">Base Payout</span>
