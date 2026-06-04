@@ -30,6 +30,20 @@ const apiDelete = (p) => fetchJson(p, { method: "DELETE" });
 
 const empty = { name: "", email: "", password: "", phone: "", address: "", position: "", salary: "", dateOfBirth: "" };
 
+const formatDateDMY = (dateVal) => {
+  if (!dateVal) return "";
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return "";
+  }
+};
+
 const HRsPage = () => {
   const [hrs, setHrs] = useState([]);
   const [editing, setEditing] = useState(null);
@@ -56,7 +70,7 @@ const HRsPage = () => {
   };
 
   const handleCreate = () => { setForm(empty); setEditing("new"); };
-  const handleEdit = (u) => { setForm({ ...u, password: "" }); setEditing(u._id); };
+  const handleEdit = (u) => { setForm({ ...u, password: "", dateOfBirth: u.dateOfBirth ? formatDateDMY(u.dateOfBirth) : "" }); setEditing(u._id); };
 
   const handleSave = async () => {
     setError("");

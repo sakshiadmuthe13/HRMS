@@ -19,6 +19,26 @@ const getIndiaDayRange = (date = new Date()) => {
   const ist = new Date(local.getTime() + istOffset * 60000);
   return { start: startOfDay(ist), end: endOfDay(ist) };
 };
+
+// Helper: Parse Date in dd/MM/yyyy format to JavaScript Date
+const parseDateDMY = (dateStr) => {
+  if (!dateStr) return undefined;
+  if (dateStr instanceof Date) return dateStr;
+  if (typeof dateStr !== 'string') return dateStr;
+
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // 0-indexed months
+    const year = parseInt(parts[2], 10);
+    const date = new Date(year, month, day);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+  return dateStr;
+};
+
 import Task from "../models/Task.js";
 
 // ---------------- Employee CRUD for Admin ----------------
@@ -59,7 +79,7 @@ export const createEmployeeAdmin = async (req, res) => {
     };
 
     // Only add optional fields if they have valid values
-    if (dateOfBirth) employeeData.dateOfBirth = dateOfBirth;
+    if (dateOfBirth) employeeData.dateOfBirth = parseDateDMY(dateOfBirth);
     // Check for valid ObjectId values (not empty, not 'abc', not placeholder values)
     if (reportingManager && reportingManager !== '' && reportingManager !== 'abc' && mongoose.Types.ObjectId.isValid(reportingManager)) {
       employeeData.reportingManager = reportingManager;
@@ -92,6 +112,11 @@ export const updateEmployeeAdmin = async (req, res) => {
     // If password is updated, hash it
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    // Parse dateOfBirth if present
+    if (updates.dateOfBirth) {
+      updates.dateOfBirth = parseDateDMY(updates.dateOfBirth);
     }
 
     // Handle empty string values for ObjectId references - convert to null
@@ -171,7 +196,7 @@ export const createLeaderAdmin = async (req, res) => {
     };
 
     // Only add optional fields if they have valid values
-    if (dateOfBirth) leaderData.dateOfBirth = dateOfBirth;
+    if (dateOfBirth) leaderData.dateOfBirth = parseDateDMY(dateOfBirth);
     // Check for valid ObjectId values (not empty, not 'abc', not placeholder values)
     if (reportingManager && reportingManager !== '' && reportingManager !== 'abc' && mongoose.Types.ObjectId.isValid(reportingManager)) {
       leaderData.reportingManager = reportingManager;
@@ -202,6 +227,11 @@ export const updateLeaderAdmin = async (req, res) => {
     const updates = req.body;
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    // Parse dateOfBirth if present
+    if (updates.dateOfBirth) {
+      updates.dateOfBirth = parseDateDMY(updates.dateOfBirth);
     }
 
     // Handle empty string values for ObjectId references - convert to null
@@ -421,7 +451,7 @@ export const getAllHRsAdmin = async (req, res) => {
 // Create a new HR
 export const createHRAdmin = async (req, res) => {
   try {
-    const { name, email, password, phone, address, position, salary } =
+    const { name, email, password, phone, address, position, salary, dateOfBirth } =
       req.body;
 
     const existing = await User.findOne({ email });
@@ -429,7 +459,7 @@ export const createHRAdmin = async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const hr = await User.create({
+    const hrData = {
       name,
       email,
       password: hashedPassword,
@@ -438,12 +468,19 @@ export const createHRAdmin = async (req, res) => {
       position,
       salary,
       role: "hr",
-    });
+    };
+
+    if (dateOfBirth) hrData.dateOfBirth = parseDateDMY(dateOfBirth);
+
+    const hr = await User.create(hrData);
 
     res.status(201).json(hr);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to create HR" });
+    console.error("Error creating HR:", err);
+    res.status(500).json({
+      message: "Failed to create HR",
+      error: err.message
+    });
   }
 };
 
@@ -455,6 +492,11 @@ export const updateHRAdmin = async (req, res) => {
 
     if (updates.password) {
       updates.password = await bcrypt.hash(updates.password, 10);
+    }
+
+    // Parse dateOfBirth if present
+    if (updates.dateOfBirth) {
+      updates.dateOfBirth = parseDateDMY(updates.dateOfBirth);
     }
 
     const hr = await User.findByIdAndUpdate(id, updates, { new: true, runValidators: true });
