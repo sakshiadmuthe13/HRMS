@@ -788,7 +788,7 @@ export const updateMyLeaderProfile = async (req, res) => {
       const verifiedDocuments = [];
 
       for (const key of Object.keys(req.uploadedUrls)) {
-        if (existingUser.documents[key] && existingUser.documents[key].verified) {
+        if (existingUser.documents && existingUser.documents[key] && existingUser.documents[key].verified) {
           verifiedDocuments.push(key);
         }
       }
@@ -826,7 +826,7 @@ export const updateMyLeaderProfile = async (req, res) => {
       "cv",
     ];
     const allVerified = docFields.every(
-      (field) => !user.documents[field].path || user.documents[field].verified
+      (field) => !user.documents || !user.documents[field] || !user.documents[field].path || user.documents[field].verified
     );
     user.profileVerified = allVerified;
     await user.save();

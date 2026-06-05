@@ -2015,7 +2015,7 @@ export const verifyDocument = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user.documents[documentType]) {
+    if (!user.documents || !user.documents[documentType]) {
       return res.status(400).json({ message: "Document type not found" });
     }
 
@@ -2026,7 +2026,6 @@ export const verifyDocument = async (req, res) => {
     }
 
     user.documents[documentType].verified = verified;
-    await user.save();
 
     const docFields = [
       "passportPhoto",
@@ -2040,10 +2039,24 @@ export const verifyDocument = async (req, res) => {
       "cv",
     ];
     const allVerified = docFields.every(
-      (field) => !user.documents[field].path || user.documents[field].verified
+      (field) => !user.documents || !user.documents[field] || !user.documents[field].path || user.documents[field].verified
     );
     user.profileVerified = allVerified;
     await user.save();
+
+    // Re-fetch clean user from database to ensure no Mongoose in-memory subdocument reference issues
+    const updatedUser = await User.findById(userId).lean();
+
+    const documents = {};
+    docFields.forEach((field) => {
+      if (updatedUser && updatedUser.documents && updatedUser.documents[field] && updatedUser.documents[field].path) {
+        documents[field] = {
+          path: updatedUser.documents[field].path,
+          verified: updatedUser.documents[field].verified || false,
+          uploadedAt: updatedUser.documents[field].uploadedAt,
+        };
+      }
+    });
 
     const statusMsg = verified ? "verified" : "unverified";
 
@@ -2117,7 +2130,9 @@ export const verifyDocument = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         profileVerified: user.profileVerified,
+        documents,
       },
     });
   } catch (error) {
@@ -2139,7 +2154,7 @@ export const unverifyDocument = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user.documents[documentType]) {
+    if (!user.documents || !user.documents[documentType]) {
       return res.status(400).json({ message: "Document type not found" });
     }
 
@@ -2156,7 +2171,6 @@ export const unverifyDocument = async (req, res) => {
     }
 
     user.documents[documentType].verified = false;
-    await user.save();
 
     const docFields = [
       "passportPhoto",
@@ -2170,10 +2184,24 @@ export const unverifyDocument = async (req, res) => {
       "cv",
     ];
     const allVerified = docFields.every(
-      (field) => !user.documents[field].path || user.documents[field].verified
+      (field) => !user.documents || !user.documents[field] || !user.documents[field].path || user.documents[field].verified
     );
     user.profileVerified = allVerified;
     await user.save();
+
+    // Re-fetch clean user from database to ensure no Mongoose in-memory subdocument reference issues
+    const updatedUser = await User.findById(userId).lean();
+
+    const documents = {};
+    docFields.forEach((field) => {
+      if (updatedUser && updatedUser.documents && updatedUser.documents[field] && updatedUser.documents[field].path) {
+        documents[field] = {
+          path: updatedUser.documents[field].path,
+          verified: updatedUser.documents[field].verified || false,
+          uploadedAt: updatedUser.documents[field].uploadedAt,
+        };
+      }
+    });
 
     await createNotification({
       message: `Your document "${documentType}" has been unverified by admin. You can now update it.`,
@@ -2236,7 +2264,9 @@ export const unverifyDocument = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role,
         profileVerified: user.profileVerified,
+        documents,
       },
     });
   } catch (error) {

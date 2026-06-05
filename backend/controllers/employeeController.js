@@ -91,6 +91,7 @@ export const checkIn = async (req, res) => {
   try {
     const userId = req.user._id;
     const now = new Date();
+    const nowIST = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
 
     const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
 
@@ -130,7 +131,7 @@ export const checkIn = async (req, res) => {
 
     // Notify admins about check-in
     await createNotification({
-      message: `${req.user.name} has checked in at ${format(now, 'hh:mm a')}`,
+      message: `${req.user.name} has checked in at ${format(nowIST, 'hh:mm a')}`,
       role: "admin",
       triggeredBy: userId,
     });
@@ -138,7 +139,7 @@ export const checkIn = async (req, res) => {
     // Notify reporting manager if exists
     if (req.user.reportingManager) {
       await createNotification({
-        message: `${req.user.name} has checked in at ${format(now, 'hh:mm a')}`,
+        message: `${req.user.name} has checked in at ${format(nowIST, 'hh:mm a')}`,
         role: "leader",
         recipient: req.user.reportingManager,
         triggeredBy: userId,
@@ -157,6 +158,7 @@ export const checkOut = async (req, res) => {
   try {
     const userId = req.user._id;
     const now = new Date();
+    const nowIST = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
 
     const attendance = await Attendance.findOne({
@@ -195,7 +197,7 @@ export const checkOut = async (req, res) => {
 
       // Notify admins about check-out
       await createNotification({
-        message: `${req.user.name} has checked out at ${format(now, 'hh:mm a')}`,
+        message: `${req.user.name} has checked out at ${format(nowIST, 'hh:mm a')}`,
         role: "admin",
         triggeredBy: userId,
       });
@@ -203,7 +205,7 @@ export const checkOut = async (req, res) => {
       // Notify reporting manager if exists
       if (req.user.reportingManager) {
         await createNotification({
-          message: `${req.user.name} has checked out at ${format(now, 'hh:mm a')}`,
+          message: `${req.user.name} has checked out at ${format(nowIST, 'hh:mm a')}`,
           role: "leader",
           recipient: req.user.reportingManager,
           triggeredBy: userId,
@@ -780,7 +782,7 @@ export const updateMyProfile = async (req, res) => {
       const verifiedDocuments = [];
 
       for (const key of Object.keys(req.uploadedUrls)) {
-        if (existingUser.documents[key] && existingUser.documents[key].verified) {
+        if (existingUser.documents && existingUser.documents[key] && existingUser.documents[key].verified) {
           verifiedDocuments.push(key);
         }
       }
@@ -818,7 +820,7 @@ export const updateMyProfile = async (req, res) => {
       "cv",
     ];
     const allVerified = docFields.every(
-      (field) => !user.documents[field].path || user.documents[field].verified
+      (field) => !user.documents || !user.documents[field] || !user.documents[field].path || user.documents[field].verified
     );
     user.profileVerified = allVerified;
     await user.save();
