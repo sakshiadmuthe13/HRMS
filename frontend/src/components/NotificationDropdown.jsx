@@ -12,6 +12,7 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
   const [toastNotification, setToastNotification] = useState(null);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
+  const dismissedIdsRef = useRef(new Set());
 
   const recentNotifications = notifications.slice(0, 5);
   const displayNotifications = showAll ? notifications : recentNotifications;
@@ -20,9 +21,17 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
   useEffect(() => {
     if (notifications.length > 0) {
       const latestNotification = notifications[0];
-      // Only show toast if notification is unread and not already shown
-      if (!latestNotification.readStatus && !toastNotification) {
+      
+      // If the latest notification is read, hide the toast
+      if (latestNotification.readStatus) {
+        setToastNotification(null);
+        return;
+      }
+
+      // Only show toast if notification is unread and has not been shown/dismissed yet
+      if (!latestNotification.readStatus && !dismissedIdsRef.current.has(latestNotification._id)) {
         setToastNotification(latestNotification);
+        dismissedIdsRef.current.add(latestNotification._id);
 
         // Auto-hide toast after 10 seconds
         const timer = setTimeout(() => {
@@ -31,8 +40,10 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
 
         return () => clearTimeout(timer);
       }
+    } else {
+      setToastNotification(null);
     }
-  }, [notifications, toastNotification]);
+  }, [notifications]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -61,7 +72,11 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
   // Toast notification component
   const toastComponent = toastNotification ? (
     <div
-      className="fixed top-20 right-5 bg-white border-l-4 border-l-blue-500 rounded-lg shadow-2xl animate-slide-in-right"
+      onClick={() => {
+        markAsRead(toastNotification._id);
+        setToastNotification(null);
+      }}
+      className="fixed top-20 right-5 bg-white border-l-4 border-l-blue-500 rounded-lg shadow-2xl animate-slide-in-right cursor-pointer hover:bg-gray-50 transition-colors"
       style={{ zIndex: 999999, maxWidth: "350px" }}
     >
       <div className="p-4 flex items-start gap-3">
@@ -76,7 +91,10 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
           </p>
         </div>
         <button
-          onClick={() => setToastNotification(null)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setToastNotification(null);
+          }}
           className="text-gray-500 hover:text-gray-500 flex-shrink-0"
         >
           <X size={18} />
