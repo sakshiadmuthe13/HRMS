@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Plus, Edit2, Trash2, Mail, Phone, MapPin, Briefcase, IndianRupee, X, Save, AlertTriangle } from "lucide-react";
+import ProfileAvatar from "../../components/ProfileAvatar";
+import UserViewModal from "../../components/UserViewModal";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -42,6 +44,7 @@ const AdminsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   useEffect(() => { fetchAdmins(); }, []);
 
@@ -122,9 +125,7 @@ const AdminsPage = () => {
                   <tr key={e._id || i} className="hover:bg-primary/5 transition-colors group">
                     <td className="p-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
-                          {e.name.charAt(0)}
-                        </div>
+                        <ProfileAvatar user={e} className="w-12 h-12 text-sm" />
                         <div>
                           <div className="font-bold text-primary text-lg">{e.name}</div>
                           <div className="text-xs text-secondary font-medium mt-0.5">UID: {e._id.slice(-6).toUpperCase()}</div>
@@ -153,6 +154,7 @@ const AdminsPage = () => {
                     </td>
                     <td className="p-5 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setViewingUserId(e._id)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold text-xs">View</button>
                         <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
                           <Edit2 size={18} />
                         </button>
@@ -262,6 +264,11 @@ const AdminsPage = () => {
           </div>
         )}
       </AnimatePresence>
+      <UserViewModal
+        isOpen={Boolean(viewingUserId)}
+        onClose={() => setViewingUserId(null)}
+        userId={viewingUserId}
+      />
     </div>
   );
 };

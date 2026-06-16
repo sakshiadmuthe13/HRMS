@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CheckSquare, DollarSign, Calendar, ArrowRight, UserCheck, Play } from "lucide-react";
+import { Clock, CheckSquare, IndianRupee, Calendar, ArrowRight, UserCheck, Play } from "lucide-react";
 
 const Hero = () => {
   // Demo Dashboard States
@@ -138,7 +138,7 @@ const Hero = () => {
               {[
                 { id: "attendance", label: "Attendance", icon: Clock },
                 { id: "tasks", label: "Tasks", icon: CheckSquare },
-                { id: "payroll", label: "Payroll", icon: DollarSign }
+                { id: "payroll", label: "Payroll", icon: IndianRupee }
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -166,7 +166,8 @@ const Hero = () => {
                     exit={{ opacity: 0, x: 10 }}
                     className="space-y-4"
                   >
-                    <div className="text-center py-4 bg-slate-50/70 rounded-2xl border border-gray-150/50">
+                    <div className="text-center py-4 bg-slate-50/70 rounded-2xl border border-gray-150/50 relative">
+                      <span className="absolute top-2 right-2 text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200">Demo</span>
                       <div className="text-sm font-semibold text-slate-400">Current Time</div>
                       <div className="text-3xl font-black text-slate-800 font-mono mt-1">{clockTime}</div>
                       <div className="text-xs text-slate-500 mt-1">Pune, India (GMT+5:30)</div>
@@ -184,7 +185,7 @@ const Hero = () => {
                         }`}
                       >
                         <UserCheck size={18} />
-                        {clockedIn ? "CLOCK OUT NOW" : "CLOCK IN NOW"}
+                        {clockedIn ? "CLOCK OUT (DEMO)" : "CLOCK IN (DEMO)"}
                       </motion.button>
                     </div>
 
@@ -194,7 +195,7 @@ const Hero = () => {
                         <Calendar size={13} className="text-primary" />
                         Today: {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                       </span>
-                      <span>Shift: 9:00 AM - 6:00 PM</span>
+                      <span>Shift: 9:30 AM - 6:30 PM</span>
                     </div>
                   </motion.div>
                 )}
@@ -260,18 +261,18 @@ const Hero = () => {
                       <div>
                         <span className="text-xs font-semibold text-slate-400">ESTIMATED PAY</span>
                         <div className="text-3xl font-black text-slate-800 mt-1 font-mono">
-                          ${(hoursWorked * hourlyRate).toLocaleString()}
+                          ₹{(hoursWorked * hourlyRate).toLocaleString("en-IN")}
                         </div>
                       </div>
                       <div className="bg-primary/10 text-primary p-3 rounded-xl">
-                        <DollarSign size={24} />
+                        <IndianRupee size={24} />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs font-bold text-slate-400">
                         <span>HOURS WORKED: {hoursWorked} Hrs</span>
-                        <span>RATE: ${hourlyRate}/Hr</span>
+                        <span>RATE: ₹{hourlyRate}/Hr</span>
                       </div>
                       <input
                         type="range"

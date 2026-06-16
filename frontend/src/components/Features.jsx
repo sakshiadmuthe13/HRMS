@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
-import { Clock, Calendar, CheckSquare, ListTodo, DollarSign, CreditCard } from "lucide-react";
+import { Clock, Calendar, CheckSquare, ListTodo, IndianRupee, CreditCard } from "lucide-react";
 
 // Feature Card with Spotlight Hover Effect
 const FeatureCard = ({ title, desc, icon, badge, children }) => {
@@ -171,7 +171,7 @@ const Features = () => {
             <FeatureCard
               title="Payroll Automation"
               desc="Calculate gross payouts, verify deductions, and export professional PDF pay stubs seamlessly."
-              icon={<DollarSign size={22} />}
+              icon={<IndianRupee size={22} />}
               badge="Automated"
             >
               <div className="bg-slate-50 border border-gray-100 p-3 rounded-2xl flex items-center justify-between text-xs">

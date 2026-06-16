@@ -10,6 +10,9 @@ const fetchJson = async (path, opts = {}) => {
   const token = localStorage.getItem("token") || sessionStorage.getItem("token");
   const headers = { ...(opts.headers || {}) };
   if (token && !headers.Authorization && !headers.authorization) headers.Authorization = `Bearer ${token}`;
+  if (opts.body && !headers["Content-Type"] && !headers["content-type"]) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
     ...opts,
@@ -76,9 +79,9 @@ const LeaderLeaves = () => {
   const [approvedUsedDays, setApprovedUsedDays] = useState(null);
   const [unpaidUsedDays, setUnpaidUsedDays] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ fromDate: "", toDate: "", reason: "" });
+  const [form, setForm] = useState({ fromDate: "", toDate: "", reason: "", halfDay: false, halfDayType: "first_half" });
   const [editing, setEditing] = useState(null);
-  const [editForm, setEditForm] = useState({ fromDate: "", toDate: "", reason: "", id: "" });
+  const [editForm, setEditForm] = useState({ fromDate: "", toDate: "", reason: "", id: "", halfDay: false, halfDayType: "first_half" });
   const [savingEdit, setSavingEdit] = useState(false);
   const [modal, setModal] = useState({ show: false, type: "", message: "", onConfirm: null });
 
@@ -100,19 +103,28 @@ const LeaderLeaves = () => {
   };
 
   const apply = async () => {
-    const { fromDate, toDate, reason } = form;
-    if (!fromDate || !toDate || !reason) return setModal({ show: true, type: "error", message: "Please complete all fields." });
+    const { fromDate, toDate, reason, halfDay, halfDayType } = form;
+    if (!fromDate || (!halfDay && !toDate) || !reason) return setModal({ show: true, type: "error", message: "Please complete all fields." });
 
     const fromDateYMD = convertDMYToYMD(fromDate);
-    const toDateYMD = convertDMYToYMD(toDate);
-    if (new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "Invalid date range." });
+    const toDateYMD = halfDay ? fromDateYMD : convertDMYToYMD(toDate);
+    if (!halfDay && new Date(toDateYMD) < new Date(fromDateYMD)) return setModal({ show: true, type: "error", message: "Invalid date range." });
 
-    const requestedDays = calcTotalDays(fromDateYMD, toDateYMD);
+    const requestedDays = halfDay ? 0.5 : calcTotalDays(fromDateYMD, toDateYMD);
 
     const submit = async () => {
       try {
-        await fetchJson("/leader/leave/apply", { method: "POST", body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason }) });
-        setForm({ fromDate: "", toDate: "", reason: "" });
+        await fetchJson("/leader/leave/apply", { 
+          method: "POST", 
+          body: JSON.stringify({ 
+            fromDate: fromDateYMD, 
+            toDate: toDateYMD, 
+            reason,
+            halfDay,
+            halfDayType: halfDay ? halfDayType : null
+          }) 
+        });
+        setForm({ fromDate: "", toDate: "", reason: "", halfDay: false, halfDayType: "first_half" });
         await fetchMyLeaves();
         setModal({ show: true, type: "success", message: "Application submitted successfully." });
       } catch (err) { setModal({ show: true, type: "error", message: err.message }); }
@@ -136,7 +148,9 @@ const LeaderLeaves = () => {
       fromDate: formatDateDMY(l.fromDate),
       toDate: formatDateDMY(l.toDate),
       reason: l.reason || "",
-      id: l._id
+      id: l._id,
+      halfDay: !!l.halfDay,
+      halfDayType: l.halfDayType || "first_half"
     });
   };
 
@@ -144,10 +158,16 @@ const LeaderLeaves = () => {
     try {
       setSavingEdit(true);
       const fromDateYMD = convertDMYToYMD(editForm.fromDate);
-      const toDateYMD = convertDMYToYMD(editForm.toDate);
+      const toDateYMD = editForm.halfDay ? fromDateYMD : convertDMYToYMD(editForm.toDate);
       await fetchJson(`/leader/leave/${editForm.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ fromDate: fromDateYMD, toDate: toDateYMD, reason: editForm.reason })
+        body: JSON.stringify({ 
+          fromDate: fromDateYMD, 
+          toDate: toDateYMD, 
+          reason: editForm.reason,
+          halfDay: editForm.halfDay,
+          halfDayType: editForm.halfDay ? editForm.halfDayType : null
+        })
       });
       await fetchMyLeaves();
       setEditing(null);
@@ -218,26 +238,70 @@ const LeaderLeaves = () => {
                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Start Date</label>
                   <DatePicker
                     value={form.fromDate}
-                    onChange={(val) => setForm(f => ({ ...f, fromDate: val }))}
+                    onChange={(val) => setForm(f => ({ ...f, fromDate: val, toDate: f.halfDay ? val : f.toDate }))}
                     placeholder="DD/MM/YYYY"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">End Date</label>
                   <DatePicker
-                    value={form.toDate}
+                    value={form.halfDay ? form.fromDate : form.toDate}
                     onChange={(val) => setForm(f => ({ ...f, toDate: val }))}
                     placeholder="DD/MM/YYYY"
+                    disabled={form.halfDay}
                   />
                 </div>
               </div>
+
+              <div className="flex items-center gap-3 bg-gray-50/50 p-4 rounded-2xl border border-gray-200">
+                <input
+                  type="checkbox"
+                  id="halfDay"
+                  checked={form.halfDay}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setForm(f => ({ ...f, halfDay: isChecked, toDate: isChecked ? f.fromDate : "" }));
+                  }}
+                  className="rounded text-primary focus:ring-primary w-4 h-4 border-slate-350 cursor-pointer"
+                />
+                <label htmlFor="halfDay" className="text-xs font-black text-secondary uppercase tracking-tight cursor-pointer selection:bg-transparent">
+                  Apply for Half Day
+                </label>
+              </div>
+
+              {form.halfDay && (
+                <div className="flex gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-200 justify-around">
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-705 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="halfDayType"
+                      value="first_half"
+                      checked={form.halfDayType === "first_half"}
+                      onChange={(e) => setForm(f => ({ ...f, halfDayType: e.target.value }))}
+                      className="text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                    />
+                    First Half
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-705 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="halfDayType"
+                      value="second_half"
+                      checked={form.halfDayType === "second_half"}
+                      onChange={(e) => setForm(f => ({ ...f, halfDayType: e.target.value }))}
+                      className="text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                    />
+                    Second Half
+                  </label>
+                </div>
+              )}
 
               <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-secondary font-bold text-xs uppercase tracking-tight">
                   <Info size={14} /> Total Duration
                 </div>
                 <div className="text-lg font-black text-primary">
-                  {calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "0"} <span className="text-[10px] uppercase font-black opacity-40">Days</span>
+                  {form.halfDay ? "0.5" : (calcTotalDays(convertDMYToYMD(form.fromDate), convertDMYToYMD(form.toDate)) || "0")} <span className="text-[10px] uppercase font-black opacity-40">Days</span>
                 </div>
               </div>
 
@@ -305,7 +369,14 @@ const LeaderLeaves = () => {
                         </td>
                         <td className="p-5">
                           <div className="text-[10px] font-black text-primary truncate max-w-[150px] uppercase tracking-tighter">{l.reason || "Casual Leave"}</div>
-                          <div className="text-[9px] font-bold text-secondary mt-1">{l.totalDays || 0} Days Requested</div>
+                          <div className="text-[9px] font-bold text-secondary mt-1 flex items-center flex-wrap gap-2">
+                            <span>{l.totalDays || 0} Days Requested</span>
+                            {l.halfDay && (
+                              <span className="text-[8px] font-black bg-blue-50 text-blue-600 border border-blue-150 px-1.5 py-0.5 rounded uppercase leading-none">
+                                {l.halfDayType === "first_half" ? "First Half" : "Second Half"}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-5">
                           <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${l.status === "Approved" ? "bg-green-50 text-green-600 border border-green-200" :
@@ -351,13 +422,57 @@ const LeaderLeaves = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Start Date</label>
-                    <DatePicker value={editForm.fromDate} onChange={(val) => setEditForm(f => ({ ...f, fromDate: val }))} />
+                    <DatePicker value={editForm.fromDate} onChange={(val) => setEditForm(f => ({ ...f, fromDate: val, toDate: f.halfDay ? val : f.toDate }))} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">End Date</label>
-                    <DatePicker value={editForm.toDate} onChange={(val) => setEditForm(f => ({ ...f, toDate: val }))} />
+                    <DatePicker value={editForm.halfDay ? editForm.fromDate : editForm.toDate} onChange={(val) => setEditForm(f => ({ ...f, toDate: val }))} disabled={editForm.halfDay} />
                   </div>
                 </div>
+                
+                <div className="flex items-center gap-3 bg-gray-50/50 p-4 rounded-2xl border border-gray-200">
+                  <input
+                    type="checkbox"
+                    id="editHalfDay"
+                    checked={editForm.halfDay}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setEditForm(f => ({ ...f, halfDay: isChecked, toDate: isChecked ? f.fromDate : "" }));
+                    }}
+                    className="rounded text-primary focus:ring-primary w-4 h-4 border-slate-350 cursor-pointer"
+                  />
+                  <label htmlFor="editHalfDay" className="text-xs font-black text-secondary uppercase tracking-tight cursor-pointer selection:bg-transparent">
+                    Apply for Half Day
+                  </label>
+                </div>
+
+                {editForm.halfDay && (
+                  <div className="flex gap-4 p-4 bg-gray-50/50 rounded-2xl border border-gray-200 justify-around">
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-705 cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="editHalfDayType"
+                        value="first_half"
+                        checked={editForm.halfDayType === "first_half"}
+                        onChange={(e) => setEditForm(f => ({ ...f, halfDayType: e.target.value }))}
+                        className="text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                      />
+                      First Half
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-705 cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="editHalfDayType"
+                        value="second_half"
+                        checked={editForm.halfDayType === "second_half"}
+                        onChange={(e) => setEditForm(f => ({ ...f, halfDayType: e.target.value }))}
+                        className="text-primary focus:ring-primary cursor-pointer w-4 h-4"
+                      />
+                      Second Half
+                    </label>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Reason</label>
                   <textarea

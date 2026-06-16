@@ -13,6 +13,7 @@ import {
   Calendar,
   UserPlus
 } from "lucide-react";
+import ProfileAvatar from "./ProfileAvatar";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -218,9 +219,7 @@ const SharedContactEmployee = ({ role = "employee" }) => {
                   >
                     <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary font-black shadow-inner">
-                          {employee.name?.charAt(0) || "U"}
-                        </div>
+                        <ProfileAvatar user={employee} className="w-12 h-12 text-sm" />
                         <div>
                           <div className="text-sm font-black text-primary tracking-tight">
                             {employee.name || "Anonymous"}

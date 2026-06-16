@@ -22,6 +22,7 @@ import {
   getUserReportData,
   getAllTasksAdmin,
   searchEmployeesForAdmin,
+  getUserFullView,
 } from "../controllers/adminController.js";
 import { protectAdmin } from "../middleware/authMiddleware.js";
 import {
@@ -118,6 +119,7 @@ router.patch("/leave/:id/reject", rejectLeave);
 // leave allowance management routes
 router.put("/users/:id/leave-allowance", updateUserLeaveAllowance);
 router.get("/users/:id/leave-info", getUserLeaveInfo);
+router.get("/users/:id/view", getUserFullView);
 
 // profile verification routes
 router.get("/verification/employees", getEmployeesForVerification);

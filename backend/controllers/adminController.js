@@ -2349,3 +2349,40 @@ export const searchEmployeesForAdmin = async (req, res) => {
     return res.status(500).json({ message: "Failed to search employees", error: error.message });
   }
 };
+
+// Get full details view for a user (admin only)
+export const getUserFullView = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .select("-password")
+      .populate("reportingManager", "name email role")
+      .populate("technicalReporting", "name email role")
+      .populate("administrativeReporting", "name email role");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const attendance = await Attendance.find({ user: id })
+      .sort({ date: -1 })
+      .limit(100);
+
+    const leaves = await Leave.find({ user: id })
+      .sort({ fromDate: -1 });
+
+    const salaries = await Salary.find({ user: id })
+      .sort({ year: -1, creditedOn: -1 });
+
+    res.status(200).json({
+      user,
+      attendance,
+      leaves,
+      salaries,
+    });
+  } catch (error) {
+    console.error("getUserFullView error:", error);
+    res.status(500).json({ message: "Failed to fetch user full details", error: error.message });
+  }
+};

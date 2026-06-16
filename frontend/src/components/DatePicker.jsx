@@ -13,7 +13,7 @@ import {
 } from "date-fns";
 import { createPortal } from "react-dom";
 
-const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
+const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [displayDate, setDisplayDate] = useState(new Date());
   const pickerRef = useRef(null);
@@ -98,7 +98,9 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
       <input
         type="text"
         value={value || ""}
+        disabled={disabled}
         onChange={(e) => {
+          if (disabled) return;
           const val = e.target.value;
           onChange(val);
           const parsed = parseDate(val);
@@ -106,9 +108,9 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy" }) => {
             setDisplayDate(parsed);
           }
         }}
-        onClick={() => setShowPicker(!showPicker)}
+        onClick={() => !disabled && setShowPicker(!showPicker)}
         placeholder={placeholder}
-        className="w-full p-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all cursor-pointer"
+        className={`w-full p-3 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       />
 
       {showPicker &&

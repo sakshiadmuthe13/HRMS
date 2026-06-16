@@ -160,10 +160,19 @@ const LeavesPage = () => {
                         <div className="text-primary font-bold">{to}</div>
                       </td>
                       <td className="p-5">
-                        <span className="text-lg font-black text-primary">
-                          {l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}
-                        </span>
-                        <span className="text-xs font-bold text-secondary ml-1">DAYS</span>
+                        <div className="flex flex-col items-start gap-1">
+                          <div>
+                            <span className="text-lg font-black text-primary">
+                              {l.totalDays ?? calcTotalDays(l.fromDate, l.toDate)}
+                            </span>
+                            <span className="text-xs font-bold text-secondary ml-1">DAYS</span>
+                          </div>
+                          {l.halfDay && (
+                            <span className="text-[8px] font-black bg-blue-50 text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded uppercase leading-none">
+                              {l.halfDayType === "first_half" ? "First Half" : "Second Half"}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-5 max-w-xs">
                         <p className="text-secondary font-medium line-clamp-3 text-sm italic">

@@ -7,6 +7,8 @@ const leaveSchema = new mongoose.Schema({
   fromDate: { type: Date, required: true },
   toDate: { type: Date, required: true },
   totalDays: { type: Number },
+  halfDay: { type: Boolean, default: false },
+  halfDayType: { type: String, enum: ["first_half", "second_half", null], default: null },
   status: { type: String, enum: ["Pending", "Approved", "Rejected"], default: "Pending" },
   appliedAt: { type: Date, default: Date.now },
 });

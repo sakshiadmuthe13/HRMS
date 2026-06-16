@@ -4,6 +4,39 @@ import { jsPDF } from "jspdf";
 import { FileText, Send, Download, Eye, X, Mail, Printer } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
+import { 
+  Document, 
+  Packer, 
+  Paragraph, 
+  TextRun, 
+  ImageRun, 
+  Table, 
+  TableRow, 
+  TableCell, 
+  TableBorders, 
+  BorderStyle, 
+  WidthType, 
+  AlignmentType, 
+  Footer 
+} from "docx";
+
+const base64ToUint8Array = (base64DataUrl) => {
+  if (!base64DataUrl) return null;
+  const parts = base64DataUrl.split(",");
+  const base64Str = parts[1] || parts[0];
+  try {
+    const raw = window.atob(base64Str);
+    const rawLength = raw.length;
+    const array = new Uint8Array(new ArrayBuffer(rawLength));
+    for (let i = 0; i < rawLength; i++) {
+      array[i] = raw.charCodeAt(i);
+    }
+    return array;
+  } catch (err) {
+    console.error("Failed to decode base64 string", err);
+    return null;
+  }
+};
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -151,19 +184,19 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
       "",
       `**Internship Terms:**`,
       "",
-      `• **Stipend:** Unpaid for first 3 months then performance-based stipend`,
+      `• **Stipend:** Unpaid`,
       "",
       `• **Duration:** This internship is for a mandatory period of 6 months, starting from your date of joining.`,
       "",
-      `• **Commitment Clause:** By signing and accepting this offer, you agree not to terminate or abandon the internship before completion of the full 6-month duration. This letter will serve as a binding contract between you and DW Innovations Pvt. Ltd. during this period.`,
+      `• **Commitment Clause:** By signing and accepting this offer, you agree not to terminate or abandon the internship before completion of the full 6-month duration. This letter will serve as a binding contract between you and QiroTech Innovation Pvt. Ltd. during this period.`,
       "",
       `• **Performance and Termination Clause:** Your internship is for a period of 6 months. However, please note that continued engagement is subject to satisfactory performance and adherence to company policies. The company reserves the right to terminate the internship at any time before the completion of the 6-month period if your performance is found to be unsatisfactory or if there is any breach of discipline, conduct, or company policies. Such termination will be communicated in writing and will be effective immediately upon notice.`,
       "",
       `• **Performance Review:** Your performance will be evaluated throughout the internship. Based on your performance, you may be considered for a full-time opportunity at the end of the internship term.`,
       "",
-      `Please find enclosed a list of documents required for onboarding. You are requested to email the scanned copies to the official HR email ID of DW Innovations Pvt. Ltd., and also bring the hard copies with you on the date of joining.`,
+      `Please find enclosed a list of documents required for onboarding. You are requested to email the scanned copies to the official HR email ID of QiroTech Innovation Pvt. Ltd., and also bring the hard copies with you on the date of joining.`,
       "",
-      `We are confident in your potential to contribute meaningfully to the success of DW Innovations Pvt. Ltd. and look forward to seeing your growth during your time with us.`,
+      `We are confident in your potential to contribute meaningfully to the success of QiroTech Innovation Pvt. Ltd. and look forward to seeing your growth during your time with us.`,
       "",
       `Kindly sign and return the enclosed copy of this letter to confirm your acceptance of the offer.`
     ];
@@ -561,6 +594,426 @@ const HRGenerateLetterPage = () => {
     link.click();
   };
 
+  const handleDownloadWord = async () => {
+    try {
+      const paragraphsData = getLetterContent(employeeType, selectedCategory, formData, position, gender)
+        .filter(p => p !== "");
+      const sectionChildren = [];
+
+      const headerCells = [];
+      const logoData = base64ToUint8Array(logoBase64?.data);
+      if (logoData) {
+        headerCells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: logoData,
+                    transformation: {
+                      width: 170,
+                      height: 57,
+                    },
+                    type: "jpeg",
+                  }),
+                ],
+              }),
+            ],
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            width: { size: 50, type: WidthType.PERCENTAGE },
+          })
+        );
+      } else {
+        headerCells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: "QIRO TECH",
+                    bold: true,
+                    size: 40,
+                    color: "1872A3",
+                  }),
+                ],
+              }),
+            ],
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            width: { size: 50, type: WidthType.PERCENTAGE },
+          })
+        );
+      }
+
+      headerCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Qiro Tech Innovation Pvt. Ltd.",
+                  bold: true,
+                  size: 20,
+                }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Unit 602, Floor 6th, The Business\nAdvantEDGE, Hinjewadi Phase 1\nPune - 411057.",
+                  size: 18,
+                }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+          ],
+          margins: { top: 0, bottom: 0, left: 0, right: 0 },
+          width: { size: 50, type: WidthType.PERCENTAGE },
+        })
+      );
+
+      const headerTable = new Table({
+        rows: [
+          new TableRow({
+            children: headerCells,
+          }),
+        ],
+        borders: TableBorders.NONE,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+      });
+
+      sectionChildren.push(headerTable);
+
+      sectionChildren.push(
+        new Paragraph({
+          border: {
+            bottom: {
+              color: "969696",
+              space: 8,
+              style: BorderStyle.SINGLE,
+              size: 6,
+            },
+          },
+          spacing: { after: 200 },
+        })
+      );
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: formData.date || format(new Date(), "dd MMMM yyyy"),
+              bold: true,
+              size: 22,
+            }),
+          ],
+          spacing: { before: 240, after: 200 },
+        })
+      );
+
+      if (selectedCategory === "Experience Letter") {
+        sectionChildren.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: "TO WHOMSO EVER IT MAY CONCERN",
+                bold: true,
+                underline: {},
+                size: 28,
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 240, after: 200 },
+          })
+        );
+      }
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: (selectedCategory || "").toUpperCase(),
+              bold: true,
+              size: 30,
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 240 },
+        })
+      );
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "To,",
+              size: 24,
+            }),
+          ],
+          spacing: { before: 180, after: 60 },
+        })
+      );
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: (formData.name || "[Employee Name]") + ",",
+              bold: true,
+              size: 24,
+            }),
+          ],
+          spacing: { before: 0, after: 240 },
+        })
+      );
+
+      paragraphsData.forEach((paragraph) => {
+        const runs = [];
+        const parts = paragraph.split(/(\*\*.*?\*\*)/g);
+        parts.forEach((part) => {
+          if (!part) return;
+          const isBold = part.startsWith("**") && part.endsWith("**");
+          const textContent = isBold ? part.slice(2, -2) : part;
+          runs.push(
+            new TextRun({
+              text: textContent,
+              bold: isBold,
+              size: 24,
+            })
+          );
+        });
+
+        sectionChildren.push(
+          new Paragraph({
+            children: runs,
+            alignment: AlignmentType.JUSTIFY,
+            spacing: { before: 0, after: 200, line: 276 },
+          })
+        );
+      });
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "Yours Faithfully,",
+              size: 24,
+            }),
+          ],
+          spacing: { before: 240, after: 60 },
+        })
+      );
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "For Qiro Tech Innovation Pvt. Ltd.",
+              bold: true,
+              size: 24,
+            }),
+          ],
+          spacing: { before: 0, after: 120 },
+        })
+      );
+
+      const stampData = base64ToUint8Array(stampBase64?.data);
+      const finalSign = customSignBase64 || signBase64;
+      const signData = base64ToUint8Array(finalSign?.data);
+
+      const signoffCells = [];
+      if (stampData) {
+        signoffCells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: stampData,
+                    transformation: {
+                      width: 151,
+                      height: 132,
+                    },
+                    type: "png",
+                  }),
+                ],
+              }),
+            ],
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            width: { size: 2500, type: WidthType.DXA },
+          })
+        );
+      } else {
+        signoffCells.push(
+          new TableCell({
+            children: [new Paragraph("")],
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            width: { size: 2500, type: WidthType.DXA },
+          })
+        );
+      }
+
+      if (signData) {
+        let renderWidth = 128;
+        let renderHeight = 90;
+        if (finalSign.width && finalSign.height) {
+          const ratio = Math.min(128 / finalSign.width, 90 / finalSign.height);
+          renderWidth = Math.round(finalSign.width * ratio);
+          renderHeight = Math.round(finalSign.height * ratio);
+        }
+
+        signoffCells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new ImageRun({
+                    data: signData,
+                    transformation: {
+                      width: renderWidth,
+                      height: renderHeight,
+                    },
+                    type: "png",
+                  }),
+                ],
+              }),
+            ],
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            width: { size: 2500, type: WidthType.DXA },
+          })
+        );
+      } else {
+        signoffCells.push(
+          new TableCell({
+            children: [new Paragraph("")],
+            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+            width: { size: 2500, type: WidthType.DXA },
+          })
+        );
+      }
+
+      signoffCells.push(
+        new TableCell({
+          children: [new Paragraph("")],
+          margins: { top: 0, bottom: 0, left: 0, right: 0 },
+          width: { size: 4592, type: WidthType.DXA },
+        })
+      );
+
+      const signoffTable = new Table({
+        rows: [
+          new TableRow({
+            children: signoffCells,
+          }),
+        ],
+        borders: TableBorders.NONE,
+        width: { size: 9592, type: WidthType.DXA },
+      });
+
+      sectionChildren.push(signoffTable);
+
+      const hrName = formData.hrFullName || "Prashant Kulkarni";
+      const hrDesignation = formData.hrDesignation || "People Operations Officer";
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: hrName,
+              bold: true,
+              size: 24,
+            }),
+          ],
+          spacing: { before: 200, after: 40 },
+        })
+      );
+
+      sectionChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: hrDesignation,
+              size: 24,
+            }),
+          ],
+        })
+      );
+
+      const doc = new Document({
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: "Arial",
+                size: 24,
+              },
+            },
+          },
+        },
+        sections: [
+          {
+            properties: {
+              page: {
+                size: {
+                  width: 11906,
+                  height: 16838,
+                },
+                margin: {
+                  top: 1152,
+                  bottom: 1152,
+                  left: 1152,
+                  right: 1152,
+                },
+              },
+            },
+            footers: {
+              default: new Footer({
+                children: [
+                  new Paragraph({
+                    border: {
+                      top: {
+                        color: "969696",
+                        space: 4,
+                        style: BorderStyle.SINGLE,
+                        size: 6,
+                      },
+                    },
+                    spacing: { before: 100, after: 50 },
+                  }),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "www.qirotec.com",
+                        size: 18,
+                      }),
+                    ],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+              }),
+            },
+            children: sectionChildren,
+          },
+        ],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${selectedCategory.replace(/ /g, "_")}_${(formData.name || "Letter").replace(/ /g, "_")}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Word document generated successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate Word document");
+    }
+  };
+
   const fetchUsers = async () => {
     try {
       const data = await fetchJson(`${prefix}/users`);
@@ -848,26 +1301,33 @@ const HRGenerateLetterPage = () => {
               </div>
             </div>
 
-            <div className="pt-4 flex flex-wrap gap-4">
+            <div className="pt-4 flex flex-wrap gap-2">
               <button
                 onClick={generatePDF}
-                className="flex items-center gap-2 px-4 py-3 bg-primary text-white font-bold rounded-xl hover:bg-secondary transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                className="flex items-center gap-1 px-3 py-2 bg-primary text-white font-bold rounded-xl hover:bg-secondary transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
               >
-                <Eye size={18} /> Generate Letter
+                <Eye size={16} /> Generate Letter
               </button>
 
               <button
                 onClick={handleDownload}
-                className="flex items-center gap-2 px-4 py-3 bg-white text-primary border-2 border-primary font-bold rounded-xl hover:bg-gray-50 transition-all shadow-md hover:-translate-y-0.5"
+                className="flex items-center gap-1 px-3 py-2 bg-white text-primary border-2 border-primary font-bold rounded-xl hover:bg-gray-50 transition-all shadow-md hover:-translate-y-0.5"
               >
-                <Download size={18} /> Download PDF
+                <Download size={16} /> Download PDF
+              </button>
+
+              <button
+                onClick={handleDownloadWord}
+                className="flex items-center gap-1 px-3 py-2 bg-white text-blue-600 border-2 border-blue-600 font-bold rounded-xl hover:bg-gray-50 transition-all shadow-md hover:-translate-y-0.5"
+              >
+                <Download size={16} /> Download Word
               </button>
 
               <button
                 onClick={openEmailModal}
-                className="flex items-center gap-2 px-4 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                className="flex items-center gap-1 px-3 py-2 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
               >
-                <Send size={18} /> Send Letter
+                <Send size={16} /> Send Letter
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMont
 import { toZonedTime } from "date-fns-tz";
 import { toast } from "react-toastify";
 import { ChevronLeft, ChevronRight, CheckCircle, Gift, Award, Heart, LogIn, LogOut, Calendar as CalendarIcon } from "lucide-react";
+import ProfileAvatar from "../../components/ProfileAvatar";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -55,9 +56,7 @@ const CelebrationCard = ({ title, items, loading, emptyMessage, icon: Icon, icon
             transition={{ delay: i * 0.08 }}
             className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
           >
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center font-black text-primary text-xs">
-              {item.name.charAt(0)}
-            </div>
+            <ProfileAvatar user={item} className="w-8 h-8 text-[10px]" />
             <div className="min-w-0">
               <span className="block font-bold text-gray-800 text-xs truncate">{item.name}</span>
               <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-tight truncate">{item.role || "Team Member"}</span>
@@ -72,6 +71,7 @@ const CelebrationCard = ({ title, items, loading, emptyMessage, icon: Icon, icon
 const Attendance = () => {
   const [loading, setLoading] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [confirmModal, setConfirmModal] = useState({ show: false, title: "", message: "", onConfirm: null });
   const [monthRecords, setMonthRecords] = useState({});
   const [holidayMap, setHolidayMap] = useState({});
   const [leaveMap, setLeaveMap] = useState({});
@@ -144,7 +144,48 @@ const Attendance = () => {
     fetchTodayCelebrations();
   }, [calendarDate, fetchTodayAttendance, fetchMonthAttendance, fetchTodayCelebrations]);
 
-  const handleCheckAction = async (type) => {
+  const checkTimingWarnings = (actionType) => {
+    const todayKey = getTodayISTKey();
+    const todayLeave = leaveMap[todayKey];
+    const isApprovedHalfDay = todayLeave && todayLeave.status === "Approved" && todayLeave.halfDay;
+    const halfDayType = isApprovedHalfDay ? todayLeave.halfDayType : null;
+
+    const now = new Date();
+    const nowIST = toZonedTime(now, TZ);
+    const hours = nowIST.getHours();
+    const minutes = nowIST.getMinutes();
+    const totalMinutes = hours * 60 + minutes;
+
+    if (actionType === "checkin") {
+      if (halfDayType === "first_half") {
+        const threshold = 14 * 60 + 30; // 2:30 PM
+        if (totalMinutes > threshold) {
+          return { isWarning: true, minutes: totalMinutes - threshold, message: `You are checking in late by ${totalMinutes - threshold} minutes. Salary deduction may apply.` };
+        }
+      } else { // second_half or normal
+        const threshold = 10 * 60; // 10:00 AM
+        if (totalMinutes > threshold) {
+          return { isWarning: true, minutes: totalMinutes - threshold, message: `You are checking in late by ${totalMinutes - threshold} minutes. Salary deduction may apply.` };
+        }
+      }
+    } else if (actionType === "checkout") {
+      if (halfDayType === "second_half") {
+        const threshold = 14 * 60; // 2:00 PM
+        if (totalMinutes < threshold) {
+          return { isWarning: true, minutes: threshold - totalMinutes, message: `You are checking out ${threshold - totalMinutes} minutes early. Salary deduction may apply.` };
+        }
+      } else { // first_half or normal
+        const threshold = 18 * 60 + 30; // 6:30 PM
+        if (totalMinutes < threshold) {
+          return { isWarning: true, minutes: threshold - totalMinutes, message: `You are checking out ${threshold - totalMinutes} minutes early. Salary deduction may apply.` };
+        }
+      }
+    }
+    return { isWarning: false };
+  };
+
+  const executeCheckAction = async (type) => {
+    setConfirmModal({ show: false, title: "", message: "", onConfirm: null });
     setLoading(true);
     try {
       await apiPost(`/employee/attendance/${type}`, {});
@@ -153,6 +194,20 @@ const Attendance = () => {
       await fetchMonthAttendance();
     } catch (e) { toast.error(e.message); }
     finally { setLoading(false); }
+  };
+
+  const handleCheckAction = async (type) => {
+    const warning = checkTimingWarnings(type);
+    if (warning.isWarning) {
+      setConfirmModal({
+        show: true,
+        title: type === "checkin" ? "Late Check-In Alert" : "Early Check-Out Alert",
+        message: warning.message,
+        onConfirm: () => executeCheckAction(type)
+      });
+    } else {
+      await executeCheckAction(type);
+    }
   };
 
   const days = (() => {
@@ -382,6 +437,42 @@ const Attendance = () => {
           />
         </div>
       </div>
+
+      {/* ── Confirmation Modal ── */}
+      <AnimatePresence>
+        {confirmModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl border border-gray-150 p-8 shadow-2xl max-w-md w-full relative overflow-hidden text-left"
+            >
+              <div className="absolute top-0 left-0 right-0 h-2 bg-amber-500" />
+              <h3 className="text-2xl font-black text-amber-600 mb-4 tracking-tight">
+                {confirmModal.title}
+              </h3>
+              <p className="text-slate-650 text-sm font-semibold leading-relaxed mb-6">
+                {confirmModal.message}
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConfirmModal({ show: false, title: "", message: "", onConfirm: null })}
+                  className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-slate-700 font-bold rounded-2xl active:scale-95 transition-all text-xs uppercase tracking-wider"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="flex-1 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl active:scale-95 transition-all text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20"
+                >
+                  {confirmModal.title.includes("Check-In") ? "Continue Check-In" : "Check Out Anyway"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

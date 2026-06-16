@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import DatePicker from "../../components/DatePicker";
+import ProfileAvatar from "../../components/ProfileAvatar";
+import UserViewModal from "../../components/UserViewModal";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -56,6 +58,7 @@ const EmployeesPage = () => {
   const [allUsers, setAllUsers] = useState([]); // For reporting manager dropdowns
   const [leaveAllowanceModal, setLeaveAllowanceModal] = useState(null); // {userId, currentAllowance, name}
   const [newAllowance, setNewAllowance] = useState("");
+  const [viewingUserId, setViewingUserId] = useState(null);
 
   useEffect(() => { fetchEmployees(); fetchAllUsers(); }, []);
 
@@ -150,8 +153,13 @@ const EmployeesPage = () => {
                 {employees.map((e, i) => (
                   <tr key={e._id || i} className="hover:bg-primary/5 transition-colors group">
                     <td className="p-5">
-                      <div className="font-bold text-primary">{e.name}</div>
-                      <div className="text-xs text-secondary md:hidden">{e.email}</div>
+                      <div className="flex items-center gap-3">
+                        <ProfileAvatar user={e} className="w-9 h-9 text-xs" />
+                        <div>
+                          <div className="font-bold text-primary">{e.name}</div>
+                          <div className="text-xs text-secondary md:hidden">{e.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="p-5 hidden md:table-cell text-secondary font-medium">{e.email}</td>
                     <td className="p-5">
@@ -169,6 +177,7 @@ const EmployeesPage = () => {
                     </td>
                     <td className="p-5 text-right">
                       <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setViewingUserId(e._id)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold">View</button>
                         <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold">Edit</button>
                         <button onClick={() => handleDeleteClick(e)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all font-bold">Delete</button>
                       </div>
@@ -287,6 +296,12 @@ const EmployeesPage = () => {
           </div>
         </div>
       )}
+
+      <UserViewModal
+        isOpen={Boolean(viewingUserId)}
+        onClose={() => setViewingUserId(null)}
+        userId={viewingUserId}
+      />
     </div>
   );
 };

@@ -130,6 +130,7 @@ export const leaderCheckIn = async (req, res) => {
   try {
     const userId = req.user._id;
     const now = new Date();
+    const nowIST = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
 
     let attendance = await Attendance.findOne({
@@ -159,6 +160,58 @@ export const leaderCheckIn = async (req, res) => {
       });
     }
     attendance.checkIn = now.toISOString();
+
+    // Check for approved half-day leave today
+    const approvedHalfDayLeave = await Leave.findOne({
+      user: userId,
+      status: "Approved",
+      halfDay: true,
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+
+    const istHours = nowIST.getHours();
+    const istMinutes = nowIST.getMinutes();
+    const checkInTotalMinutes = istHours * 60 + istMinutes;
+
+    if (approvedHalfDayLeave) {
+      attendance.status = "Half Day (Approved)";
+      attendance.attendance_status = "Half Day (Approved)";
+      if (approvedHalfDayLeave.halfDayType === "first_half") {
+        const threshold = 14 * 60 + 30; // 2:30 PM
+        if (checkInTotalMinutes > threshold) {
+          attendance.is_late = true;
+          attendance.late_minutes = checkInTotalMinutes - threshold;
+        } else {
+          attendance.is_late = false;
+          attendance.late_minutes = 0;
+        }
+      } else { // second_half
+        const threshold = 10 * 60; // 10:00 AM
+        if (checkInTotalMinutes > threshold) {
+          attendance.is_late = true;
+          attendance.late_minutes = checkInTotalMinutes - threshold;
+        } else {
+          attendance.is_late = false;
+          attendance.late_minutes = 0;
+        }
+      }
+    } else {
+      // Normal shift
+      const threshold = 10 * 60; // 10:00 AM
+      if (checkInTotalMinutes <= threshold) {
+        attendance.is_late = false;
+        attendance.late_minutes = 0;
+        attendance.status = "Present";
+        attendance.attendance_status = "On Time";
+      } else {
+        attendance.is_late = true;
+        attendance.late_minutes = checkInTotalMinutes - threshold;
+        attendance.status = "Late";
+        attendance.attendance_status = "Late";
+      }
+    }
+
     await attendance.save();
     res.status(200).json(attendance);
   } catch (err) {
@@ -172,6 +225,7 @@ export const leaderCheckOut = async (req, res) => {
   try {
     const userId = req.user._id;
     const now = new Date();
+    const nowIST = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
 
     const attendance = await Attendance.findOne({
@@ -197,8 +251,69 @@ export const leaderCheckOut = async (req, res) => {
 
       if (isHoliday && (attendance.checkIn || attendance.checkOut)) {
         attendance.status = "Over-time";
-      } else if (!attendance.status) {
-        attendance.status = attendance.checkIn ? "Present" : "Absent";
+        attendance.attendance_status = "Over-time";
+      } else if (!attendance.status || attendance.status === "Present" || attendance.status === "Absent") {
+        attendance.status = "Present";
+      }
+
+      // Check for approved half-day leave today
+      const approvedHalfDayLeave = await Leave.findOne({
+        user: userId,
+        status: "Approved",
+        halfDay: true,
+        fromDate: { $lte: todayEnd },
+        toDate: { $gte: todayStart },
+      });
+
+      const istHours = nowIST.getHours();
+      const istMinutes = nowIST.getMinutes();
+      const checkOutTotalMinutes = istHours * 60 + istMinutes;
+
+      if (!isHoliday) {
+        if (approvedHalfDayLeave) {
+          attendance.status = "Half Day (Approved)";
+          attendance.attendance_status = "Half Day (Approved)";
+          if (approvedHalfDayLeave.halfDayType === "second_half") {
+            // Expected checkout: 2:00 PM (14:00)
+            const threshold = 14 * 60;
+            if (checkOutTotalMinutes < threshold) {
+              attendance.is_early_checkout = true;
+              attendance.early_checkout_minutes = threshold - checkOutTotalMinutes;
+            } else {
+              attendance.is_early_checkout = false;
+              attendance.early_checkout_minutes = 0;
+            }
+          } else { // first_half
+            // Expected checkout: 6:30 PM (18:30)
+            const threshold = 18 * 60 + 30;
+            if (checkOutTotalMinutes < threshold) {
+              attendance.is_early_checkout = true;
+              attendance.early_checkout_minutes = threshold - checkOutTotalMinutes;
+            } else {
+              attendance.is_early_checkout = false;
+              attendance.early_checkout_minutes = 0;
+            }
+          }
+        } else {
+          // No approved half-day leave today
+          const endOfDayMinutes = 18 * 60 + 30; // 6:30 PM
+          if (checkOutTotalMinutes < endOfDayMinutes) {
+            attendance.is_early_checkout = true;
+            attendance.early_checkout_minutes = endOfDayMinutes - checkOutTotalMinutes;
+
+            // Check if checkout is between 2:00 PM and 2:30 PM (14:00 and 14:30)
+            if (checkOutTotalMinutes >= 14 * 60 && checkOutTotalMinutes <= 14 * 60 + 30) {
+              attendance.status = "Half Day (Unapproved)";
+              attendance.attendance_status = "Half Day (Unapproved)";
+            } else {
+              attendance.status = "Early Checkout";
+              attendance.attendance_status = "Early Checkout";
+            }
+          } else {
+            attendance.is_early_checkout = false;
+            attendance.early_checkout_minutes = 0;
+          }
+        }
       }
 
       await attendance.save();
@@ -347,7 +462,7 @@ export const getTeamMembersByProject = async (req, res) => {
 // POST /api/leader/leave/apply
 export const applyLeaderLeave = async (req, res) => {
   try {
-    const { reason, fromDate, toDate } = req.body;
+    const { reason, fromDate, toDate, halfDay, halfDayType } = req.body;
     const leaderId = req.user._id;
 
     if (!reason || !fromDate || !toDate) {
@@ -369,7 +484,10 @@ export const applyLeaderLeave = async (req, res) => {
 
     // calculate inclusive days
     const oneDay = 1000 * 60 * 60 * 24;
-    const totalDays = Math.floor((to - from) / oneDay) + 1;
+    let totalDays = Math.floor((to - from) / oneDay) + 1;
+    if (halfDay) {
+      totalDays = 0.5;
+    }
 
     const leave = await Leave.create({
       user: leaderId,
@@ -377,6 +495,8 @@ export const applyLeaderLeave = async (req, res) => {
       fromDate: from,
       toDate: to,
       totalDays,
+      halfDay: !!halfDay,
+      halfDayType: halfDay ? halfDayType : null,
     });
 
     // Notify all admins about new leave application
