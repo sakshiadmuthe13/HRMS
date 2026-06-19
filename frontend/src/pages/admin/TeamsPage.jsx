@@ -45,7 +45,7 @@ const apiPut = (p, body) =>
 
 const emptyForm = { name: "", leader: "", members: [] };
 
-const TeamsPage = () => {
+const TeamsPage = ({ isLeader = false }) => {
   const [teams, setTeams] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -56,15 +56,20 @@ const TeamsPage = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const prefix = isLeader ? "/leader" : "/admin";
+  const getTeamsPath = isLeader ? "/leader/all-teams" : "/admin/teams";
+  const getLeadersPath = isLeader ? "/leader/all-leaders" : "/admin/leaders";
+  const getEmployeesPath = isLeader ? "/leader/all-employees" : "/admin/employees";
+
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true); setError("");
     try {
       const [teamsData, leadersData, employeesData] = await Promise.all([
-        apiGet("/admin/teams"),
-        apiGet("/admin/leaders"),
-        apiGet("/admin/employees"),
+        apiGet(getTeamsPath),
+        apiGet(getLeadersPath),
+        apiGet(getEmployeesPath),
       ]);
       setTeams(teamsData || []);
       setLeaders(leadersData || []);
@@ -87,9 +92,9 @@ const TeamsPage = () => {
     }
     try {
       if (editingTeam) {
-        await apiPut(`/admin/teams/${editingTeam._id}`, form);
+        await apiPut(`${prefix}/teams/${editingTeam._id}`, form);
       } else {
-        await apiPost("/admin/teams", form);
+        await apiPost(`${prefix}/teams`, form);
       }
       setEditingTeam(null);
       setIsModalOpen(false);
@@ -113,7 +118,7 @@ const TeamsPage = () => {
   const handleDeleteClick = (team) => setDeleteTarget(team);
   const confirmDelete = async () => {
     try {
-      await apiDelete(`/admin/teams/${deleteTarget._id}`);
+      await apiDelete(`${prefix}/teams/${deleteTarget._id}`);
       setDeleteTarget(null);
       loadData();
     } catch (err) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Layout, User, Clock, AlertCircle, Send, History, Filter, ClipboardCheck, ExternalLink, FileText } from "lucide-react";
+import { CheckCircle2, Layout, User, Clock, AlertCircle, Send, History, Filter, ClipboardCheck, ExternalLink, FileText, Paperclip } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -32,7 +32,7 @@ export default function AssignTaskPage() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const [form, setForm] = useState({ project: "", assignedTo: "", description: "", deadline: "" });
+  const [form, setForm] = useState({ project: "", assignedTo: "", description: "", deadline: "", file: null });
 
   useEffect(() => { fetchProjects(); fetchMyTasks(); }, []);
   useEffect(() => { if (form.project) fetchTeammates(form.project); else setTeammates([]); }, [form.project]);
@@ -48,13 +48,34 @@ export default function AssignTaskPage() {
     }
     try {
       setLoading(true);
-      await apiPost("/leader/assign-task", {
-        projectId: form.project,
-        assignedTo: form.assignedTo,
-        description: form.description,
-        deadline: form.deadline ? new Date(form.deadline).toISOString() : undefined,
+      const formData = new FormData();
+      formData.append("projectId", form.project);
+      formData.append("assignedTo", form.assignedTo);
+      formData.append("description", form.description);
+      if (form.deadline) {
+        formData.append("deadline", new Date(form.deadline).toISOString());
+      }
+      if (form.file) {
+        formData.append("file", form.file);
+      }
+
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const headers = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE}/leader/assign-task`, {
+        method: "POST",
+        body: formData,
+        headers,
+        credentials: "include",
       });
-      setForm({ project: "", assignedTo: "", description: "", deadline: "" });
+      if (!res.ok) {
+        let text = await res.text();
+        try { text = JSON.parse(text); } catch { }
+        throw new Error(text?.message || res.statusText || "API error");
+      }
+
+      setForm({ project: "", assignedTo: "", description: "", deadline: "", file: null });
       fetchMyTasks();
       setSuccessMessage("Task assigned successfully.");
     } catch (e) { setSuccessMessage(e.message); }
@@ -105,7 +126,11 @@ export default function AssignTaskPage() {
               disabled={!form.project || teammates.length === 0}
             >
               <option value="">{form.project ? (teammates.length ? "Select Teammate" : "No teammates found") : "Select project first"}</option>
-              {teammates.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+              {teammates.map(t => (
+                <option key={t._id} value={t._id} disabled={t.isOnHoliday} className={t.isOnHoliday ? "text-red-400 font-normal" : ""}>
+                  {t.name} {t.isOnHoliday ? " (On Holiday / Leave)" : ""}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -119,21 +144,30 @@ export default function AssignTaskPage() {
             />
           </div>
 
-          <div className="md:col-span-3 space-y-3">
+          <div className="space-y-3">
             <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Task Description</label>
             <textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Detail the requirements for this task assignment..."
-              className="w-full bg-gray-50 border border-gray-200 text-primary font-bold p-6 rounded-3xl min-h-[120px] outline-none focus:ring-4 focus:ring-primary/10 transition-all resize-none"
+              className="w-full bg-gray-50 border border-gray-200 text-primary font-bold p-4 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 transition-all min-h-[120px]"
+              placeholder="Detailed instructions..."
             />
           </div>
-        </div>
 
-        <div className="flex justify-center pt-4">
-          <button onClick={assignTask} disabled={loading} className="px-12 py-5 bg-primary text-white font-black rounded-3xl shadow-xl shadow-primary/20 hover:scale-[1.05] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs flex items-center gap-3">
-            {loading ? "Processing..." : <><Send size={16} /> Assign Task</>}
-          </button>
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Attachment</label>
+            <label className="flex items-center gap-3 w-full bg-gray-50 border border-gray-200 text-primary font-bold p-4 rounded-2xl cursor-pointer hover:bg-gray-100 transition-all">
+              <Paperclip size={16} />
+              <span className="text-xs truncate">{form.file ? form.file.name : "Upload File (Optional)"}</span>
+              <input type="file" onChange={e => setForm(f => ({ ...f, file: e.target.files[0] }))} className="hidden" />
+            </label>
+          </div>
+
+          <div className="flex items-end">
+            <button onClick={assignTask} disabled={loading} className="w-full px-12 py-5 bg-primary text-white font-black rounded-3xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3">
+              {loading ? "Processing..." : <><Send size={16} /> Assign Task</>}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -163,32 +197,22 @@ export default function AssignTaskPage() {
                 <tr><td colSpan="3" className="p-20 text-center text-secondary/20 font-black italic">No tasks assigned yet</td></tr>
               ) : (
                 tasks.map((t, i) => (
-                  <motion.tr key={t._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="group hover:bg-gray-50/30 transition-colors">
+                  <motion.tr key={t._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="group transition-colors">
                     <td className="p-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary font-black text-lg">{t.project?.name?.charAt(0)}</div>
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black text-xs uppercase">{t.assignedTo?.name?.charAt(0) || "?"}</div>
                         <div>
-                          <div className="text-sm font-black text-primary tracking-tight">{t.project?.name || "Independent"}</div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <User size={12} className="text-secondary/40" />
-                            <span className="text-[10px] font-bold text-secondary/60 uppercase">{t.assignedTo?.name || "Unassigned"}</span>
-                          </div>
-                          {t.status === "Completed" && (t.completionDescription || t.deployedLink) && (
-                            <div className="mt-3 p-3 bg-gray-50 rounded-xl space-y-2 border border-gray-100">
-                              {t.completionDescription && (
-                                <div className="flex items-start gap-2">
-                                  <FileText size={12} className="text-secondary/40 mt-0.5 shrink-0" />
-                                  <span className="text-[10px] font-bold text-secondary/80 leading-relaxed">{t.completionDescription}</span>
-                                </div>
-                              )}
-                              {t.deployedLink && (
-                                <div className="flex items-center gap-2">
-                                  <ExternalLink size={12} className="text-primary/60 shrink-0" />
-                                  <a href={t.deployedLink} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-primary hover:underline truncate max-w-[200px]">
-                                    {t.deployedLink}
-                                  </a>
-                                </div>
-                              )}
+                          <p className="text-xs font-black text-primary">{t.assignedTo?.name || "Unknown"}</p>
+                          <p className="text-[10px] font-bold text-secondary/50 truncate max-w-[150px]">{t.description}</p>
+                          {t.project?.name && (
+                            <p className="text-[9px] font-bold text-secondary/40 mt-0.5">Project: {t.project.name}</p>
+                          )}
+                          {t.attachmentUrl && (
+                            <div className="mt-1.5 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-lg p-1.5 max-w-max">
+                              <Paperclip size={10} className="text-primary" />
+                              <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-[9px] font-black text-primary uppercase hover:underline">
+                                {t.attachmentName || "View Attachment"}
+                              </a>
                             </div>
                           )}
                         </div>

@@ -39,20 +39,21 @@ const apiPost = (p, body) =>
 
 // Utiliy function to calculate payslip details
 const calculatePayslipData = (totalSalary, presentDays, absentDays, month, year, pfEnabled, bonusAmount = 0) => {
-  totalSalary = Number(totalSalary) || 0;
+  const ctc = Number(totalSalary) || 0;
+  const monthlySalary = ctc / 12;
   presentDays = Number(presentDays) || 0;
   absentDays = Number(absentDays) || 0;
   bonusAmount = Number(bonusAmount) || 0;
 
-  const basic = Math.round(totalSalary * 0.48);
-  const hra = Math.round(totalSalary * 0.20);
-  const lta = Math.round(totalSalary * 0.05);
-  const bonus = Math.round(totalSalary * 0.04);
-  const specialAllowance = totalSalary - (basic + hra + lta + bonus);
+  const basic = Math.round(monthlySalary * 0.48);
+  const hra = Math.round(monthlySalary * 0.20);
+  const lta = Math.round(monthlySalary * 0.05);
+  const bonus = Math.round(monthlySalary * 0.04);
+  const specialAllowance = monthlySalary - (basic + hra + lta + bonus);
 
   let pt = 0;
-  if (totalSalary >= 7500 && totalSalary <= 10000) pt = 175;
-  else if (totalSalary > 10000) pt = 200;
+  if (monthlySalary >= 7500 && monthlySalary <= 10000) pt = 175;
+  else if (monthlySalary > 10000) pt = 200;
 
   const pf = pfEnabled ? Math.round(basic * 0.12) : 0;
 
@@ -61,10 +62,10 @@ const calculatePayslipData = (totalSalary, presentDays, absentDays, month, year,
   const monthIndex = monthNames.indexOf((month || "").toLowerCase());
   const daysInMonth = monthIndex >= 0 ? new Date(year, monthIndex + 1, 0).getDate() : 30;
 
-  const perDaySalary = totalSalary / daysInMonth;
+  const perDaySalary = monthlySalary / daysInMonth;
   const lopDeduction = Math.round(perDaySalary * absentDays);
 
-  const totalEarnings = totalSalary + bonusAmount;
+  const totalEarnings = monthlySalary + bonusAmount;
   const totalDeductions = pt + pf + lopDeduction;
   const netSalary = totalEarnings - totalDeductions;
 
@@ -759,17 +760,29 @@ const HRSalaryPage = () => {
                 <div className="space-y-6 relative z-10">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/10 p-4 rounded-2xl">
-                      <div className="text-[10px] font-black opacity-60 uppercase tracking-widest">Present</div>
-                      <div className="text-xl font-black">{salaryDetails.presentDays} <span className="text-xs opacity-60">DAYS</span></div>
+                      <div className="text-[10px] font-black opacity-60 uppercase tracking-widest">Effective Present</div>
+                      <div className="text-xl font-black">{Number(salaryDetails.presentDays).toFixed(2)} <span className="text-xs opacity-60">DAYS</span></div>
                     </div>
                     <div className="bg-white/10 p-4 rounded-2xl">
-                      <div className="text-[10px] font-black opacity-60 uppercase tracking-widest">Absences</div>
-                      <div className="text-xl font-black">{salaryDetails.absentDays} <span className="text-xs opacity-60">DAYS</span></div>
+                      <div className="text-[10px] font-black opacity-60 uppercase tracking-widest">Total LOP (Absences)</div>
+                      <div className="text-xl font-black">{Number(salaryDetails.absentDays).toFixed(2)} <span className="text-xs opacity-60">DAYS</span></div>
                     </div>
                   </div>
 
                   <div className="space-y-3 pt-4 border-t border-gray-200/10">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs text-white/80">
+                      <span>Leaves Taken</span>
+                      <span className="font-bold">{salaryDetails.leaveDays || 0} Days</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-white/80">
+                      <span>Late/Early/Break Deductions</span>
+                      <span className="font-bold">{Number(salaryDetails.fractionalAbsences || 0).toFixed(2)} Days</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-white/80">
+                      <span>Unmarked Absences</span>
+                      <span className="font-bold">{salaryDetails.unmarkedAbsences || 0} Days</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-2">
                       <span className="opacity-60">Daily Rate</span>
                       <span className="font-bold">₹{salaryDetails.dailyRate}</span>
                     </div>

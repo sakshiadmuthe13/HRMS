@@ -80,6 +80,7 @@ export const updateMyProfile = async (req, res) => {
         updates[`documents.${key}.path`] = req.uploadedUrls[key];
         updates[`documents.${key}.verified`] = false;
         updates[`documents.${key}.uploadedAt`] = new Date();
+        updates[`documents.${key}.rejectionReason`] = "";
       });
     }
 
@@ -197,6 +198,17 @@ export const checkOut = async (req, res) => {
     if (!attendance.checkOut) {
       attendance.checkOut = now.toISOString();
 
+      if (attendance.is_on_break) {
+        attendance.is_on_break = false;
+        const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+        if (lastBreak && !lastBreak.end) {
+          lastBreak.end = now;
+          const diffMs = now.getTime() - new Date(lastBreak.start).getTime();
+          const diffMin = Math.round(diffMs / 60000);
+          attendance.total_break_minutes = (attendance.total_break_minutes || 0) + diffMin;
+        }
+      }
+
       const day = new Date(now);
       const holidayStart = new Date(day);
       holidayStart.setHours(0, 0, 0, 0);
@@ -206,7 +218,7 @@ export const checkOut = async (req, res) => {
       const isCustomHoliday = await Holiday.exists({
         date: { $gte: holidayStart, $lte: holidayEnd },
       });
-      const isWeekend = [0, 6].includes(holidayStart.getDay());
+      const isWeekend = holidayStart.getDay() === 0;
       const isHoliday = !!isCustomHoliday || isWeekend;
 
       if (isHoliday && (attendance.checkIn || attendance.checkOut)) {
@@ -286,6 +298,74 @@ export const checkOut = async (req, res) => {
   }
 };
 
+// Start Break
+export const startBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lte: todayEnd },
+    });
+
+    if (!attendance || !attendance.checkIn) {
+      return res.status(400).json({ message: "Please check in first before taking a break" });
+    }
+
+    if (attendance.checkOut) {
+      return res.status(400).json({ message: "You have already checked out for the day" });
+    }
+
+    if (attendance.is_on_break) {
+      return res.status(400).json({ message: "You are already on break" });
+    }
+
+    attendance.is_on_break = true;
+    attendance.breaks.push({ start: now });
+    await attendance.save();
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    console.error("Start break error:", err);
+    res.status(500).json({ message: "Failed to start break" });
+  }
+};
+
+// End Break
+export const endBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lte: todayEnd },
+    });
+
+    if (!attendance || !attendance.is_on_break) {
+      return res.status(400).json({ message: "You are not on an active break" });
+    }
+
+    attendance.is_on_break = false;
+    const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+    if (lastBreak && !lastBreak.end) {
+      lastBreak.end = now;
+      const diffMs = now.getTime() - new Date(lastBreak.start).getTime();
+      const diffMin = Math.round(diffMs / 60000);
+      attendance.total_break_minutes = (attendance.total_break_minutes || 0) + diffMin;
+    }
+    await attendance.save();
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    console.error("End break error:", err);
+    res.status(500).json({ message: "Failed to end break" });
+  }
+};
+
 export const getAttendance = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -322,6 +402,8 @@ export const getAttendance = async (req, res) => {
           checkIn: rec.checkIn || null,
           checkOut: rec.checkOut || null,
           status: rec.status || (rec.checkIn ? "Present" : "Absent"),
+          breaks: rec.breaks || [],
+          total_break_minutes: rec.total_break_minutes || 0,
         };
       });
       return res.status(200).json(formattedRecords);
@@ -398,7 +480,7 @@ export const getAllAttendance = async (req, res) => {
     let targetDate = date ? new Date(date) : new Date();
     const { start: startDay, end: endDay } = getIndiaDayRange(targetDate);
 
-    const users = await User.find({ role: { $in: ["employee", "leader"] } }).select("name email role position");
+    const users = await User.find({ role: { $in: ["employee", "leader", "hr"] } }).select("name email role position");
     const records = await Attendance.find({ date: { $gte: startDay, $lte: endDay } });
 
     const attendanceMap = {};
@@ -406,11 +488,22 @@ export const getAllAttendance = async (req, res) => {
 
     const result = users.map(user => {
       const attendance = attendanceMap[user._id.toString()];
+      let workingHours = 0;
+      if (attendance && attendance.checkIn) {
+        const checkInTime = new Date(attendance.checkIn);
+        const checkOutTime = attendance.checkOut ? new Date(attendance.checkOut) : new Date();
+        const totalMs = checkOutTime.getTime() - checkInTime.getTime();
+        const breakMs = (attendance.total_break_minutes || 0) * 60 * 1000;
+        workingHours = Math.max(0, (totalMs - breakMs) / (1000 * 60 * 60));
+      }
       return {
         user,
         status: attendance?.status || "Absent",
         checkIn: attendance?.checkIn || null,
         checkOut: attendance?.checkOut || null,
+        total_break_minutes: attendance?.total_break_minutes || 0,
+        total_working_minutes: Math.round(workingHours * 60),
+        breaks: attendance?.breaks || [],
       };
     });
 

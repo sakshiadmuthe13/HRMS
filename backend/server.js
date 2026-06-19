@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import jwt from "jsonwebtoken";
 import connectDB from "./config/db.js";
 import { errorHandler } from "./middleware/errorMiddleware.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -64,11 +65,54 @@ app.use("/api/hr", hrRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/vacancies", vacancyRoutes);
 
-// Socket.io connection
+// Socket.io middleware: authenticate and assign userId/role from JWT
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (!token) {
+      // Allow unauthenticated connections; they won't receive targeted notifications
+      socket.userId = null;
+      socket.userRole = null;
+      return next();
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.id;
+    socket.userRole = decoded.role;
+    next();
+  } catch (err) {
+    // Invalid token: allow connection anyway (client will register via event)
+    socket.userId = null;
+    socket.userRole = null;
+    next();
+  }
+});
+
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log(`User connected: ${socket.id} | userId: ${socket.userId} | role: ${socket.userRole}`);
+
+  // Join user-specific and role-specific rooms
+  if (socket.userId) {
+    socket.join(`user:${socket.userId}`);
+  }
+  if (socket.userRole) {
+    socket.join(`role:${socket.userRole}`);
+  }
+
+  // Allow client to explicitly register/re-register their room (e.g. after auth)
+  socket.on("register", ({ userId, role }) => {
+    if (userId) {
+      socket.join(`user:${userId}`);
+      socket.userId = userId;
+    }
+    if (role) {
+      socket.join(`role:${role}`);
+      socket.userRole = role;
+    }
+    console.log(`Socket ${socket.id} registered to user:${userId} role:${role}`);
+  });
+
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log(`User disconnected: ${socket.id}`);
   });
 });
 

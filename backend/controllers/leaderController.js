@@ -149,7 +149,7 @@ export const leaderCheckIn = async (req, res) => {
       const isCustomHoliday = await Holiday.exists({
         date: { $gte: holidayStart, $lte: holidayEnd },
       });
-      const isWeekend = [0, 6].includes(holidayStart.getDay());
+      const isWeekend = holidayStart.getDay() === 0;
       const isHoliday = !!isCustomHoliday || isWeekend;
 
       // Create attendance as Present on check-in; convert to Over-time on check-out if required
@@ -238,6 +238,17 @@ export const leaderCheckOut = async (req, res) => {
     if (!attendance.checkOut) {
       attendance.checkOut = now.toISOString();
 
+      if (attendance.is_on_break) {
+        attendance.is_on_break = false;
+        const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+        if (lastBreak && !lastBreak.end) {
+          lastBreak.end = now;
+          const diffMs = now.getTime() - new Date(lastBreak.start).getTime();
+          const diffMin = Math.round(diffMs / 60000);
+          attendance.total_break_minutes = (attendance.total_break_minutes || 0) + diffMin;
+        }
+      }
+
       const day = new Date(now);
       const holidayStart = new Date(day);
       holidayStart.setHours(0, 0, 0, 0);
@@ -246,7 +257,7 @@ export const leaderCheckOut = async (req, res) => {
       const isCustomHoliday = await Holiday.exists({
         date: { $gte: holidayStart, $lte: holidayEnd },
       });
-      const isWeekend = [0, 6].includes(holidayStart.getDay());
+      const isWeekend = holidayStart.getDay() === 0;
       const isHoliday = !!isCustomHoliday || isWeekend;
 
       if (isHoliday && (attendance.checkIn || attendance.checkOut)) {
@@ -326,6 +337,74 @@ export const leaderCheckOut = async (req, res) => {
   }
 };
 
+// Leader Start Break
+export const leaderStartBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lte: todayEnd },
+    });
+
+    if (!attendance || !attendance.checkIn) {
+      return res.status(400).json({ message: "Please check in first before taking a break" });
+    }
+
+    if (attendance.checkOut) {
+      return res.status(400).json({ message: "You have already checked out for the day" });
+    }
+
+    if (attendance.is_on_break) {
+      return res.status(400).json({ message: "You are already on break" });
+    }
+
+    attendance.is_on_break = true;
+    attendance.breaks.push({ start: now });
+    await attendance.save();
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    console.error("Start break error:", err);
+    res.status(500).json({ message: "Failed to start break" });
+  }
+};
+
+// Leader End Break
+export const leaderEndBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lte: todayEnd },
+    });
+
+    if (!attendance || !attendance.is_on_break) {
+      return res.status(400).json({ message: "You are not on an active break" });
+    }
+
+    attendance.is_on_break = false;
+    const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+    if (lastBreak && !lastBreak.end) {
+      lastBreak.end = now;
+      const diffMs = now.getTime() - new Date(lastBreak.start).getTime();
+      const diffMin = Math.round(diffMs / 60000);
+      attendance.total_break_minutes = (attendance.total_break_minutes || 0) + diffMin;
+    }
+    await attendance.save();
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    console.error("End break error:", err);
+    res.status(500).json({ message: "Failed to end break" });
+  }
+};
+
 // Get attendance
 export const getLeaderAttendance = async (req, res) => {
   try {
@@ -386,11 +465,28 @@ export const assignTask = async (req, res) => {
       });
     }
 
+    // Check if the employee is on holiday/leave today
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(new Date());
+    const leaveToday = await Leave.findOne({
+      user: assignedTo,
+      status: "Approved",
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+
+    if (leaveToday) {
+      return res.status(400).json({
+        message: "Cannot assign task to an employee who is on holiday/leave today.",
+      });
+    }
+
     const taskData = {
       description,
       assignedTo,
       assignedBy: leaderId,
       project: projectId,
+      attachmentUrl: req.imageUrl || undefined,
+      attachmentName: req.file ? req.file.originalname : undefined,
     };
 
     if (deadline) {
@@ -451,7 +547,27 @@ export const getTeamMembersByProject = async (req, res) => {
     }).populate("members", "name email");
 
     const members = teams.flatMap((t) => t.members);
-    res.status(200).json(members);
+
+    // Check approved leaves today
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(new Date());
+    const approvedLeaves = await Leave.find({
+      user: { $in: members.map((m) => m._id) },
+      status: "Approved",
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+
+    const leaveUserIds = new Set(approvedLeaves.map((l) => l.user.toString()));
+
+    const result = members.map((member) => {
+      const mObj = typeof member.toObject === "function" ? member.toObject() : member;
+      return {
+        ...mObj,
+        isOnHoliday: leaveUserIds.has(member._id.toString()),
+      };
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching team members:", error);
     res.status(500).json({ message: "Failed to fetch team members" });
@@ -772,7 +888,7 @@ export const getHolidaysForLeader = async (req, res) => {
 
     while (cursor <= targetEnd) {
       const day = cursor.getDay();
-      if (day === 0 || day === 6) {
+      if (day === 0) {
         weekendEntries.push({ date: new Date(cursor), description: "Weekend Off", type: "WEEKEND" });
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -818,19 +934,50 @@ export const getTeamAttendance = async (req, res) => {
       date: { $gte: todayStart, $lte: todayEnd },
     }).populate("user", "name email");
 
+    // Get approved leaves today
+    const approvedLeaves = await Leave.find({
+      user: { $in: members.map((m) => m._id) },
+      status: "Approved",
+      fromDate: { $lte: todayEnd },
+      toDate: { $gte: todayStart },
+    });
+    const leaveUserIds = new Set(approvedLeaves.map((l) => l.user.toString()));
+
     // Map to members
     const attendanceMap = {};
     attendances.forEach((att) => {
       attendanceMap[att.user._id.toString()] = att;
     });
 
-    const result = members.map((member) => ({
-      _id: member._id,
-      name: member.name,
-      email: member.email,
-      attendance: attendanceMap[member._id.toString()] || null,
-      status: attendanceMap[member._id.toString()]?.status || "Absent",
-    }));
+    const result = members.map((member) => {
+      const isLeave = leaveUserIds.has(member._id.toString());
+      const att = attendanceMap[member._id.toString()];
+      let status = att?.status || "Absent";
+      if (isLeave && status === "Absent") {
+        status = "Leave";
+      }
+
+      let workingHours = 0;
+      if (att && att.checkIn) {
+        const checkInTime = new Date(att.checkIn);
+        const checkOutTime = att.checkOut ? new Date(att.checkOut) : new Date();
+        const totalMs = checkOutTime.getTime() - checkInTime.getTime();
+        const breakMs = (att.total_break_minutes || 0) * 60 * 1000;
+        workingHours = Math.max(0, (totalMs - breakMs) / (1000 * 60 * 60));
+      }
+
+      return {
+        _id: member._id,
+        name: member.name,
+        email: member.email,
+        attendance: att ? {
+          ...(typeof att.toObject === 'function' ? att.toObject() : att),
+          total_working_minutes: Math.round(workingHours * 60)
+        } : null,
+        status: status,
+        isOnHoliday: isLeave,
+      };
+    });
 
     res.status(200).json(result);
   } catch (err) {
@@ -924,6 +1071,7 @@ export const updateMyLeaderProfile = async (req, res) => {
         updates[`documents.${key}.path`] = req.uploadedUrls[key];
         updates[`documents.${key}.verified`] = false; // Reset verification
         updates[`documents.${key}.uploadedAt`] = new Date();
+        updates[`documents.${key}.rejectionReason`] = "";
       });
     }
 

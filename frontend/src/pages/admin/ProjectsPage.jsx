@@ -76,7 +76,7 @@ const convertDMYtoYMD = (dmy) => {
   return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
 
-const ProjectsPage = () => {
+const ProjectsPage = ({ isLeader = false }) => {
   const [projects, setProjects] = useState([]);
   const [teams, setTeams] = useState([]);
   const [form, setForm] = useState(emptyProject);
@@ -88,6 +88,10 @@ const ProjectsPage = () => {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const prefix = isLeader ? "/leader" : "/admin";
+  const getProjectsPath = isLeader ? "/leader/all-projects" : "/admin/projects";
+  const getTeamsPath = isLeader ? "/leader/all-teams" : "/admin/teams";
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -96,8 +100,8 @@ const ProjectsPage = () => {
     setLoading(true);
     try {
       const [proj, tms] = await Promise.all([
-        apiGet("/admin/projects"),
-        apiGet("/admin/teams"),
+        apiGet(getProjectsPath),
+        apiGet(getTeamsPath),
       ]);
       setProjects(proj || []);
       setTeams(tms || []);
@@ -156,9 +160,9 @@ const ProjectsPage = () => {
 
     try {
       if (editing) {
-        await apiPut(`/admin/projects/${editing}`, payload);
+        await apiPut(`${prefix}/projects/${editing}`, payload);
       } else {
-        await apiPost("/admin/projects", payload);
+        await apiPost(`${prefix}/projects`, payload);
       }
       setEditing(null);
       setIsModalOpen(false);
@@ -176,7 +180,7 @@ const ProjectsPage = () => {
     try {
       console.log("Deleting project with ID:", deleteTarget._id); // Log the ID being sent
 
-      await apiDelete(`/admin/projects/${deleteTarget._id}`);
+      await apiDelete(`${prefix}/projects/${deleteTarget._id}`);
       setDeleteTarget(null);
       fetchData(); // Refresh the project list
     } catch (e) {

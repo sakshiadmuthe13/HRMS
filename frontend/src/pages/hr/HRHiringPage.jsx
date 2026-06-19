@@ -51,6 +51,32 @@ export default function HRHiringPage() {
   // { type, candidateId, subject, body, extraFields: {} }
   const [isSending, setIsSending] = useState(false);
 
+  // Confirmation Modal
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    confirmText: "Confirm",
+    confirmColor: "bg-primary hover:bg-primary/90",
+    iconType: "info",
+    onConfirm: null,
+  });
+
+  const triggerConfirm = (title, message, confirmText, confirmColor, iconType, onConfirm) => {
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      confirmText,
+      confirmColor,
+      iconType,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal((prev) => ({ ...prev, show: false }));
+      }
+    });
+  };
+
   useEffect(() => {
     fetchCandidatesAndVacancies();
   }, []);
@@ -119,12 +145,19 @@ export default function HRHiringPage() {
   // --- ACTIONS ---
 
   const handleMarkReviewed = (c) => {
-    if (window.confirm(`Mark task as reviewed for ${c.name}?`)) {
-      updateCandidate(c._id, {
-        taskReviewed: "Reviewed",
-        status: "Task Reviewed"
-      }, "Task marked as Reviewed");
-    }
+    triggerConfirm(
+      "Mark Task Reviewed",
+      `Are you sure you want to mark the task for ${c.name} as reviewed? This will move them to the next stage in the hiring pipeline.`,
+      "Mark Reviewed",
+      "bg-primary hover:bg-secondary text-white",
+      "info",
+      () => {
+        updateCandidate(c._id, {
+          taskReviewed: "Reviewed",
+          status: "Task Reviewed"
+        }, "Task marked as Reviewed");
+      }
+    );
   };
 
   const handleExtraFieldChange = (field, placeholder, val) => {
@@ -332,6 +365,15 @@ export default function HRHiringPage() {
             <p className="text-lg font-semibold text-secondary/70">Manage candidates and track recruitment stages</p>
           </div>
         </div>
+        <button
+          onClick={() => {
+            setSelectedVacancyForHiring(null);
+            setShowAddModal(true);
+          }}
+          className="btn bg-primary text-white hover:bg-secondary flex items-center gap-2 h-12 px-6 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
+        >
+          <Plus size={20} /> Add Candidate
+        </button>
       </div>
 
       {/* Active Vacancies Section */}
@@ -507,7 +549,7 @@ export default function HRHiringPage() {
                 filteredCandidates.map(c => {
                   const isClosed = c.status.includes("Closed");
                   return (
-                    <tr key={c._id || c.id} className={`hover:bg-gray-50/50 transition-colors ${isClosed ? 'opacity-60 bg-gray-50' : ''}`}>
+                    <tr key={c._id || c.id} className={`transition-colors ${isClosed ? 'opacity-60 bg-gray-50' : ''}`}>
                       {/* Cand Details */}
                       <td className="pl-4 py-3">
                         <div className="font-bold text-primary">{c.name}</div>
@@ -691,7 +733,7 @@ export default function HRHiringPage() {
             >
               <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
                 <h3 className="text-xl font-black text-primary">Add Candidate</h3>
-                <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-red-500 transition">
+                <button onClick={() => { setShowAddModal(false); setSelectedVacancyForHiring(null); }} className="text-gray-500 hover:text-red-500 transition">
                   <X size={20} />
                 </button>
               </div>
@@ -722,7 +764,26 @@ export default function HRHiringPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">Applied Role (Vacancy)</label>
-                    <input type="text" className="input bg-gray-100" readOnly value={selectedVacancyForHiring?.positionTitle || ""} id="add-role" />
+                    {selectedVacancyForHiring ? (
+                      <input type="text" className="input bg-gray-100" readOnly value={selectedVacancyForHiring.positionTitle} id="add-role" />
+                    ) : (
+                      <select
+                        className="input"
+                        id="add-role-select"
+                        onChange={(e) => {
+                          const vacId = e.target.value;
+                          const vac = vacancies.find(v => v._id === vacId);
+                          setSelectedVacancyForHiring(vac || null);
+                        }}
+                      >
+                        <option value="">Select a vacancy...</option>
+                        {vacancies.map(v => (
+                          <option key={v._id} value={v._id}>
+                            {v.positionTitle} ({v.department})
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -744,11 +805,11 @@ export default function HRHiringPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1">Notes (Optional)</label>
-                  <textarea className="input min-h-[80px]" placeholder="Any additional notes..."></textarea>
+                  <textarea className="input min-h-[80px]" placeholder="Any additional notes..." id="add-notes"></textarea>
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex justify-end gap-3">
-                <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900">Cancel</button>
+                <button onClick={() => { setShowAddModal(false); setSelectedVacancyForHiring(null); }} className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-900">Cancel</button>
                 <button
                   className="btn bg-primary text-white hover:bg-secondary"
                   disabled={loading}
@@ -757,42 +818,45 @@ export default function HRHiringPage() {
                       setLoading(true);
                       const token = localStorage.getItem("token");
                       const formData = new FormData();
-
+ 
                       const name = document.getElementById('add-name').value;
                       const phone = document.getElementById('add-phone').value;
                       const email = document.getElementById('add-email').value;
                       const source = document.getElementById('add-source').value;
-                      const role = document.getElementById('add-role').value;
-
+                      const role = selectedVacancyForHiring ? selectedVacancyForHiring.positionTitle : "";
+                      const notes = document.getElementById('add-notes')?.value || "";
+ 
                       if (!name || !phone || !email || !role) {
                         toast.error("Please fill in all required fields.");
                         setLoading(false);
                         return;
                       }
-
+ 
                       formData.append("name", name);
                       formData.append("phone", phone);
                       formData.append("email", email);
                       formData.append("source", source);
                       formData.append("role", role);
+                      formData.append("notes", notes);
                       if (selectedVacancyForHiring) {
                         formData.append("vacancy", selectedVacancyForHiring._id);
                       }
-
+ 
                       const fileInput = document.getElementById('add-resume');
                       if (fileInput.files[0]) {
                         formData.append("file", fileInput.files[0]);
                       }
-
+ 
                       const res = await axios.post(`${API_BASE}${prefix}/hiring/candidates`, formData, {
                         headers: {
                           Authorization: `Bearer ${token}`,
                           'Content-Type': 'multipart/form-data'
                         }
                       });
-
+ 
                       setCandidates([res.data, ...candidates]);
                       setShowAddModal(false);
+                      setSelectedVacancyForHiring(null);
                       toast.success("Candidate added successfully");
                     } catch (error) {
                       console.error("Error adding candidate:", error);
@@ -1015,6 +1079,76 @@ export default function HRHiringPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- CONFIRMATION MODAL --- */}
+      <AnimatePresence>
+        {confirmModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-200 p-6 text-center"
+            >
+              <div className="flex justify-center mb-4">
+                {(() => {
+                  switch (confirmModal.iconType) {
+                    case "success":
+                      return (
+                        <div className="w-16 h-16 bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400 rounded-full flex items-center justify-center border border-green-100 dark:border-green-800 shadow-sm">
+                          <CheckCircle2 size={32} />
+                        </div>
+                      );
+                    case "danger":
+                      return (
+                        <div className="w-16 h-16 bg-red-50 text-red-500 dark:bg-red-950/30 dark:text-red-400 rounded-full flex items-center justify-center border border-red-100 dark:border-red-800 shadow-sm">
+                          <AlertCircle size={32} />
+                        </div>
+                      );
+                    case "warning":
+                      return (
+                        <div className="w-16 h-16 bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 rounded-full flex items-center justify-center border border-amber-100 dark:border-amber-800 shadow-sm">
+                          <AlertCircle size={32} />
+                        </div>
+                      );
+                    case "info":
+                    default:
+                      return (
+                        <div className="w-16 h-16 bg-cyan-50 text-[#1A9DC2] dark:bg-cyan-950/30 dark:text-cyan-400 rounded-full flex items-center justify-center border border-cyan-100 dark:border-cyan-800 shadow-sm">
+                          <CheckCircle2 size={32} />
+                        </div>
+                      );
+                  }
+                })()}
+              </div>
+              
+              <h3 className="text-2xl font-black text-primary tracking-tight mb-2">
+                {confirmModal.title}
+              </h3>
+              <p className="text-gray-500 font-semibold mb-6">
+                {confirmModal.message}
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal((prev) => ({ ...prev, show: false }))}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmModal.onConfirm}
+                  className={`flex-1 py-3 text-white font-bold rounded-xl transition shadow-md hover:shadow-lg ${confirmModal.confirmColor}`}
+                >
+                  {confirmModal.confirmText}
+                </button>
               </div>
             </motion.div>
           </div>

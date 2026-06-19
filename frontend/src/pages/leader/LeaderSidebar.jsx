@@ -13,8 +13,9 @@ import {
   Phone,
   Menu,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import NotificationDropdown from "../../components/NotificationDropdown";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -30,8 +31,24 @@ const tabIcons = {
   Profile: <User size={18} />,
 };
 
-const LeaderSidebar = ({ tabs = [], active, onChange }) => {
+const LeaderSidebar = ({ tabs = [], active, onChange, isCollapsed = false, onToggleCollapse }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [hoveredTab, setHoveredTab] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+
+  const handleMouseEnter = (e, tab) => {
+    if (!isCollapsed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipPos({
+      top: rect.top + rect.height / 2,
+      left: rect.right + 12,
+    });
+    setHoveredTab(tab);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredTab(null);
+  };
 
   const doLogout = async () => {
     try {
@@ -66,11 +83,19 @@ const LeaderSidebar = ({ tabs = [], active, onChange }) => {
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-screen w-60 flex flex-col bg-white text-primary shadow-2xl border-r border-gray-100 overflow-hidden transition-all duration-500 ease-in-out ${
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`fixed left-0 top-0 h-screen flex flex-col bg-white text-primary shadow-2xl border-r border-gray-100 overflow-visible transition-all duration-300 ease-in-out ${
+          isCollapsed ? "w-20" : "w-60"
+        } ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
         style={{ zIndex: 40 }}
       >
+        <button
+          onClick={onToggleCollapse}
+          className="hidden md:flex absolute -right-3 top-8 w-6 h-6 bg-white border border-gray-200 rounded-full items-center justify-center shadow-md hover:bg-gray-50 transition-all z-50 text-primary cursor-pointer"
+          aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+
         <button
           onClick={() => setIsOpen(false)}
           className="absolute top-6 right-6 z-50 md:hidden p-2 text-primary hover:bg-gray-100 rounded-xl transition-all"
@@ -78,20 +103,26 @@ const LeaderSidebar = ({ tabs = [], active, onChange }) => {
           <X size={24} />
         </button>
 
-        <div className="pt-6 pb-6 px-8">
+        <div className={`pt-6 pb-6 transition-all duration-300 ${isCollapsed ? "px-5" : "px-8"}`}>
           <div className="flex items-center gap-4 mb-3">
-            <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-transform hover:rotate-12">
+            <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 transition-transform hover:rotate-12 flex-shrink-0">
               <img src="/qiro-logo.png" alt="Logo" className="w-6 h-6 object-contain invert brightness-0" />
             </div>
-            <h3 className="text-2xl font-black tracking-tighter text-primary">
-              QiroTech
-            </h3>
+            {!isCollapsed && (
+              <h3 className="text-2xl font-black tracking-tighter text-primary truncate whitespace-nowrap">
+                QiroTech
+              </h3>
+            )}
           </div>
-          <div className="h-1 w-12 bg-primary rounded-full mb-2"></div>
-          <p className="text-[10px] font-black text-secondary uppercase tracking-[0.3em] ml-1 opacity-60">Leader Console</p>
+          {!isCollapsed && (
+            <div className="whitespace-nowrap">
+              <div className="h-1 w-12 bg-primary rounded-full mb-2"></div>
+              <p className="text-[10px] font-black text-secondary uppercase tracking-[0.3em] ml-1 opacity-60">Leader Console</p>
+            </div>
+          )}
         </div>
 
-        <nav className="flex-1 px-4 overflow-y-auto ">
+        <nav className={`flex-1 px-4 w-full overflow-y-auto overflow-x-hidden no-scrollbar`}>
           <ul className="space-y-2">
             {tabs.map((tab, idx) => {
               const isObject = typeof tab === "object" && tab !== null;
@@ -104,16 +135,19 @@ const LeaderSidebar = ({ tabs = [], active, onChange }) => {
                 <li key={id} className="animate-slideUp" style={{ animationDelay: `${idx * 0.05}s` }}>
                   <button
                     onClick={() => handleTabChange(id)}
-                    className={`flex items-center gap-4 w-full px-5 py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative ${
-                      active === id
-                        ? "bg-primary text-white shadow-xl shadow-primary/25 scale-[1.02]"
-                        : "text-secondary hover:text-primary hover:bg-primary/5"
+                    onMouseEnter={(e) => handleMouseEnter(e, label)}
+                    onMouseLeave={handleMouseLeave}
+                    className={`flex items-center w-full py-3 rounded-2xl text-[13px] font-bold transition-all duration-300 group relative ${
+                      isCollapsed ? "justify-center px-0" : "gap-4 px-5"
+                    } ${active === id
+                      ? "bg-primary text-white shadow-xl shadow-primary/25 scale-[1.02]"
+                      : "text-secondary hover:text-primary hover:bg-primary/5"
                     }`}
                   >
-                    <span className={`transition-transform duration-300 group-hover:scale-110 ${active === id ? "text-white" : "text-primary/70"}`}>
+                    <span className={`transition-transform duration-300 group-hover:scale-110 flex-shrink-0 ${active === id ? "text-white" : "text-primary/70"}`}>
                       {iconElement}
                     </span>
-                    <span className="truncate tracking-tight">{label}</span>
+                    {!isCollapsed && <span className="truncate tracking-tight whitespace-nowrap">{label}</span>}
                   </button>
                 </li>
               );
@@ -121,19 +155,35 @@ const LeaderSidebar = ({ tabs = [], active, onChange }) => {
           </ul>
         </nav>
 
-        <div className="mt-auto p-2 space-y-2 border-t border-gray-100">
-          <NotificationDropdown />
+        <div className={`mt-auto p-2 space-y-2 border-t border-gray-100 w-full flex flex-col ${isCollapsed ? "items-center" : ""}`}>
           <button 
             onClick={doLogout} 
-            className="flex items-center gap-4 w-full px-5 py-2 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all duration-300 border border-transparent hover:border-red-100 group"
+            onMouseEnter={(e) => handleMouseEnter(e, "Logout")}
+            onMouseLeave={handleMouseLeave}
+            className={`flex items-center w-full py-2 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-all duration-300 border border-transparent hover:border-red-100 group ${
+              isCollapsed ? "justify-center px-0" : "gap-4 px-5"
+            }`}
           >
-            <div className="p-2 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
+            <div className="p-2 bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors flex-shrink-0">
               <LogOut size={18} /> 
             </div>
-            Logout
+            {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
           </button>
         </div>
       </aside>
+      {isCollapsed && hoveredTab && (
+        <div 
+          className="fixed px-3 py-1.5 bg-[#1e293b] text-white text-xs font-bold rounded-lg shadow-xl whitespace-nowrap z-[100] pointer-events-none transition-opacity duration-200"
+          style={{ 
+            top: `${tooltipPos.top}px`, 
+            left: `${tooltipPos.left}px`,
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 bg-[#1e293b] rotate-45" />
+          <span className="relative z-10">{hoveredTab}</span>
+        </div>
+      )}
     </>
   );
 };

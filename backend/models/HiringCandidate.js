@@ -14,6 +14,7 @@ const hiringCandidateSchema = new mongoose.Schema(
     role: { type: String, required: true },
     vacancy: { type: mongoose.Schema.Types.ObjectId, ref: "Vacancy" },
     resumeUrl: { type: String, default: "#" },
+    notes: { type: String, default: "" },
     dateAdded: { type: Date, default: Date.now },
 
     // Interview Stage

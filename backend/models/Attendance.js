@@ -24,6 +24,14 @@ const attendanceSchema = new mongoose.Schema({
     enum: ["On Time", "Late", "Very Late", "Early Checkout", "Half Day", "Half Day (Approved)", "Half Day (Unapproved)", "Absent", "Holiday", "Over-time"],
     default: "On Time",
   },
+  breaks: [
+    {
+      start: { type: Date },
+      end: { type: Date },
+    },
+  ],
+  total_break_minutes: { type: Number, default: 0 },
+  is_on_break: { type: Boolean, default: false },
 });
 
 attendanceSchema.index({ user: 1, date: 1 }, { unique: true });

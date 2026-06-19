@@ -572,8 +572,15 @@ export const getAttendanceByDate = async (req, res) => {
 
       // If it's a holiday, mark Over-time only when user actually checked in AND checked out.
       // Otherwise mark Holiday (but preserve any recorded times if present).
+      // If it's a holiday, mark Over-time only when user actually checked in AND checked out.
+      // Otherwise mark Holiday (but preserve any recorded times if present).
       if (holiday) {
         if (att && att.checkIn && att.checkOut) {
+          const checkInTime = new Date(att.checkIn);
+          const checkOutTime = new Date(att.checkOut);
+          const totalMs = checkOutTime.getTime() - checkInTime.getTime();
+          const breakMs = (att.total_break_minutes || 0) * 60 * 1000;
+          const workingHours = Math.max(0, (totalMs - breakMs) / (1000 * 60 * 60));
           return {
             user: u,
             date: att.date || date,
@@ -581,6 +588,9 @@ export const getAttendanceByDate = async (req, res) => {
             checkIn: att.checkIn || null,
             checkOut: att.checkOut || null,
             holidayDescription: holiday.description,
+            total_break_minutes: att.total_break_minutes || 0,
+            total_working_minutes: Math.round(workingHours * 60),
+            breaks: att.breaks || [],
           };
         }
 
@@ -592,10 +602,21 @@ export const getAttendanceByDate = async (req, res) => {
             status: "Leave",
             checkIn: att?.checkIn || null,
             checkOut: att?.checkOut || null,
+            total_break_minutes: att?.total_break_minutes || 0,
+            total_working_minutes: 0,
+            breaks: att?.breaks || [],
           };
         }
 
         // User did not fully check-in/out -> Holiday (but include any partial times if present)
+        let workingHours = 0;
+        if (att && att.checkIn) {
+          const checkInTime = new Date(att.checkIn);
+          const checkOutTime = att.checkOut ? new Date(att.checkOut) : new Date();
+          const totalMs = checkOutTime.getTime() - checkInTime.getTime();
+          const breakMs = (att.total_break_minutes || 0) * 60 * 1000;
+          workingHours = Math.max(0, (totalMs - breakMs) / (1000 * 60 * 60));
+        }
         return {
           user: u,
           date: att?.date || date,
@@ -603,14 +624,28 @@ export const getAttendanceByDate = async (req, res) => {
           checkIn: att?.checkIn || null,
           checkOut: att?.checkOut || null,
           holidayDescription: holiday.description,
+          total_break_minutes: att?.total_break_minutes || 0,
+          total_working_minutes: Math.round(workingHours * 60),
+          breaks: att?.breaks || [],
         };
       } else if (att) {
+        let workingHours = 0;
+        if (att.checkIn) {
+          const checkInTime = new Date(att.checkIn);
+          const checkOutTime = att.checkOut ? new Date(att.checkOut) : new Date();
+          const totalMs = checkOutTime.getTime() - checkInTime.getTime();
+          const breakMs = (att.total_break_minutes || 0) * 60 * 1000;
+          workingHours = Math.max(0, (totalMs - breakMs) / (1000 * 60 * 60));
+        }
         return {
           user: u,
           date: att.date,
           status: att.status || "Present",
           checkIn: att.checkIn || null,
           checkOut: att.checkOut || null,
+          total_break_minutes: att.total_break_minutes || 0,
+          total_working_minutes: Math.round(workingHours * 60),
+          breaks: att.breaks || [],
         };
       } else if (leave) {
         return {
@@ -619,6 +654,9 @@ export const getAttendanceByDate = async (req, res) => {
           status: "Leave",
           checkIn: null,
           checkOut: null,
+          total_break_minutes: 0,
+          total_working_minutes: 0,
+          breaks: [],
         };
       } else {
         return {
@@ -627,6 +665,9 @@ export const getAttendanceByDate = async (req, res) => {
           status: "Absent",
           checkIn: null,
           checkOut: null,
+          total_break_minutes: 0,
+          total_working_minutes: 0,
+          breaks: [],
         };
       }
     });
@@ -674,7 +715,7 @@ export const listHolidays = async (req, res) => {
 
     while (cursor <= targetEnd) {
       const day = cursor.getDay(); // 0=Sun, 6=Sat
-      if (day === 0 || day === 6) {
+      if (day === 0) {
         weekendEntries.push({
           date: new Date(cursor),
           description: "Weekend Off",
@@ -703,8 +744,8 @@ export const createHoliday = async (req, res) => {
     }
 
     const day = new Date(date).getDay();
-    if (day === 0 || day === 6) {
-      return res.status(400).json({ message: "Weekends are already holidays" });
+    if (day === 0) {
+      return res.status(400).json({ message: "Sundays are already holidays" });
     }
 
     const normalizedDate = toDateOnly(date);
@@ -1387,15 +1428,12 @@ const calculateSalaryDetails = async (userId, monthName, year) => {
   const holidaySet = new Set();
   const weekendSet = new Set();
   
-  let workingDays = 0;
   for (let i = 1; i <= daysInMonth; i++) {
     const date = new Date(year, monthIndex, i);
     const dayOfWeek = date.getDay();
     
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
+    if (dayOfWeek === 0) {
       weekendSet.add(i);
-    } else {
-      workingDays++;
     }
   }
 
@@ -1403,64 +1441,100 @@ const calculateSalaryDetails = async (userId, monthName, year) => {
     const day = new Date(holiday.date).getDate();
     if (!weekendSet.has(day)) {
       holidaySet.add(day);
-      workingDays--;
     }
   });
 
   let presentDays = 0;
   let absentDays = 0;
   let overtimeDays = 0;
+  let fractionalAbsences = 0;
+  let unmarkedAbsences = 0;
+  let leaveDays = 0;
   
   const attendanceMap = new Map(attendances.map(a => [new Date(a.date).getDate(), a]));
 
-  for (let i = 1; i <= daysInMonth; i++) {
-    if (weekendSet.has(i) || holidaySet.has(i)) {
-      continue;
-    }
-
-    const att = attendanceMap.get(i);
-    if (att) {
-      if (att.status === 'Present') {
-        presentDays++;
-      } else if (att.status === 'Absent') {
-        absentDays++;
-      } else if (att.status === 'Over-time') {
-        overtimeDays++;
-        presentDays++;
-      } else if (att.status === 'Leave') {
-        // Handled separately
-      }
-    } else {
-      absentDays++;
-    }
-  }
-
-  let leaveDays = 0;
+  const leaveDaysSet = new Set();
   leaves.forEach(leave => {
     const leaveStart = new Date(leave.fromDate);
     const leaveEnd = new Date(leave.toDate);
-    
     for (let d = new Date(leaveStart); d <= leaveEnd; d.setDate(d.getDate() + 1)) {
       if (d.getMonth() === monthIndex && d.getFullYear() === year) {
-        const dayOfMonth = d.getDate();
-        if (!weekendSet.has(dayOfMonth) && !holidaySet.has(dayOfMonth)) {
-          leaveDays++;
-        }
+        leaveDaysSet.add(d.getDate());
       }
     }
   });
 
-  const baseSalary = Number(user.salary) || 0;
-  const dailyRate = baseSalary / workingDays;
+  for (let i = 1; i <= daysInMonth; i++) {
+    if (weekendSet.has(i) || holidaySet.has(i)) {
+      presentDays += 1;
+      continue;
+    }
+
+    const isLeave = leaveDaysSet.has(i);
+    const att = attendanceMap.get(i);
+
+    if (att) {
+      if (
+        att.status === 'Present' ||
+        att.status === 'Late' ||
+        att.status === 'Early Checkout' ||
+        att.status === 'Half Day' ||
+        att.status === 'Half Day (Approved)' ||
+        att.status === 'Half Day (Unapproved)' ||
+        att.status === 'Over-time'
+      ) {
+        let workingHours = 0;
+        if (att.checkIn && att.checkOut) {
+          const checkInTime = new Date(att.checkIn);
+          const checkOutTime = new Date(att.checkOut);
+          const totalMs = checkOutTime.getTime() - checkInTime.getTime();
+          const breakMs = (att.total_break_minutes || 0) * 60 * 1000;
+          workingHours = Math.max(0, (totalMs - breakMs) / (1000 * 60 * 60));
+        }
+        const credit = Math.min(1.0, workingHours / 7.5);
+        presentDays += credit;
+        const deduction = 1.0 - credit;
+        absentDays += deduction;
+        if (deduction > 0) {
+          fractionalAbsences += deduction;
+        }
+        if (att.status === 'Over-time') {
+          overtimeDays++;
+        }
+      } else if (att.status === 'Absent' || att.status === 'Leave') {
+        absentDays++;
+        if (isLeave) {
+          leaveDays++;
+        } else {
+          unmarkedAbsences++;
+        }
+      }
+    } else {
+      absentDays++;
+      if (isLeave) {
+        leaveDays++;
+      } else {
+        unmarkedAbsences++;
+      }
+    }
+  }
+
+  // Calculate salary using CTC logic
+  // user.salary is considered annual CTC
+  const annualCTC = Number(user.salary) || 0;
+  const monthlySalary = annualCTC / 12;
+  const dailyRate = monthlySalary / daysInMonth;
   const calculatedSalary = Math.round(dailyRate * presentDays * 100) / 100;
 
   return {
-    baseSalary,
+    baseSalary: annualCTC,
+    monthlySalary: Math.round(monthlySalary * 100) / 100,
     daysInMonth,
-    workingDays,
-    presentDays,
-    absentDays,
+    presentDays: Math.round(presentDays * 100) / 100,
+    absentDays: Math.round(absentDays * 100) / 100,
     leaveDays,
+    fractionalAbsences: Math.round(fractionalAbsences * 100) / 100,
+    unmarkedAbsences,
     overtimeDays,
     dailyRate: Math.round(dailyRate * 100) / 100,
     calculatedSalary,
@@ -1946,7 +2020,7 @@ export const getUserReportData = async (req, res) => {
 // Document Verification
 export const getEmployeesForVerification = async (req, res) => {
   try {
-    const users = await User.find({ role: { $in: ["employee", "leader"] } })
+    const users = await User.find({ role: { $in: ["employee", "leader", "hr"] } })
       .select("name email role documents profileVerified")
       .lean();
 
@@ -1970,6 +2044,7 @@ export const getEmployeesForVerification = async (req, res) => {
             path: user.documents[field].path,
             verified: user.documents[field].verified || false,
             uploadedAt: user.documents[field].uploadedAt,
+            rejectionReason: user.documents[field].rejectionReason || "",
           };
         }
       });
@@ -2000,7 +2075,7 @@ export const getEmployeesForVerification = async (req, res) => {
 export const verifyDocument = async (req, res) => {
   try {
     const { userId, documentType } = req.params;
-    const { verified } = req.body;
+    const { verified, rejectionReason } = req.body;
 
     if (!userId || !documentType) {
       return res
@@ -2026,6 +2101,11 @@ export const verifyDocument = async (req, res) => {
     }
 
     user.documents[documentType].verified = verified;
+    if (verified) {
+      user.documents[documentType].rejectionReason = "";
+    } else {
+      user.documents[documentType].rejectionReason = rejectionReason || "No reason specified";
+    }
 
     const docFields = [
       "passportPhoto",
@@ -2054,14 +2134,18 @@ export const verifyDocument = async (req, res) => {
           path: updatedUser.documents[field].path,
           verified: updatedUser.documents[field].verified || false,
           uploadedAt: updatedUser.documents[field].uploadedAt,
+          rejectionReason: updatedUser.documents[field].rejectionReason || "",
         };
       }
     });
 
-    const statusMsg = verified ? "verified" : "unverified";
+    const statusMsg = verified ? "verified" : "rejected";
+    const notificationMsg = verified
+      ? `Your document "${documentType}" has been verified by admin.`
+      : `Your document "${documentType}" has been rejected by admin. Reason: ${rejectionReason || "No reason specified"}`;
 
     await createNotification({
-      message: `Your document "${documentType}" has been ${statusMsg} by admin.`,
+      message: notificationMsg,
       role: user.role,
       recipient: userId,
       triggeredBy: req.user._id,
@@ -2073,7 +2157,7 @@ export const verifyDocument = async (req, res) => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>Document ${verified ? "Verified" : "Unverified"}</title>
+        <title>Document ${verified ? "Verified" : "Rejected"}</title>
       </head>
       <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f4f6fa; color:#333;">
         <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6fa; padding:20px 0;">
@@ -2094,6 +2178,11 @@ export const verifyDocument = async (req, res) => {
                       <h3 style="margin:0 0 15px 0; color:#0EA6F0; font-size:18px;">Document Details:</h3>
                       <p style="margin:5px 0; font-size:14px;"><strong>Type:</strong> ${documentType}</p>
                       <p style="margin:5px 0; font-size:14px;"><strong>Status:</strong> ${statusMsg.charAt(0).toUpperCase() + statusMsg.slice(1)}</p>
+                      ${
+                        !verified
+                          ? `<p style="margin:5px 0; font-size:14px; color:#d9534f;"><strong>Reason:</strong> ${rejectionReason || "No reason specified"}</p>`
+                          : ""
+                      }
                     </div>
                     ${
                       !verified
@@ -2119,7 +2208,7 @@ export const verifyDocument = async (req, res) => {
 
     await sendMail(
       user.email,
-      `Document ${verified ? "Verified" : "Unverified"}`,
+      `Document ${verified ? "Verified" : "Rejected"}`,
       "",
       htmlContent
     );
@@ -2384,5 +2473,113 @@ export const getUserFullView = async (req, res) => {
   } catch (error) {
     console.error("getUserFullView error:", error);
     res.status(500).json({ message: "Failed to fetch user full details", error: error.message });
+  }
+};
+
+export const getPresenceReport = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) return res.status(400).json({ message: "startDate and endDate are required" });
+
+    const startRange = new Date(startDate);
+    startRange.setHours(0,0,0,0);
+    const endRange = new Date(endDate);
+    endRange.setHours(23,59,59,999);
+
+    const allUsers = await User.find({}, "name role salary").lean();
+    const holidays = await Holiday.find({ date: { $gte: startRange, $lte: endRange } });
+    const attendances = await Attendance.find({ date: { $gte: startRange, $lte: endRange } });
+    const leaves = await Leave.find({ status: "Approved", $or: [{ fromDate: { $lte: endRange }, toDate: { $gte: startRange } }] });
+
+    const report = allUsers.map(user => {
+      let totalRequiredMinutes = 0;
+      let totalCompletedMinutes = 0;
+      let totalMissedMinutes = 0;
+      let totalAbsentMinutes = 0;
+      let daysCount = 0;
+
+      for (let d = new Date(startRange); d <= endRange; d.setDate(d.getDate() + 1)) {
+        daysCount++;
+        const currentDate = new Date(d);
+        const currentDateString = currentDate.toISOString().split("T")[0];
+        
+        const isHoliday = holidays.find(h => h.date && h.date.toISOString().split("T")[0] === currentDateString);
+        const att = attendances.find(a => a.user.toString() === user._id.toString() && new Date(a.date).toISOString().split("T")[0] === currentDateString);
+        const isLeave = leaves.find(l => l.user.toString() === user._id.toString() && new Date(l.fromDate) <= currentDate && new Date(l.toDate) >= currentDate);
+
+        const requiredDayMinutes = 450;
+        let dayCompletedMinutes = 0;
+        let isOffDay = false;
+
+        if (isLeave) {
+          dayCompletedMinutes = isLeave.halfDay ? 225 : 450;
+          isOffDay = true;
+        } else if (isHoliday) {
+          dayCompletedMinutes = 450;
+          isOffDay = true;
+        } else if (currentDate.getDay() === 0) { // Sunday
+          dayCompletedMinutes = 450;
+          isOffDay = true;
+        }
+
+        if (att) {
+           let workingMinutes = 0;
+           if (att.checkIn && att.checkOut) {
+              const checkInTime = new Date(att.checkIn);
+              const checkOutTime = new Date(att.checkOut);
+              let workingHours = (checkOutTime - checkInTime) / (1000 * 60 * 60) - ((att.total_break_minutes || 0) / 60);
+              workingMinutes = Math.round(workingHours * 60);
+              if (workingMinutes < 0) workingMinutes = 0;
+           }
+           
+           if (workingMinutes > 0) {
+              if (isOffDay) {
+                 dayCompletedMinutes = Math.max(dayCompletedMinutes, workingMinutes);
+              } else {
+                 dayCompletedMinutes = workingMinutes;
+              }
+           } else if (!isOffDay && att.status === 'Absent') {
+              dayCompletedMinutes = 0;
+           } else if (!isOffDay && att.status === 'Leave') {
+               dayCompletedMinutes = 450;
+           }
+        } else {
+           if (!isOffDay) {
+              dayCompletedMinutes = 0;
+           }
+        }
+
+        totalRequiredMinutes += requiredDayMinutes;
+        totalCompletedMinutes += dayCompletedMinutes;
+
+        if (dayCompletedMinutes < requiredDayMinutes) {
+           const missed = requiredDayMinutes - dayCompletedMinutes;
+           totalMissedMinutes += missed;
+           
+           if (dayCompletedMinutes === 0) {
+              totalAbsentMinutes += requiredDayMinutes;
+           }
+        }
+      }
+
+      const dailySalary = (user.salary || 0) / 30;
+      const hourlyRate = dailySalary / 7.5;
+      const salaryDeduction = (totalMissedMinutes / 60) * hourlyRate;
+      
+      return {
+         user,
+         totalRequiredMinutes,
+         totalCompletedMinutes,
+         totalMissedMinutes,
+         totalAbsentMinutes,
+         salaryDeduction: salaryDeduction > 0 ? salaryDeduction.toFixed(2) : "0.00",
+         daysCount
+      };
+    });
+
+    res.json(report);
+  } catch (error) {
+    console.error("Error generating presence report:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };

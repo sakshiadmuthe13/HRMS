@@ -4,6 +4,7 @@ import { Calendar, CheckCircle, Clock, FolderOpen, AlertCircle, ArrowUpRight, Tr
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import EmployeeSidebar from "./EmployeeSidebar";
+import DashboardNavbar from "../../components/DashboardNavbar";
 import Attendance from "./Attendance";
 import Leaves from "./Leaves";
 import Teams from "./Teams";
@@ -11,6 +12,7 @@ import Tasks from "./Tasks";
 import Projects from "./Projects";
 import Profile from "./Profile";
 import ContactEmployeePage from "./ContactEmployee";
+import DashboardSkeleton from "../../components/DashboardSkeleton";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -51,6 +53,14 @@ const TABS = [
 
 const EmployeeDashboard = () => {
   const [active, setActive] = useState("Dashboard");
+  const [pageLoading, setPageLoading] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [summary, setSummary] = useState(null);
   const [leaves, setLeaves] = useState([]);
   const [leaveAllowance, setLeaveAllowance] = useState(12);
@@ -59,13 +69,6 @@ const EmployeeDashboard = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [profileVerified, setProfileVerified] = useState(true);
-
-  useEffect(() => {
-    if (active === "Dashboard") {
-      fetchAllData();
-      fetchProfileStatus();
-    }
-  }, [active]);
 
   const fetchAllData = async () => {
     setLoading(true);
@@ -122,6 +125,30 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const toggleCollapse = () => {
+    const next = !isCollapsed;
+    setIsCollapsed(next);
+    try {
+      localStorage.setItem("sidebar-collapsed", next.toString());
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => setPageLoading(false), 400);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (active === "Dashboard") {
+      fetchAllData();
+      fetchProfileStatus();
+    }
+  }, [active]);
+
+  if (pageLoading) return <DashboardSkeleton role="employee" />;
+
   const leavesTaken = leaves.filter(l => l.status === 'Approved').reduce((sum, l) => sum + (l.totalDays || 0), 0);
   const pendingLeaves = leaves.filter(l => l.status === 'Pending').length;
   const tasksCompleted = tasks.filter(t => t.status === 'Completed').length;
@@ -143,10 +170,11 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="min-h-screen flex bg-gray-50/50">
-      <EmployeeSidebar tabs={TABS} active={active} onChange={setActive} />
+      <EmployeeSidebar tabs={TABS} active={active} onChange={setActive} isCollapsed={isCollapsed} onToggleCollapse={toggleCollapse} />
 
-      <main className="flex-1 md:ml-60 min-h-screen overflow-x-hidden transition-all duration-300">
-        <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-12">
+      <main className={`flex-1 min-h-screen overflow-x-hidden transition-all duration-300 ${isCollapsed ? "md:ml-20" : "md:ml-60"}`}>
+        <DashboardNavbar />
+        <div className={`p-6 md:p-8 space-y-12 transition-all duration-300 ${isCollapsed ? "max-w-none w-full" : "max-w-7xl mx-auto"}`}>
         {active === "Dashboard" && (
           <div className="animate-fadeIn space-y-12">
             {/* Header */}

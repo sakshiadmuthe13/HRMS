@@ -97,7 +97,7 @@ const Teams = () => {
             </div>
 
             <div className="mt-auto p-6 bg-gray-50/30 border-t border-gray-200 flex justify-between items-center px-8">
-              <span className="text-[10px] font-black text-secondary/40 uppercase tracking-widest">{team.members?.length || 0} active members</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{team.members?.length || 0} active members</span>
               <button className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest group-hover:gap-4 transition-all">
                 Project Logs <ArrowRight size={12} />
               </button>

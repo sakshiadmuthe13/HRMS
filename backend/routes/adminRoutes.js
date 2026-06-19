@@ -43,7 +43,7 @@ import {
   updateHRAdmin,
   deleteHRAdmin,
 } from "../controllers/adminController.js";
-import { getAttendanceByDate } from "../controllers/adminController.js";
+import { getAttendanceByDate, getPresenceReport } from "../controllers/adminController.js";
 import { getAllSalaries, creditSalary, calculateSalary, previewSalarySlip } from "../controllers/adminController.js";
 import { getAllTeams, createTeam, updateTeam, deleteTeam } from "../controllers/adminController.js";
 import { getAllProjects, createProject, updateProject, deleteProject } from "../controllers/adminController.js";
@@ -87,6 +87,7 @@ router.delete("/hrs/:id", deleteHRAdmin);
 
 // attendance management routes
 router.get("/attendance/by-date", getAttendanceByDate);
+router.get("/attendance/presence-report", getPresenceReport);
 
 // holiday management routes
 router.get("/holidays", listHolidays);

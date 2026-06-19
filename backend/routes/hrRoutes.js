@@ -8,6 +8,8 @@ import {
   updateMyProfile,
   checkIn,
   checkOut,
+  startBreak,
+  endBreak,
   getAttendance,
   applyLeave,
   getMyLeaves,
@@ -28,7 +30,8 @@ import {
   getAllHRsAdmin,
   getEmployeesForVerification,
   verifyDocument,
-  unverifyDocument
+  unverifyDocument,
+  getPresenceReport
 } from "../controllers/adminController.js";
 import {
   addCandidate,
@@ -36,6 +39,10 @@ import {
   updateCandidate,
   sendCandidateEmail
 } from "../controllers/hiringCandidateController.js";
+import {
+  getTodayCelebrations,
+  getHolidaysForEmployee
+} from "../controllers/employeeController.js";
 
 const router = express.Router();
 
@@ -53,7 +60,13 @@ router.put("/profile", handleMultipleUploads, updateMyProfile);
 // Self Attendance
 router.post("/attendance/checkin", checkIn);
 router.post("/attendance/checkout", checkOut);
+router.post("/attendance/break/start", startBreak);
+router.post("/attendance/break/end", endBreak);
 router.get("/attendance", getAttendance);
+
+// Holidays & Celebrations
+router.get("/holidays", getHolidaysForEmployee);
+router.get("/celebrations/today", getTodayCelebrations);
 
 // Self Leave
 router.post("/leave/apply", applyLeave);
@@ -61,6 +74,7 @@ router.get("/leave/my", getMyLeaves);
 
 // Management
 router.get("/manage/attendance", getAllAttendance);
+router.get("/manage/presence-report", getPresenceReport);
 router.get("/manage/leaves", getAllLeaves);
 router.put("/manage/leave/:id/status", updateLeaveStatus);
 

@@ -376,15 +376,16 @@ const HRProfilePage = () => {
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <div className="text-xs font-bold text-gray-800 uppercase tracking-wide truncate pr-8">{label}</div>
-                          {/* File status badge */}
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            doc?.verified 
-                              ? "bg-green-500/10 text-green-700 border-green-200" 
-                              : doc?.path 
-                              ? "bg-amber-500/10 text-amber-700 border-amber-200" 
+                            doc?.verified
+                              ? "bg-green-500/10 text-green-700 border-green-200"
+                              : doc?.rejectionReason
+                              ? "bg-red-500/10 text-red-700 border-red-200"
+                              : doc?.path
+                              ? "bg-amber-500/10 text-amber-700 border-amber-200"
                               : "bg-gray-100 text-gray-600 border-gray-300"
                           }`}>
-                            {doc?.verified ? "Verified" : doc?.path ? "Pending" : "Missing"}
+                            {doc?.verified ? "Verified" : doc?.rejectionReason ? "Rejected" : doc?.path ? "Pending" : "Missing"}
                           </span>
                         </div>
 
@@ -404,6 +405,11 @@ const HRProfilePage = () => {
                         ) : (
                           <div className="text-[11px] text-gray-400 mt-2">
                             {doc?.path ? "Document uploaded & saved." : "No document registered."}
+                            {doc?.rejectionReason && (
+                              <div className="mt-1.5 p-2 bg-red-50 border border-red-100 rounded-lg text-[10px] font-semibold text-red-600 leading-tight">
+                                Rejected: {doc.rejectionReason}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

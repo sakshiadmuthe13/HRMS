@@ -30,6 +30,9 @@ const ProfileVerificationPage = () => {
   const [verifying, setVerifying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectDocType, setRejectDocType] = useState("");
+  const [rejectReasonText, setRejectReasonText] = useState("");
 
   const documentLabels = {
     passportPhoto: "Passport Size Photograph",
@@ -67,7 +70,7 @@ const ProfileVerificationPage = () => {
     }
   };
 
-  const verifyDocument = async (userId, documentType, verified) => {
+  const verifyDocument = async (userId, documentType, verified, rejectionReason = "") => {
     setVerifying(true);
     try {
       const token = localStorage.getItem("token");
@@ -79,7 +82,7 @@ const ProfileVerificationPage = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ verified }),
+          body: JSON.stringify({ verified, rejectionReason }),
         }
       );
       const data = await response.json();
@@ -116,9 +119,25 @@ const ProfileVerificationPage = () => {
     }
   };
 
+  const handleRejectClick = (docType) => {
+    setRejectDocType(docType);
+    setRejectReasonText("");
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectReasonText.trim()) {
+      toast.error("Please enter a reason for rejection");
+      return;
+    }
+    setShowRejectModal(false);
+    await verifyDocument(selectedUser._id, rejectDocType, false, rejectReasonText);
+  };
+
   const getVerificationStatus = (doc) => {
     if (!doc || !doc.path) return "Not Uploaded";
     if (doc.verified) return "Verified";
+    if (doc.rejectionReason) return "Rejected";
     return "Pending";
   };
 
@@ -128,6 +147,8 @@ const ProfileVerificationPage = () => {
         return "bg-green-100 text-green-600 border-green-200";
       case "Pending":
         return "bg-amber-100 text-amber-600 border-amber-200";
+      case "Rejected":
+        return "bg-red-100 text-red-600 border-red-200";
       default:
         return "bg-gray-50 text-gray-900 border-gray-200";
     }
@@ -301,22 +322,29 @@ const ProfileVerificationPage = () => {
                           )}
                         </div>
 
-                        {doc?.path ? (
-                          <div className="flex gap-3">
-                            <button
-                              onClick={() => verifyDocument(selectedUser._id, field, true)}
-                              disabled={verifying || doc.verified}
-                              className="flex-1 py-3 bg-green-50 text-green-600 rounded-xl font-bold text-xs hover:bg-green-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => verifyDocument(selectedUser._id, field, false)}
-                              disabled={verifying || !doc.verified}
-                              className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl font-bold text-xs hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                              Reject
-                            </button>
+                         {doc?.path ? (
+                          <div className="space-y-3">
+                            {status === "Rejected" && doc.rejectionReason && (
+                              <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 font-semibold">
+                                <strong>Reason:</strong> {doc.rejectionReason}
+                              </div>
+                            )}
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => verifyDocument(selectedUser._id, field, true)}
+                                disabled={verifying || doc.verified}
+                                className="flex-1 py-3 bg-green-50 text-green-600 rounded-xl font-bold text-xs hover:bg-green-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectClick(field)}
+                                disabled={verifying || status === "Rejected"}
+                                className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl font-bold text-xs hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                Reject
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="py-4 text-center border-2 border-dashed border-gray-200 rounded-2xl text-[10px] font-black text-secondary/40 uppercase tracking-widest">
@@ -373,6 +401,51 @@ const ProfileVerificationPage = () => {
           </AnimatePresence>
         </div>
       </div>
+      <AnimatePresence>
+        {showRejectModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-primary/30 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 cursor-default"
+              onClick={() => setShowRejectModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-md p-6 rounded-[2rem] shadow-2xl border border-gray-150 flex flex-col z-[120]"
+            >
+              <h3 className="text-xl font-black text-primary mb-2">Reject Document</h3>
+              <p className="text-xs text-secondary mb-4 font-bold">
+                Please specify the reason why you are rejecting the document: <span className="text-primary">{documentLabels[rejectDocType]}</span>.
+              </p>
+              <textarea
+                value={rejectReasonText}
+                onChange={(e) => setRejectReasonText(e.target.value)}
+                placeholder="Type rejection reason here (e.g. blurry image, missing pages, wrong document)..."
+                rows={4}
+                className="w-full p-4 border border-gray-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all resize-none mb-6"
+              />
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  className="px-5 py-3 bg-gray-50 text-secondary hover:bg-gray-100 rounded-xl font-bold text-xs transition-all border border-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmReject}
+                  className="px-5 py-3 bg-red-500 text-white hover:bg-red-600 rounded-xl font-bold text-xs transition-all shadow-md shadow-red-500/20"
+                >
+                  Reject Document
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

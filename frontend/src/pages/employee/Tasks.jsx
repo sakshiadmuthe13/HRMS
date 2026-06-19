@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ListTodo, CheckCircle2, Clock, PlayCircle, AlertCircle, ArrowRight, UserCheck, Layout, CheckCircle } from "lucide-react";
+import { ListTodo, CheckCircle2, Clock, PlayCircle, AlertCircle, ArrowRight, UserCheck, Layout, CheckCircle, Paperclip } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -100,7 +100,7 @@ export default function EmployeeTasksPage() {
                   initial={{ opacity: 0, x: -10 }} 
                   animate={{ opacity: 1, x: 0 }} 
                   transition={{ delay: i * 0.05 }}
-                  className="hover:bg-gray-50/50 transition-colors group"
+                  className="transition-colors group"
                 >
                   <td className="p-6">
                     <div className="flex items-center gap-3">
@@ -108,6 +108,14 @@ export default function EmployeeTasksPage() {
                       <div>
                         <div className="text-sm font-black text-primary tracking-tight">{t.project?.name || "Independent Task"}</div>
                         <div className="text-[10px] font-bold text-secondary/50 truncate max-w-[200px]">{t.description}</div>
+                        {t.attachmentUrl && (
+                          <div className="mt-1.5 flex items-center gap-1.5 bg-gray-50 border border-gray-100 rounded-lg p-1.5 max-w-max">
+                            <Paperclip size={10} className="text-primary" />
+                            <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="text-[9px] font-black text-primary uppercase hover:underline">
+                              {t.attachmentName || "View Attachment"}
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>

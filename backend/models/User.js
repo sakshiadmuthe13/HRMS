@@ -5,6 +5,7 @@ const documentSchema = new mongoose.Schema({
   path: { type: String }, // ImageKit URL or file path
   verified: { type: Boolean, default: false },
   uploadedAt: { type: Date, default: Date.now },
+  rejectionReason: { type: String, default: "" },
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({

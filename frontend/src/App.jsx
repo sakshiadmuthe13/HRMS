@@ -12,6 +12,8 @@ import HRDashboard from "./pages/hr/hr-dashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
           <Route path="/leader-dashboard" element={<LeaderDashboard />} />

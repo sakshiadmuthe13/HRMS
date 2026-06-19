@@ -115,7 +115,7 @@ export const checkIn = async (req, res) => {
       const isCustomHoliday = await Holiday.exists({
         date: { $gte: holidayStart, $lte: holidayEnd },
       });
-      const isWeekend = [0, 6].includes(holidayStart.getDay());
+      const isWeekend = holidayStart.getDay() === 0;
       const isHoliday = !!isCustomHoliday || isWeekend;
 
       // Always create attendance as Present on check-in; we'll mark Over-time on check-out if applicable
@@ -230,6 +230,17 @@ export const checkOut = async (req, res) => {
     if (!attendance.checkOut) {
       attendance.checkOut = now.toISOString();
 
+      if (attendance.is_on_break) {
+        attendance.is_on_break = false;
+        const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+        if (lastBreak && !lastBreak.end) {
+          lastBreak.end = now;
+          const diffMs = now.getTime() - new Date(lastBreak.start).getTime();
+          const diffMin = Math.round(diffMs / 60000);
+          attendance.total_break_minutes = (attendance.total_break_minutes || 0) + diffMin;
+        }
+      }
+
       // If the day is a holiday and the user has both checkIn/checkOut, mark Over-time
       const day = new Date(now);
       const holidayStart = new Date(day);
@@ -240,7 +251,7 @@ export const checkOut = async (req, res) => {
       const isCustomHoliday = await Holiday.exists({
         date: { $gte: holidayStart, $lte: holidayEnd },
       });
-      const isWeekend = [0, 6].includes(holidayStart.getDay());
+      const isWeekend = holidayStart.getDay() === 0;
       const isHoliday = !!isCustomHoliday || isWeekend;
 
       if (isHoliday && (attendance.checkIn || attendance.checkOut)) {
@@ -343,6 +354,130 @@ export const checkOut = async (req, res) => {
   }
 };
 
+// Start Break
+export const startBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lte: todayEnd },
+    });
+
+    if (!attendance || !attendance.checkIn) {
+      return res.status(400).json({ message: "Please check in first before taking a break" });
+    }
+
+    if (attendance.checkOut) {
+      return res.status(400).json({ message: "You have already checked out for the day" });
+    }
+
+    if (attendance.is_on_break) {
+      return res.status(400).json({ message: "You are already on break" });
+    }
+
+    attendance.is_on_break = true;
+    attendance.breaks.push({ start: now });
+    await attendance.save();
+
+    // Notify leaders of teams this employee belongs to
+    try {
+      const teams = await Team.find({ members: userId }).populate("leader");
+      const leaderIds = new Set();
+      if (req.user.reportingManager) {
+        leaderIds.add(req.user.reportingManager.toString());
+      }
+      teams.forEach((t) => {
+        if (t.leader) {
+          leaderIds.add(t.leader._id.toString());
+        }
+      });
+
+      for (const leaderId of leaderIds) {
+        const leaderTeams = await Team.find({ leader: leaderId, members: userId });
+        const projectIds = leaderTeams.flatMap((lt) => lt.projects || []);
+        const projects = await Project.find({ _id: { $in: projectIds } });
+        const projectNames = projects.map((p) => p.name).join(", ");
+        const projectStr = projectNames ? ` under project ${projectNames}` : "";
+
+        await createNotification({
+          message: `${req.user.name}${projectStr} has taken a break.`,
+          role: "leader",
+          recipient: leaderId,
+          triggeredBy: userId,
+        });
+      }
+    } catch (notifErr) {
+      console.error("Error creating break notification for leaders:", notifErr);
+    }
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    console.error("Start break error:", err);
+    res.status(500).json({ message: "Failed to start break" });
+  }
+};
+
+// End Break
+export const endBreak = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const now = new Date();
+    const { start: todayStart, end: todayEnd } = getIndiaDayRange(now);
+
+    const attendance = await Attendance.findOne({
+      user: userId,
+      date: { $gte: todayStart, $lte: todayEnd },
+    });
+
+    if (!attendance || !attendance.is_on_break) {
+      return res.status(400).json({ message: "You are not on an active break" });
+    }
+
+    attendance.is_on_break = false;
+    const lastBreak = attendance.breaks[attendance.breaks.length - 1];
+    if (lastBreak && !lastBreak.end) {
+      lastBreak.end = now;
+      const diffMs = now.getTime() - new Date(lastBreak.start).getTime();
+      const diffMin = Math.round(diffMs / 60000);
+      attendance.total_break_minutes = (attendance.total_break_minutes || 0) + diffMin;
+    }
+    await attendance.save();
+
+    // Notify leaders of teams this employee belongs to
+    try {
+      const teams = await Team.find({ members: userId }).populate("leader");
+      const leaderIds = new Set();
+      if (req.user.reportingManager) {
+        leaderIds.add(req.user.reportingManager.toString());
+      }
+      teams.forEach((t) => {
+        if (t.leader) {
+          leaderIds.add(t.leader._id.toString());
+        }
+      });
+
+      for (const leaderId of leaderIds) {
+        await createNotification({
+          message: `${req.user.name} has returned from break.`,
+          role: "leader",
+          recipient: leaderId,
+          triggeredBy: userId,
+        });
+      }
+    } catch (notifErr) {
+      console.error("Error creating break end notification for leaders:", notifErr);
+    }
+
+    res.status(200).json(attendance);
+  } catch (err) {
+    console.error("End break error:", err);
+    res.status(500).json({ message: "Failed to end break" });
+  }
+};
+
 // Get attendance
 export const getAttendance = async (req, res) => {
   try {
@@ -386,6 +521,8 @@ export const getAttendance = async (req, res) => {
         checkIn: rec.checkIn || null,
         checkOut: rec.checkOut || null,
         status: rec.status || (rec.checkIn ? "Present" : "Absent"),
+        breaks: rec.breaks || [],
+        total_break_minutes: rec.total_break_minutes || 0,
       };
     });
 
@@ -703,7 +840,7 @@ export const getHolidaysForEmployee = async (req, res) => {
 
     while (cursor <= targetEnd) {
       const day = cursor.getDay();
-      if (day === 0 || day === 6) {
+      if (day === 0) {
         weekendEntries.push({ date: new Date(cursor), description: "Weekend Off", type: "WEEKEND" });
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -926,6 +1063,7 @@ export const updateMyProfile = async (req, res) => {
         updates[`documents.${key}.path`] = req.uploadedUrls[key];
         updates[`documents.${key}.verified`] = false; // Reset verification
         updates[`documents.${key}.uploadedAt`] = new Date();
+        updates[`documents.${key}.rejectionReason`] = "";
       });
     }
 

@@ -12,6 +12,28 @@ export default function VacancyManagementPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingVacancy, setEditingVacancy] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    confirmText: "Delete",
+    confirmColor: "bg-red-600 hover:bg-red-700",
+    onConfirm: null,
+  });
+
+  const triggerConfirm = (title, message, confirmText, confirmColor, onConfirm) => {
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      confirmText,
+      confirmColor,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal((prev) => ({ ...prev, show: false }));
+      }
+    });
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -79,18 +101,25 @@ export default function VacancyManagementPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this vacancy?")) return;
-    try {
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      await axios.delete(`${API_BASE}/vacancies/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setVacancies((prev) => prev.filter((v) => v._id !== id));
-      toast.success("Vacancy deleted");
-    } catch (err) {
-      console.error("Error deleting vacancy:", err);
-      toast.error("Failed to delete vacancy");
-    }
+    triggerConfirm(
+      "Delete Vacancy",
+      "Are you sure you want to delete this vacancy? This action cannot be undone.",
+      "Delete",
+      "bg-red-600 hover:bg-red-700",
+      async () => {
+        try {
+          const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+          await axios.delete(`${API_BASE}/vacancies/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setVacancies((prev) => prev.filter((v) => v._id !== id));
+          toast.success("Vacancy deleted");
+        } catch (err) {
+          console.error("Error deleting vacancy:", err);
+          toast.error("Failed to delete vacancy");
+        }
+      }
+    );
   };
 
   const handleStatusToggle = async (vacancy) => {
@@ -229,12 +258,18 @@ export default function VacancyManagementPage() {
                   </button>
                   {v.status !== 'Closed' && (
                     <button onClick={() => {
-                        if(window.confirm('Are you sure you want to close this vacancy?')) {
-                          const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-                          axios.put(`${API_BASE}/vacancies/${v._id}`, { status: 'Closed' }, { headers: { Authorization: `Bearer ${token}` } })
-                            .then(res => setVacancies(prev => prev.map(vac => vac._id === v._id ? res.data : vac)))
-                            .catch(() => toast.error('Failed to close vacancy'));
-                        }
+                        triggerConfirm(
+                          "Close Vacancy",
+                          "Are you sure you want to close this vacancy? This will mark it as closed.",
+                          "Close Vacancy",
+                          "bg-red-600 hover:bg-red-700",
+                          () => {
+                            const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+                            axios.put(`${API_BASE}/vacancies/${v._id}`, { status: 'Closed' }, { headers: { Authorization: `Bearer ${token}` } })
+                              .then(res => setVacancies(prev => prev.map(vac => vac._id === v._id ? res.data : vac)))
+                              .catch(() => toast.error('Failed to close vacancy'));
+                          }
+                        );
                       }} className="text-xs font-bold text-red-500 hover:text-red-700 transition">
                       Close
                     </button>
@@ -336,6 +371,50 @@ export default function VacancyManagementPage() {
                 <button type="button" onClick={closeModal} className="px-6 py-3 font-bold text-gray-600 hover:text-gray-900 transition">Cancel</button>
                 <button type="submit" form="vacancyForm" className="px-8 py-3 bg-primary text-white font-bold rounded-xl hover:bg-secondary transition shadow-md hover:shadow-lg">
                   {editingVacancy ? "Update Vacancy" : "Publish Vacancy"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* --- CONFIRMATION MODAL --- */}
+      <AnimatePresence>
+        {confirmModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-100 p-6 text-center"
+            >
+              <div className="flex justify-center mb-4">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center border border-red-100 text-red-500">
+                  <AlertCircle size={32} />
+                </div>
+              </div>
+              
+              <h3 className="text-2xl font-black text-primary tracking-tight mb-2">
+                {confirmModal.title}
+              </h3>
+              <p className="text-gray-500 font-semibold mb-6">
+                {confirmModal.message}
+              </p>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal((prev) => ({ ...prev, show: false }))}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmModal.onConfirm}
+                  className={`flex-1 py-3 text-white font-bold rounded-xl transition shadow-md hover:shadow-lg ${confirmModal.confirmColor}`}
+                >
+                  {confirmModal.confirmText}
                 </button>
               </div>
             </motion.div>

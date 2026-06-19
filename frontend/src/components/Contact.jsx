@@ -105,7 +105,7 @@ const Contact = () => {
               delay={0.3}
             >
               <div className="space-y-1 text-slate-550 font-semibold text-sm">
-                <p>+91 97647 60719</p>
+                <p>+91 86004 86482</p>
                 <p>+91 98605 07744</p>
               </div>
             </ContactCard>

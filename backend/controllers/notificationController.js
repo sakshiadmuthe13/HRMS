@@ -28,6 +28,27 @@ export const markAsRead = async (req, res) => {
   }
 };
 
+// Mark ALL notifications as read for a user
+export const markAllAsRead = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userRole = req.user.role;
+    await Notification.updateMany(
+      {
+        readStatus: false,
+        $or: [
+          { recipient: userId },
+          { role: userRole, recipient: { $exists: false } },
+        ],
+      },
+      { readStatus: true }
+    );
+    res.status(200).json({ message: "All notifications marked as read" });
+  } catch (error) {
+    res.status(500).json({ message: "Error marking all notifications as read", error: error.message });
+  }
+};
+
 // Create a new notification
 export const createNotification = async ({ message, role, triggeredBy, recipient }) => {
   try {
@@ -39,20 +60,14 @@ export const createNotification = async ({ message, role, triggeredBy, recipient
     });
     await notification.save();
 
-    // Emit real-time notification
+    // Emit real-time notification to targeted rooms only
     if (global.io) {
-      // If recipient is specified, emit to that user
       if (recipient) {
-        global.io.emit("notification", {
-          notification: notification.toObject(),
-          recipient: recipient.toString()
-        });
+        // Emit only to the specific user's room
+        global.io.to(`user:${recipient.toString()}`).emit("new-notification", notification.toObject());
       } else if (role) {
-        // If role is specified, emit to all users with that role
-        global.io.emit("notification", {
-          notification: notification.toObject(),
-          role
-        });
+        // Emit to all users in the role room
+        global.io.to(`role:${role}`).emit("new-notification", notification.toObject());
       }
     }
     return notification;

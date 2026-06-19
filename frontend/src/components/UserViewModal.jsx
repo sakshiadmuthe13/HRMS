@@ -394,13 +394,18 @@ const UserViewModal = ({ isOpen, onClose, userId }) => {
                                 <td className="p-3 text-primary text-[11px] font-black tracking-tight">{displayName}</td>
                                 <td className="p-3 text-secondary">{formatDate(doc.uploadedAt)}</td>
                                 <td className="p-3">
-                                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase border flex items-center gap-1 w-fit ${
-                                    doc.verified ? "bg-green-50 text-green-600 border-green-200" : "bg-amber-50 text-amber-600 border-amber-200"
-                                  }`}>
-                                    {doc.verified ? <CheckCircle size={10} /> : <XCircle size={10} />}
-                                    {doc.verified ? "Verified" : "Pending"}
-                                  </span>
-                                </td>
+                                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase border flex items-center gap-1 w-fit ${
+                                     doc.verified ? "bg-green-50 text-green-600 border-green-200" : doc.rejectionReason ? "bg-red-50 text-red-500 border-red-200" : "bg-amber-50 text-amber-600 border-amber-200"
+                                   }`}>
+                                     {doc.verified ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                                     {doc.verified ? "Verified" : doc.rejectionReason ? "Rejected" : "Pending"}
+                                   </span>
+                                   {doc.rejectionReason && (
+                                     <div className="text-[10px] text-red-500 mt-1 font-bold">
+                                       Reason: {doc.rejectionReason}
+                                     </div>
+                                   )}
+                                 </td>
                                 <td className="p-3 text-center">
                                   <a
                                     href={doc.path}

@@ -3,6 +3,8 @@ import {
   getAttendance,
   checkIn,
   checkOut,
+  startBreak,
+  endBreak,
   getMyTeams,
   getProjectsForEmployee,
   getMyTasks,
@@ -28,6 +30,8 @@ router.get("/dashboard", protectEmployee, getDashboard);
 // Attendance
 router.post("/attendance/checkin", protectEmployee, checkIn);
 router.post("/attendance/checkout", protectEmployee, checkOut);
+router.post("/attendance/break/start", protectEmployee, startBreak);
+router.post("/attendance/break/end", protectEmployee, endBreak);
 router.get("/attendance", protectEmployee, getAttendance);
 
 // Holidays visible to authenticated users

@@ -3,6 +3,9 @@
 ## Overview
 The Employee Management System is a robust web application designed to streamline organizational processes, manage human resources, track attendance, and facilitate project and task management. 
 
+### Key System Features
+- **Real-Time Notifications**: The system employs a WebSocket-based event-driven architecture to deliver instant notifications (with audible alerts) to Admins, HRs, Leaders, and Employees for crucial events like task assignments, leave approvals, and announcements, without requiring a page refresh.
+
 To ensure security and organized access, the system utilizes a **Role-Based Access Control (RBAC)** architecture. There are four primary roles within the application, each tailored to specific organizational duties:
 1. **Admin**
 2. **HR (Human Resources)**

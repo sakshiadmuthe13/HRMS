@@ -189,7 +189,7 @@ const AdminHolidayCalendar = () => {
         {/* Calendar Grid */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-primary/5 border border-gray-200">
-            <div className="grid grid-cols-7 gap-4">
+            <div className="grid grid-cols-7 gap-5">
               {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
                 <div key={day} className="text-center text-[10px] font-black text-secondary uppercase tracking-widest mb-4">
                   {day}

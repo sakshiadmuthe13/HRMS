@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 
@@ -9,135 +9,230 @@ const NotificationContext = createContext();
 
 export const useNotifications = () => useContext(NotificationContext);
 
-// Sound notification function
-const playNotificationSound = () => {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Decode a JWT without verifying (client-side only, for extracting claims). */
+const decodeToken = (token) => {
   try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.value = 800;
-    oscillator.type = "sine";
-
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.5);
-  } catch (error) {
-    console.error("Error playing sound:", error);
+    return JSON.parse(atob(token.split(".")[1]));
+  } catch {
+    return null;
   }
 };
 
-// Browser notification function
+/** Get the logged-in user's token/payload from localStorage. */
+const getUserPayload = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  const payload = decodeToken(token);
+  return payload ? { token, ...payload } : null;
+};
+
+// ─── Notification Sound ───────────────────────────────────────────────────────
+
+/**
+ * Plays a pleasant two-tone chime using the Web Audio API.
+ * Falls back silently if the API is unavailable or user hasn't interacted.
+ */
+const playNotificationSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    const ctx = new AudioCtx();
+
+    const playTone = (frequency, startTime, duration, gainPeak = 0.35) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(frequency, startTime);
+
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    const now = ctx.currentTime;
+    // First note: D5 (587 Hz), then E5 (659 Hz) — a bright, friendly chime
+    playTone(587, now, 0.35, 0.3);
+    playTone(784, now + 0.18, 0.45, 0.25);
+  } catch (err) {
+    // Silently ignore – e.g. browser blocked autoplay
+    console.debug("Notification sound blocked:", err.message);
+  }
+};
+
+// ─── Browser Push Notification ────────────────────────────────────────────────
+
 const showBrowserNotification = (message) => {
   if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("QiroTech Innovation - New Notification", {
+    new Notification("QiroTech Innovation – New Notification", {
       body: message,
       icon: "/favicon.ico",
+      tag: "qirotech-notification", // replace previous notification of same tag
     });
   }
 };
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef(null);
 
+  // ── Fetch notifications from API ──────────────────────────────────────────
+  const fetchNotifications = useCallback(async () => {
+    const user = getUserPayload();
+    if (!user) return;
+
+    try {
+      const res = await axios.get(`${API_BASE}/notifications/${user.id}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      setNotifications(res.data);
+      setUnreadCount(res.data.filter((n) => !n.readStatus).length);
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+    }
+  }, []);
+
+  // ── Register socket into user/role rooms ──────────────────────────────────
+  const registerSocket = useCallback((socket) => {
+    const user = getUserPayload();
+    if (!user || !socket) return;
+    socket.emit("register", { userId: user.id, role: user.role });
+    console.log(`🔌 Socket registered for user:${user.id} role:${user.role}`);
+  }, []);
+
+  // ── Handle an incoming notification ──────────────────────────────────────
+  const handleNewNotification = useCallback((notification) => {
+    console.log("📨 Real-time notification received:", notification);
+    setNotifications((prev) => {
+      // Avoid duplicate if already in state
+      if (prev.some((n) => n._id === notification._id)) return prev;
+      return [notification, ...prev];
+    });
+    setUnreadCount((prev) => prev + 1);
+    playNotificationSound();
+    showBrowserNotification(notification.message);
+  }, []);
+
+  // ── Initialise Socket.IO ──────────────────────────────────────────────────
   useEffect(() => {
-    // Request browser notification permission
+    // Request browser notification permission once
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
 
-    // Connect to socket
-    const newSocket = io(SOCKET_BASE);
-    setSocket(newSocket);
+    const user = getUserPayload();
 
-    // Fetch initial notifications
-    const fetchNotifications = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const userPayload = JSON.parse(atob(token.split(".")[1]));
-        const userId = userPayload.id;
-        const userRole = userPayload.role;
-
-        const res = await axios.get(`${API_BASE}/notifications/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setNotifications(res.data);
-        setUnreadCount(res.data.filter(n => !n.readStatus).length);
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-      }
-    };
-    fetchNotifications();
-
-    // Listen for new notifications
-    newSocket.on("notification", (data) => {
-      try {
-        console.log("📨 Received notification:", data);
-
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const userPayload = JSON.parse(atob(token.split(".")[1]));
-        const userId = userPayload.id;
-        const userRole = userPayload.role;
-
-        console.log("👤 Current user:", { userId, userRole });
-        console.log("📋 Notification details:", {
-          role: data.role,
-          recipient: data.recipient,
-          notification: data.notification
-        });
-
-        // Check if notification is for this user
-        // 1. Specific recipient matches this user ID
-        // 2. Role matches and no specific recipient (role-based notification)
-        const isForThisUser =
-          (data.recipient && data.recipient === userId) ||
-          (data.role && data.role === userRole && !data.recipient);
-
-        console.log("✅ Is for this user?", isForThisUser);
-
-        if (isForThisUser) {
-          setNotifications(prev => [data.notification, ...prev]);
-          setUnreadCount(prev => prev + 1);
-
-          // Play sound and show browser notification
-          playNotificationSound();
-          showBrowserNotification(data.notification.message);
-          console.log("🔔 Notification added to state");
-        }
-      } catch (error) {
-        console.error("Error handling notification:", error);
-      }
+    // Build socket with JWT auth so the server can assign rooms immediately
+    const socket = io(SOCKET_BASE, {
+      auth: { token: user?.token || "" },
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity,
+      transports: ["websocket", "polling"],
     });
 
-    return () => newSocket.close();
-  }, []);
+    socketRef.current = socket;
 
+    // ── Connection events ─────────────────────────────────────────────────
+    socket.on("connect", () => {
+      console.log(`✅ Socket connected: ${socket.id}`);
+      setIsConnected(true);
+      // Re-register into rooms on every (re)connect
+      registerSocket(socket);
+      // Re-fetch to catch any notifications missed while disconnected
+      fetchNotifications();
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log(`❌ Socket disconnected: ${reason}`);
+      setIsConnected(false);
+    });
+
+    socket.on("connect_error", (err) => {
+      console.warn("Socket connection error:", err.message);
+    });
+
+    // ── Notification event (new targeted event name) ───────────────────────
+    socket.on("new-notification", handleNewNotification);
+
+    // Fetch initial notifications
+    fetchNotifications();
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mark notification as read ─────────────────────────────────────────────
   const markAsRead = async (id) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(`${API_BASE}/notifications/${id}/read`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setNotifications(prev => prev.map(n => n._id === id ? { ...n, readStatus: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error("Error marking as read:", error);
+      const user = getUserPayload();
+      if (!user) return;
+      await axios.put(
+        `${API_BASE}/notifications/${id}/read`,
+        {},
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, readStatus: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
     }
   };
 
+  // ── Mark ALL notifications as read ───────────────────────────────────────
+  const markAllAsRead = async () => {
+    try {
+      const user = getUserPayload();
+      if (!user) return;
+      await axios.put(
+        `${API_BASE}/notifications/${user.id}/read-all`,
+        {},
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, readStatus: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Error marking all notifications as read:", err);
+    }
+  };
+
+  // ── Re-register when the user logs in (call this after login) ────────────
+  const registerUser = useCallback(() => {
+    if (socketRef.current?.connected) {
+      registerSocket(socketRef.current);
+    }
+    fetchNotifications();
+  }, [registerSocket, fetchNotifications]);
+
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead }}>
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        isConnected,
+        markAsRead,
+        markAllAsRead,
+        registerUser,
+        refreshNotifications: fetchNotifications,
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );

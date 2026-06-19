@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   format,
@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy", disabled = false }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [displayDate, setDisplayDate] = useState(new Date());
+  const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
   const pickerRef = useRef(null);
   const portalRef = useRef(null);
 
@@ -35,6 +36,33 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy", disabled = fa
       return "";
     }
   };
+
+  useLayoutEffect(() => {
+    if (showPicker && pickerRef.current) {
+      const rect = pickerRef.current.getBoundingClientRect();
+      const calendarHeight = 350;
+      const calendarWidth = 288;
+
+      // Place 8px below the input field by default
+      let top = rect.bottom + 8;
+      let left = rect.left;
+
+      // Flip above if not enough space below viewport
+      if (top + calendarHeight > window.innerHeight - 8) {
+        top = rect.top - calendarHeight - 8;
+      }
+      // Ensure minimum top
+      if (top < 8) top = 8;
+
+      // Clamp horizontally within viewport
+      if (left + calendarWidth > window.innerWidth - 8) {
+        left = window.innerWidth - calendarWidth - 8;
+      }
+      if (left < 8) left = 8;
+
+      setPickerPos({ top, left });
+    }
+  }, [showPicker]);
 
   useEffect(() => {
     if (value) {
@@ -89,10 +117,6 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy", disabled = fa
     setDisplayDate(addMonths(displayDate, 1));
   };
 
-  const pickerRect = pickerRef.current?.getBoundingClientRect();
-  const pickerTop = pickerRect ? pickerRect.bottom + window.scrollY + 8 : 0;
-  const pickerLeft = pickerRect ? pickerRect.left + window.scrollX : 0;
-
   return (
     <div className="relative w-full" ref={pickerRef}>
       <input
@@ -118,16 +142,12 @@ const DatePicker = ({ value, onChange, placeholder = "dd/mm/yyyy", disabled = fa
           <div
             ref={portalRef}
             className="fixed inset-0 z-[2147483647] pointer-events-none"
-            style={{
-              top: 0,
-              left: 0,
-            }}
           >
             <div
               className="pointer-events-auto absolute bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-2xl shadow-2xl shadow-primary/10 p-4 w-72 max-w-[calc(100vw-1rem)]"
               style={{
-                top: pickerTop,
-                left: pickerLeft,
+                top: pickerPos.top,
+                left: pickerPos.left,
               }}
             >
               <div className="flex items-center justify-between mb-4">

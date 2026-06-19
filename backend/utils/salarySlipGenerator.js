@@ -90,7 +90,8 @@ export const generateSalarySlipBuffer = async (user, salaryDetails, creditRecord
 
       // Table Data
       doc.font('Helvetica').fillColor('#333333');
-      const salaryBase = Number(user.salary) || Number(salaryDetails?.baseSalary) || 0;
+      const annualCTC = Number(user.salary) || Number(salaryDetails?.baseSalary) || 0;
+      const salaryBase = annualCTC / 12;
       const bonus = Number(creditRecord.bonus) || 0;
       const daysInMonth = Number(salaryDetails?.daysInMonth) || getDaysInMonth(creditRecord.month, creditRecord.year);
       const absentDays = Number(salaryDetails?.absentDays) || 0;

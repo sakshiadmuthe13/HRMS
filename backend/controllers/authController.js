@@ -16,7 +16,7 @@ export const login = async (req, res) => {
   if (!isMatch)
     return res.status(400).json({ message: "Invalid email or password" });
 
-  const token = generateToken(user._id);
+  const token = generateToken(user._id, user.role);
   res.json({ token, role: user.role, name: user.name });
 };
 
@@ -122,4 +122,16 @@ export const logout = async (req, res) => {
     // ignore
   }
   return res.json({ message: "Logged out" });
+};
+
+// Get profile of the currently logged-in user
+export const getProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(req.user);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch profile info" });
+  }
 };

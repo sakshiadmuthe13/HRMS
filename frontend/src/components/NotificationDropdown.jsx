@@ -1,49 +1,87 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Bell, X, BellOff } from "lucide-react";
+import { Bell, X, BellOff, Wifi, WifiOff } from "lucide-react";
 import { useNotifications } from "../contexts/NotificationContext";
 
+// Helper to read/write dismissed IDs from sessionStorage
+const STORAGE_KEY = "dismissed_notification_ids";
+const getDismissedIds = () => {
+  try {
+    return new Set(JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "[]"));
+  } catch {
+    return new Set();
+  }
+};
+const addDismissedId = (id) => {
+  try {
+    const ids = getDismissedIds();
+    ids.add(id);
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+  } catch {
+    // ignore
+  }
+};
+
 const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 md:bottom-24" }) => {
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isConnected } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [toastNotification, setToastNotification] = useState(null);
   const dropdownRef = useRef(null);
   const buttonRef = useRef(null);
-  const dismissedIdsRef = useRef(new Set());
+  const timerRef = useRef(null);
 
   const recentNotifications = notifications.slice(0, 5);
   const displayNotifications = showAll ? notifications : recentNotifications;
+
+  const dismissToast = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setToastNotification(null);
+  }, []);
 
   // Show toast notification when new notification arrives
   useEffect(() => {
     if (notifications.length > 0) {
       const latestNotification = notifications[0];
-      
+
       // If the latest notification is read, hide the toast
       if (latestNotification.readStatus) {
-        setToastNotification(null);
+        dismissToast();
         return;
       }
 
-      // Only show toast if notification is unread and has not been shown/dismissed yet
-      if (!latestNotification.readStatus && !dismissedIdsRef.current.has(latestNotification._id)) {
+      const dismissedIds = getDismissedIds();
+
+      // Only show toast if unread and not yet shown/dismissed in this session
+      if (!dismissedIds.has(latestNotification._id)) {
+        // Mark as dismissed in sessionStorage immediately so reload doesn't re-show it
+        addDismissedId(latestNotification._id);
+
+        // Clear any existing timer before starting a new one
+        if (timerRef.current) clearTimeout(timerRef.current);
+
         setToastNotification(latestNotification);
-        dismissedIdsRef.current.add(latestNotification._id);
 
-        // Auto-hide toast after 10 seconds
-        const timer = setTimeout(() => {
+        // Auto-hide after 5 seconds
+        timerRef.current = setTimeout(() => {
           setToastNotification(null);
-        }, 10000);
-
-        return () => clearTimeout(timer);
+          timerRef.current = null;
+        }, 5000);
       }
     } else {
-      setToastNotification(null);
+      dismissToast();
     }
-  }, [notifications]);
+
+    // Cleanup timer on unmount
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [notifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -69,14 +107,10 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
 
   // Positioning handled via responsive Tailwind utility classes
 
-  // Toast notification component
+  // Toast notification component (auto-dismisses in 5s, does NOT mark as read)
   const toastComponent = toastNotification ? (
     <div
-      onClick={() => {
-        markAsRead(toastNotification._id);
-        setToastNotification(null);
-      }}
-      className="fixed top-20 right-5 bg-white border-l-4 border-l-blue-500 rounded-lg shadow-2xl animate-slide-in-right cursor-pointer hover:bg-gray-50 transition-colors"
+      className="fixed top-20 right-5 bg-white border-l-4 border-l-blue-500 rounded-lg shadow-2xl animate-slide-in-right overflow-hidden"
       style={{ zIndex: 999999, maxWidth: "350px" }}
     >
       <div className="p-4 flex items-start gap-3">
@@ -89,16 +123,26 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
           <p className="text-xs text-gray-500 mt-2">
             {new Date(toastNotification.timestamp).toLocaleString()}
           </p>
+          <p className="text-[10px] text-gray-400 mt-1 italic">
+            Open notification panel to view &amp; mark as read
+          </p>
         </div>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setToastNotification(null);
-          }}
-          className="text-gray-500 hover:text-gray-500 flex-shrink-0"
+          onClick={dismissToast}
+          className="text-gray-400 hover:text-gray-600 flex-shrink-0 transition-colors"
+          aria-label="Dismiss notification"
         >
           <X size={18} />
         </button>
+      </div>
+      {/* 5-second countdown progress bar */}
+      <div className="h-1 bg-blue-100">
+        <div
+          className="h-full bg-[#1A9DC2]"
+          style={{
+            animation: "toast-progress 5s linear forwards",
+          }}
+        />
       </div>
     </div>
   ) : null;
@@ -127,13 +171,29 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
             </p>
           )}
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="Close notifications"
-        >
-          <X size={18} />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Live connection indicator */}
+          <span
+            title={isConnected ? "Live – notifications arrive instantly" : "Reconnecting…"}
+            className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+              isConnected
+                ? "bg-green-50 text-green-600"
+                : "bg-orange-50 text-orange-500"
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-orange-400"}`}
+            />
+            {isConnected ? "Live" : "Offline"}
+          </span>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-1.5 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close notifications"
+          >
+            <X size={18} />
+          </button>
+        </div>
       </div>
       <div className="max-h-96 overflow-y-auto">
         {displayNotifications.length === 0 ? (
@@ -175,14 +235,27 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
           ))
         )}
       </div>
-      {notifications.length > 5 && (
-        <div className="px-6 py-3 border-t border-gray-50 bg-gray-50/30 flex justify-center">
+      {notifications.length > 0 && (
+        <div className="px-6 py-3 border-t border-gray-50 bg-gray-50/30 flex items-center justify-between gap-2">
           <button
-            onClick={() => setShowAll(!showAll)}
-            className="text-xs font-bold text-primary hover:text-secondary transition-colors py-1.5 px-4 rounded-xl hover:bg-primary/5"
+            onClick={unreadCount > 0 ? markAllAsRead : undefined}
+            disabled={unreadCount === 0}
+            className={`text-xs font-bold transition-colors py-1.5 px-3 rounded-xl whitespace-nowrap ${
+              unreadCount > 0
+                ? "text-gray-400 hover:text-primary hover:bg-primary/5 cursor-pointer"
+                : "text-gray-300 cursor-not-allowed"
+            }`}
           >
-            {showAll ? "Show Less" : `View All (${notifications.length})`}
+            Mark all as read
           </button>
+          {notifications.length > 5 && (
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="text-xs font-bold text-primary hover:text-secondary transition-colors py-1.5 px-4 rounded-xl hover:bg-primary/5"
+            >
+              {showAll ? "Show Less" : `View All (${notifications.length})`}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -204,6 +277,12 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
+            {/* Live dot */}
+            {unreadCount === 0 && (
+              <span
+                className={`absolute -top-1 -right-1 w-2 h-2 rounded-full border border-white ${isConnected ? "bg-green-400" : "bg-orange-400"}`}
+              />
+            )}
           </div>
           Notifications
         </button>
@@ -215,10 +294,17 @@ const NotificationDropdown = ({ showText = true, positionClasses = "md:left-64 m
           aria-label="Notifications"
         >
           <Bell size={22} />
-          {unreadCount > 0 && (
+          {unreadCount > 0 ? (
             <span className="absolute top-2 right-2 bg-secondary text-white text-[9px] rounded-full h-4.5 w-4.5 flex items-center justify-center font-bold">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
+          ) : (
+            /* Live dot when no unread */
+            <span
+              className={`absolute top-2.5 right-2.5 w-2 h-2 rounded-full border border-white ${
+                isConnected ? "bg-green-400 animate-pulse" : "bg-orange-400"
+              }`}
+            />
           )}
         </button>
       )}

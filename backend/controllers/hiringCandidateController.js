@@ -7,7 +7,7 @@ import { sendMail } from "../utils/sendMail.js";
 // @access  Private/HR
 export const addCandidate = async (req, res) => {
   try {
-    const { name, phone, email, source, role, notes } = req.body;
+    const { name, phone, email, source, role, notes, vacancy } = req.body;
     let resumeUrl = req.imageUrl || "#";
 
     const candidate = await HiringCandidate.create({
@@ -16,7 +16,9 @@ export const addCandidate = async (req, res) => {
       email,
       source,
       role,
+      vacancy: vacancy || null,
       resumeUrl,
+      notes: notes || "",
       logs: [{ text: "Candidate Added by HR" }],
     });
 

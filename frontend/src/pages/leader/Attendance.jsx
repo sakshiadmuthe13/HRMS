@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths, addMonths, getDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { toast } from "react-toastify";
-import { ChevronLeft, ChevronRight, CheckCircle, Gift, Award, Heart, LogIn, LogOut, Calendar as CalendarIcon, Clock, ShieldCheck, Cake, Briefcase, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, Gift, Award, Heart, LogIn, LogOut, Calendar as CalendarIcon, Clock, ShieldCheck, Cake, Briefcase, X, Eye, Coffee } from "lucide-react";
 import ProfileAvatar from "../../components/ProfileAvatar";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -47,57 +47,48 @@ const getTodayISTLabel = () => {
   return zoned ? format(zoned, "EEEE, MMMM d, yyyy") : "";
 };
 
-const CelebrationCard = ({ title, items, loading, error, emptyMessage, icon: Icon, accentColor }) => {
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="p-6 rounded-[2rem] bg-white border border-gray-200 shadow-xl shadow-primary/5 flex flex-col h-full group hover:border-primary transition-all"
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`p-2 rounded-xl bg-${accentColor}-50 text-${accentColor}-600`}>
-          <Icon size={20} />
-        </div>
-        <h3 className="text-sm font-black text-primary uppercase tracking-widest">
-          {title}
-        </h3>
+const CelebrationCard = ({ title, items, loading, emptyMessage, icon: Icon, iconColor }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex-1 p-5 rounded-2xl bg-white border border-gray-100 shadow-sm flex flex-col gap-4 hover:shadow-md transition-all"
+  >
+    {/* Card header */}
+    <div className="flex items-center gap-2.5">
+      <Icon size={18} className={iconColor} />
+      <h3 className="text-[11px] font-black text-primary uppercase tracking-[0.18em]">{title}</h3>
+    </div>
+    {/* Card body */}
+    {loading ? (
+      <div className="space-y-2 animate-pulse">
+        <div className="h-4 bg-gray-100 rounded w-3/4" />
+        <div className="h-3 bg-gray-100 rounded w-1/2" />
       </div>
-      
-      <div className="flex-1">
-        {loading ? (
-          <div className="space-y-2 animate-pulse">
-            <div className="h-4 bg-gray-50 rounded w-3/4"></div>
-            <div className="h-3 bg-gray-50 rounded w-1/2"></div>
-          </div>
-        ) : error ? (
-          <p className="text-xs text-red-500 font-medium">{error}</p>
-        ) : items.length === 0 ? (
-          <div className="py-4 text-center border-2 border-dashed border-gray-200 rounded-2xl">
-            <p className="text-[10px] font-black text-secondary/30 uppercase tracking-[0.2em]">{emptyMessage}</p>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {items.map((item, i) => (
-              <motion.li 
-                key={item.id || i} 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <ProfileAvatar user={item} className="w-8 h-8 text-[10px]" />
-                <div className="min-w-0">
-                  <span className="block font-bold text-primary text-xs truncate">{item.name}</span>
-                  <span className="block text-[9px] font-black text-secondary/60 uppercase tracking-tighter truncate">{item.role || "Team Member"}</span>
-                </div>
-              </motion.li>
-            ))}
-          </ul>
-        )}
+    ) : items.length === 0 ? (
+      <div className="py-3 px-4 text-center border-2 border-dashed border-gray-200 rounded-xl">
+        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.18em]">{emptyMessage}</p>
       </div>
-    </motion.div>
-  );
-};
+    ) : (
+      <ul className="space-y-2">
+        {items.map((item, i) => (
+          <motion.li
+            key={item.id || i}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.08 }}
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            <ProfileAvatar user={item} className="w-8 h-8 text-[10px]" />
+            <div className="min-w-0">
+              <span className="block font-bold text-gray-800 text-xs truncate">{item.name}</span>
+              <span className="block text-[9px] font-bold text-gray-400 uppercase tracking-tight truncate">{item.role || "Team Member"}</span>
+            </div>
+          </motion.li>
+        ))}
+      </ul>
+    )}
+  </motion.div>
+);
 
 const LeaderAttendance = () => {
   const [loading, setLoading] = useState(false);
@@ -108,12 +99,15 @@ const LeaderAttendance = () => {
   const [leaveMap, setLeaveMap] = useState({});
   const [canCheckIn, setCanCheckIn] = useState(true);
   const [canCheckOut, setCanCheckOut] = useState(false);
+  const [isOnBreak, setIsOnBreak] = useState(false);
+  const [totalBreakMinutes, setTotalBreakMinutes] = useState(0);
   const [celebrations, setCelebrations] = useState({
     birthdays: [],
     workAnniversaries: [],
     marriageAnniversaries: [],
   });
   const [celebrationsLoading, setCelebrationsLoading] = useState(false);
+  const [breakModal, setBreakModal] = useState({ show: false, date: "", breaks: [], total: 0 });
 
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentYear = new Date().getFullYear();
@@ -127,10 +121,14 @@ const LeaderAttendance = () => {
       const hasOut = !!res?.checkOut;
       setCanCheckIn(!hasIn);
       setCanCheckOut(hasIn && !hasOut);
+      setIsOnBreak(!!res?.is_on_break);
+      setTotalBreakMinutes(res?.total_break_minutes || 0);
     } catch (e) {
       console.error(e);
       setCanCheckIn(true);
       setCanCheckOut(false);
+      setIsOnBreak(false);
+      setTotalBreakMinutes(0);
     }
   }, []);
 
@@ -163,7 +161,7 @@ const LeaderAttendance = () => {
       (leaveRes?.leaves || []).forEach(lv => {
         const cursor = new Date(lv.fromDate);
         const to = new Date(lv.toDate);
-        cursor.setHours(0,0,0,0);
+        cursor.setHours(0, 0, 0, 0);
         while (cursor <= to) {
           const k = toISTDateKey(new Date(cursor));
           if (k) lMap[k] = lv;
@@ -245,6 +243,32 @@ const LeaderAttendance = () => {
     } finally { setLoading(false); }
   };
 
+  const handleBreakAction = async () => {
+    setLoading(true);
+    const action = isOnBreak ? "end" : "start";
+    try {
+      const res = await apiPost(`/leader/attendance/break/${action}`, {});
+      toast.success(isOnBreak ? "Break ended! Welcome back." : "Break started! Enjoy your break.");
+      
+      if (isOnBreak && res?.total_break_minutes > 60) {
+        const exceeded = res.total_break_minutes - 60;
+        setConfirmModal({
+          show: true,
+          title: "Break Time Exceeded",
+          message: `Your break time exceeded by ${exceeded} minutes (Total break: ${res.total_break_minutes} mins). This will affect your salary calculation.`,
+          onConfirm: () => setConfirmModal({ show: false, title: "", message: "", onConfirm: null })
+        });
+      }
+
+      await fetchTodayAttendance();
+      await fetchMonthAttendance();
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCheckAction = async (type) => {
     const warning = checkTimingWarnings(type);
     if (warning.isWarning) {
@@ -270,34 +294,48 @@ const LeaderAttendance = () => {
   return (
     <div className="animate-fadeIn space-y-12 max-w-6xl mx-auto">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-10 animate-slideUp">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
-              <CalendarIcon size={28} />
-            </div>
-            <div>
-              <h2 className="text-5xl font-black text-primary tracking-tighter mb-3 leading-tight">My Attendance Hub</h2>
-              <div className="inline-flex items-center gap-3 text-secondary/80 font-bold text-sm bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-gray-100">
-                <Clock size={18} className="text-primary" />
-                {getTodayISTLabel()}
-              </div>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shrink-0">
+            <CalendarIcon size={28} />
+          </div>
+          <div>
+            <h2 className="text-5xl font-black text-primary tracking-tighter mb-3 leading-tight">My Attendance Hub</h2>
+            <div className="inline-flex items-center gap-3 text-secondary/80 font-bold text-sm bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-gray-100">
+              <Clock size={18} className="text-primary" />
+              {getTodayISTLabel()}
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-6 w-full lg:w-auto">
-            <AnimatePresence mode="wait">
-              {canCheckIn ? (
+        <div className="flex items-center gap-6 w-full lg:w-auto">
+          <AnimatePresence mode="wait">
+            {canCheckIn ? (
+              <motion.button
+                key="in"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                onClick={() => handleCheckAction('checkin')}
+                disabled={loading}
+                className="btn btn-primary flex-1 lg:flex-none py-4 px-12 text-lg shadow-green-500/20 bg-green-500 hover:bg-green-600"
+              >
+                <LogIn size={22} /> Check In
+              </motion.button>
+            ) : canCheckOut ? (
+              <div className="flex gap-3 w-full lg:w-auto">
                 <motion.button
-                  key="in"
+                  key="break"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  onClick={() => handleCheckAction('checkin')}
+                  onClick={handleBreakAction}
                   disabled={loading}
-                  className="btn btn-primary flex-1 lg:flex-none py-4 px-12 text-lg shadow-green-500/20 bg-green-500 hover:bg-green-600"
+                  className={`btn flex-1 lg:flex-none py-4 px-8 text-lg font-black text-white rounded-2xl shadow-lg transition-all ${
+                    isOnBreak ? "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20" : "bg-blue-500 hover:bg-blue-600 shadow-blue-500/20"
+                  }`}
                 >
-                  <LogIn size={22} /> LOG ENTRY
+                  {isOnBreak ? "Resume Work" : "Take Break"}
                 </motion.button>
-              ) : canCheckOut ? (
                 <motion.button
                   key="out"
                   initial={{ opacity: 0, y: 10 }}
@@ -307,46 +345,58 @@ const LeaderAttendance = () => {
                   disabled={loading}
                   className="btn btn-primary flex-1 lg:flex-none py-4 px-12 text-lg shadow-red-500/20 bg-red-500 hover:bg-red-600"
                 >
-                  <LogOut size={22} /> LOG EXIT
+                  <LogOut size={22} /> Check Out
                 </motion.button>
-              ) : (
-                <div className="flex-1 lg:flex-none py-4 px-12 bg-white text-secondary font-black rounded-2xl border border-green-100 flex items-center gap-3 shadow-sm">
-                  <CheckCircle size={22} className="text-green-500" /> SHIFT COMPLETE
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
+              </div>
+            ) : (
+              <div className="flex-1 lg:flex-none py-4 px-12 bg-white text-secondary font-black rounded-2xl border border-green-100 flex items-center gap-3 shadow-sm">
+                <CheckCircle size={22} className="text-green-500" /> SHIFT COMPLETE
+              </div>
+            )}
+          </AnimatePresence>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-8 space-y-8 animate-slideUp" style={{ animationDelay: '0.1s' }}>
-            <div className="card-premium p-10 bg-white">
-              <div className="flex items-center justify-between mb-12">
-                <div className="flex items-center gap-3">
+      <div className="grid grid-cols-1 gap-8 p-4">
+
+        {/* Calendar + Legend */}
+        <div className="lg:col-span-8 space-y-6">
+
+          {/* Calendar Card */}
+          <div className="bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
+            <div className="p-8 md:p-10">
+              {/* Month/Year controls */}
+              <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-2">
                   <select
                     value={calendarDate.getMonth()}
                     onChange={(e) => setCalendarDate(new Date(calendarDate.setMonth(e.target.value)))}
-                    className="bg-gray-50 border border-gray-100 text-primary font-black uppercase tracking-[0.2em] text-[10px] py-3 px-5 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 transition-all appearance-none cursor-pointer"
+                    className="bg-gray-50 border border-gray-200 text-primary font-black uppercase tracking-wider text-[10px] py-2.5 px-4 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
                   >
                     {months.map((m, i) => <option key={m} value={i}>{m}</option>)}
                   </select>
                   <select
                     value={calendarDate.getFullYear()}
                     onChange={(e) => setCalendarDate(new Date(calendarDate.setFullYear(e.target.value)))}
-                    className="bg-gray-50 border border-gray-100 text-primary font-black uppercase tracking-[0.2em] text-[10px] py-3 px-5 rounded-xl outline-none focus:ring-4 focus:ring-primary/5 transition-all appearance-none cursor-pointer"
+                    className="bg-gray-50 border border-gray-200 text-primary font-black uppercase tracking-wider text-[10px] py-2.5 px-4 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none cursor-pointer"
                   >
                     {selectableYears.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setCalendarDate(subMonths(calendarDate, 1))} className="p-3 bg-gray-50 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm"><ChevronLeft size={20} /></button>
-                  <button onClick={() => setCalendarDate(addMonths(calendarDate, 1))} className="p-3 bg-gray-50 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm"><ChevronRight size={20} /></button>
+                <div className="flex gap-2">
+                  <button onClick={() => setCalendarDate(subMonths(calendarDate, 1))} className="p-2.5 bg-gray-50 rounded-xl text-primary hover:bg-primary hover:text-white transition-all border border-gray-200">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button onClick={() => setCalendarDate(addMonths(calendarDate, 1))} className="p-2.5 bg-gray-50 rounded-xl text-primary hover:bg-primary hover:text-white transition-all border border-gray-200">
+                    <ChevronRight size={18} />
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-7 gap-4">
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-5">
                 {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(d => (
-                  <div key={d} className="text-center font-black text-secondary/30 text-[10px] tracking-[0.3em] mb-6">{d}</div>
+                  <div key={d} className="text-center font-black text-gray-400 text-[9px] tracking-widest pb-3">{d}</div>
                 ))}
                 {days.map((cell, i) => {
                   if (!cell) return <div key={`empty-${i}`} className="aspect-square" />;
@@ -356,89 +406,198 @@ const LeaderAttendance = () => {
                   const isToday = cell === getTodayISTKey();
                   const isPresent = !!rec?.checkIn && !!rec?.checkOut;
 
+                  let cellClass = "bg-gray-50 border-transparent text-gray-700";
+                  if (isHoliday) cellClass = "bg-red-50 border-red-100 text-red-500";
+                  else if (isPresent) cellClass = "bg-green-50 border-green-100 text-green-600";
+                  else if (isLeave) cellClass = "bg-cyan-50 border-cyan-100 text-[#12637E]";
+                  if (isToday) cellClass = "bg-primary/8 border-primary shadow-md shadow-primary/10 text-primary";
+
                   return (
                     <motion.div
                       key={cell}
-                      whileHover={{ y: -3, scale: 1.05 }}
-                      className={`aspect-square p-3 rounded-[1.25rem] border-2 transition-all flex flex-col items-center justify-center relative overflow-hidden group cursor-default ${
-                        isToday ? "border-primary bg-primary/5 shadow-xl shadow-primary/10" : "border-transparent bg-gray-50/50"
-                      } ${
-                        isHoliday ? "bg-red-50 text-red-500 border-red-100" :
-                        isPresent ? "bg-green-50/70 text-green-600 border-green-100" :
-                        isLeave ? "bg-cyan-50 text-[#12637E] border-cyan-100" : ""
-                      }`}
+                      whileHover={{ y: -2, scale: 1.04 }}
+                      className={`aspect-square p-1.5 rounded-2xl border-2 transition-all flex flex-col items-center justify-center relative cursor-default ${cellClass}`}
                     >
-                      <span className={`text-base font-black mb-1 ${isToday ? "text-primary" : "text-gray-700"}`}>
-                        {Number(cell.split("-")[2])}
-                      </span>
+                      <span className="text-sm font-black leading-none mb-0.5">{Number(cell.split("-")[2])}</span>
                       {rec?.checkIn && !isHoliday && !isLeave && (
-                        <div className="text-[8px] font-black uppercase tracking-tighter opacity-80 bg-white/50 px-2 py-0.5 rounded-full">
-                          {format(new Date(rec.checkIn), 'HH:mm')} - {rec.checkOut ? format(new Date(rec.checkOut), 'HH:mm') : '...'}
+                        <div className="flex flex-col items-center gap-0.5 mt-1">
+                          <div className="text-[12px] font-black uppercase tracking-tight opacity-80 bg-white/60 px-1 py-0.5 rounded-full leading-none">
+                            {format(new Date(rec.checkIn), "h:mm a").toLowerCase()} - {rec.checkOut ? format(new Date(rec.checkOut), "h:mm a").toLowerCase() : "…"}
+                          </div>
+                          {rec.breaks && rec.breaks.length > 0 && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setBreakModal({ show: true, date: cell, breaks: rec.breaks, total: rec.total_break_minutes || 0 }); }}
+                              className="mt-0.5 flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-amber-100 hover:bg-amber-200 text-amber-600 transition-all"
+                              title="View break history"
+                            >
+                              <span className="text-[10px] font-black">Break:</span>
+                              <Eye size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
-                      {isHoliday && <div className="text-[8px] font-black uppercase tracking-tighter truncate w-full text-center px-1">{isHoliday.description || "Holiday"}</div>}
-                      {isLeave && <div className="text-[8px] font-black uppercase tracking-tighter">Leave</div>}
-                      
-                      {isToday && <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-primary rounded-full"></div>}
+                      {isHoliday && <div className="text-[7px] font-black uppercase tracking-tight truncate w-full text-center px-0.5 leading-none">Holiday</div>}
+                      {isLeave && <div className="text-[7px] font-black uppercase tracking-tight leading-none">Leave</div>}
+                      {isToday && <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full" />}
                     </motion.div>
                   );
                 })}
               </div>
             </div>
+          </div>
 
-            <div className="card-premium p-8 bg-white/50 border-dashed border-2 flex flex-wrap gap-10 justify-center">
-              {[
-                { label: "Holiday", color: "bg-red-500 shadow-red-500/30" },
-                { label: "Present", color: "bg-green-500 shadow-green-500/30" },
-                { label: "Leave", color: "bg-secondary shadow-secondary/30" },
-                { label: "Today", color: "bg-primary shadow-primary/30" },
-              ].map(k => (
-                <div key={k.label} className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${k.color} shadow-lg`}></div>
-                  <span className="text-[11px] font-black text-secondary uppercase tracking-[0.2em]">{k.label}</span>
-                </div>
-              ))}
+          {/* Legend */}
+          <div className="bg-white/20 rounded-2xl border-2 border-dashed border-gray-200 px-8 py-5 flex flex-wrap gap-8 justify-center">
+            {[
+              { label: "Holiday", color: "bg-red-500" },
+              { label: "Present", color: "bg-green-500" },
+              { label: "Leave", color: "bg-secondary" },
+              { label: "Today", color: "bg-primary" },
+            ].map(k => (
+              <div key={k.label} className="flex items-center gap-2.5">
+                <div className={`w-2.5 h-2.5 rounded-full ${k.color} shadow-sm`} />
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{k.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        {/* <div className="lg:col-span-4 space-y-6">
+
+          <div className="card-premium p-10 bg-white text-center flex flex-col justify-center items-center group relative overflow-hidden h-full min-h-[400px]">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700" />
+
+            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-8 shadow-inner">
+              <CalendarIcon size={40} className="text-primary" />
+            </div>
+
+            <h3 className="text-2xl font-black text-primary mb-4 tracking-tight">Attendance Protocol</h3>
+            <p className="text-base text-secondary/80 font-medium leading-relaxed px-4">
+              Precision in attendance tracking ensures smooth payroll and resource management.
+              Please record your entries and exits promptly.
+            </p>
+
+            <div className="mt-10 p-5 bg-gray-50 rounded-2xl w-full border border-gray-100">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-secondary">Completion Status</span>
+                <span className="text-xs font-black text-primary">85%</span>
+              </div>
+              <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                <div className="bg-primary h-full w-[85%] rounded-full shadow-sm"></div>
+              </div>
             </div>
           </div>
 
-          <div className="lg:col-span-4 space-y-8 animate-slideUp" style={{ animationDelay: '0.2s' }}>
-             <div className="card-premium p-10 bg-white text-center flex flex-col justify-center items-center group relative overflow-hidden h-full min-h-[400px]">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
-               
-               <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-8 shadow-inner">
-                 <CalendarIcon size={40} className="text-primary" />
-               </div>
-               
-               <h3 className="text-2xl font-black text-primary mb-4 tracking-tight">Attendance Protocol</h3>
-               <p className="text-base text-secondary/80 font-medium leading-relaxed px-4">
-                 Precision in attendance tracking ensures smooth payroll and resource management. 
-                 Please record your entries and exits promptly.
-               </p>
-               
-               <div className="mt-10 p-5 bg-gray-50 rounded-2xl w-full border border-gray-100">
-                 <div className="flex justify-between items-center mb-2">
-                   <span className="text-xs font-bold text-secondary">Completion Status</span>
-                   <span className="text-xs font-black text-primary">85%</span>
-                 </div>
-                 <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
-                   <div className="bg-primary h-full w-[85%] rounded-full shadow-sm"></div>
-                 </div>
-               </div>
-             </div>
-          </div>
-        </div>
+        </div> */}
+      </div>
 
-        <div>
-          <div className="flex items-center gap-4 mb-8">
-            <div className="h-1 w-12 bg-primary rounded-full" />
-            <h2 className="text-2xl font-black text-primary tracking-tight uppercase">Social Pulse</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <CelebrationCard title="Birthdays" items={celebrations.birthdays} loading={celebrationsLoading} emptyMessage="No birthday celebrations today" icon={Cake} accentColor="pink" />
-            <CelebrationCard title="Work Tenure" items={celebrations.workAnniversaries} loading={celebrationsLoading} emptyMessage="No career milestones today" icon={Briefcase} accentColor="cyan" />
-            <CelebrationCard title="Marital Milestones" items={celebrations.marriageAnniversaries} loading={celebrationsLoading} emptyMessage="No social events today" icon={Heart} accentColor="red" />
-          </div>
+      {/* ── Social Pulse ── */}
+      <div className="space-y-4">
+        {/* Section heading */}
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-0.5 bg-primary rounded-full" />
+          <h3 className="text-sm font-black text-primary uppercase tracking-[0.25em]">Social Pulse</h3>
         </div>
+        {/* Three-column cards row */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <CelebrationCard
+            title="Birthdays"
+            items={celebrations.birthdays}
+            loading={celebrationsLoading}
+            emptyMessage="No Birthday Celebrations Today"
+            icon={Gift}
+            iconColor="text-primary"
+          />
+          <CelebrationCard
+            title="Work Tenure"
+            items={celebrations.workAnniversaries}
+            loading={celebrationsLoading}
+            emptyMessage="No Career Milestones Today"
+            icon={Award}
+            iconColor="text-primary"
+          />
+          <CelebrationCard
+            title="Marital Milestones"
+            items={celebrations.marriageAnniversaries}
+            loading={celebrationsLoading}
+            emptyMessage="No Social Events Today"
+            icon={Heart}
+            iconColor="text-rose-500"
+          />
+        </div>
+      </div>
+
+      {/* ── Break History Modal ── */}
+      <AnimatePresence>
+        {breakModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
+              <div className="flex items-center justify-between px-7 pt-8 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center">
+                    <Coffee size={20} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-gray-800 tracking-tight">Break History</h3>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{breakModal.date}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setBreakModal({ show: false, date: "", breaks: [], total: 0 })}
+                  className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="mx-7 mb-4 px-4 py-2.5 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-700">Total Break Time</span>
+                <span className="text-sm font-black text-amber-600">
+                  {Math.floor(breakModal.total / 60) > 0 ? `${Math.floor(breakModal.total / 60)}h ` : ""}{breakModal.total % 60}m
+                </span>
+              </div>
+              <div className="px-7 pb-7 space-y-3 max-h-64 overflow-y-auto">
+                {breakModal.breaks.map((b, idx) => {
+                  const startTime = b.start ? format(new Date(b.start), "h:mm a").toLowerCase() : "–";
+                  const endTime = b.end ? format(new Date(b.end), "h:mm a").toLowerCase() : "Ongoing";
+                  const diffMin = b.start && b.end ? Math.round((new Date(b.end) - new Date(b.start)) / 60000) : null;
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.06 }}
+                      className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-amber-200 hover:bg-amber-50/50 transition-all"
+                    >
+                      <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                        <span className="text-[11px] font-black text-amber-700">#{idx + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-black text-gray-700">{startTime}</span>
+                          <span className="text-gray-300 font-bold">→</span>
+                          <span className={`text-xs font-black ${b.end ? "text-gray-700" : "text-amber-500"}`}>{endTime}</span>
+                        </div>
+                        {diffMin !== null && (
+                          <p className="text-[10px] font-bold text-gray-400 mt-0.5">
+                            Duration: {diffMin >= 60 ? `${Math.floor(diffMin / 60)}h ${diffMin % 60}m` : `${diffMin} min`}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── Confirmation Modal ── */}
       <AnimatePresence>
@@ -458,17 +617,19 @@ const LeaderAttendance = () => {
                 {confirmModal.message}
               </p>
               <div className="flex gap-4">
+                {confirmModal.title !== "Break Time Exceeded" && (
+                  <button
+                    onClick={() => setConfirmModal({ show: false, title: "", message: "", onConfirm: null })}
+                    className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-slate-700 font-bold rounded-2xl active:scale-95 transition-all text-xs uppercase tracking-wider"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
-                  onClick={() => setConfirmModal({ show: false, title: "", message: "", onConfirm: null })}
-                  className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-slate-700 font-bold rounded-2xl active:scale-95 transition-all text-xs uppercase tracking-wider"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmModal.onConfirm}
+                  onClick={confirmModal.onConfirm || (() => setConfirmModal({ show: false, title: "", message: "", onConfirm: null }))}
                   className="flex-1 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl active:scale-95 transition-all text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20"
                 >
-                  {confirmModal.title.includes("Check-In") ? "Continue Check-In" : "Check Out Anyway"}
+                  {confirmModal.title === "Break Time Exceeded" ? "OK" : (confirmModal.title.includes("Check-In") ? "Continue Check-In" : "Check Out Anyway")}
                 </button>
               </div>
             </motion.div>

@@ -29,6 +29,8 @@ const taskSchema = new mongoose.Schema({
   ],
   completionDescription: { type: String },
   deployedLink: { type: String },
+  attachmentUrl: { type: String },
+  attachmentName: { type: String },
 });
 
 const Task = mongoose.model("Task", taskSchema);

@@ -69,13 +69,16 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
-          <div>
+        <div className="max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center sm:text-left">
+          <div className="flex-1">
             © {new Date().getFullYear()} QiroTech Innovation Pvt. Ltd. — All rights reserved.
           </div>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-slate-650 transition">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-650 transition">Terms of Service</a>
+          <div className="flex-1 text-center font-medium">
+            Developed by QiroTech Innovation Private Limited
+          </div>
+          <div className="flex flex-1 justify-center sm:justify-end gap-6">
+            <Link to="/privacy" className="hover:text-slate-650 transition">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-slate-650 transition">Terms of Service</Link>
           </div>
         </div>
       </footer>
