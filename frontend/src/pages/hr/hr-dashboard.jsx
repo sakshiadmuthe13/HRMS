@@ -13,6 +13,7 @@ import HRGenerateLetterPage from "./HRGenerateLetterPage";
 import HRSalaryPage from "./HRSalaryPage";
 import HRHiringPage from "./HRHiringPage";
 import ProfileVerificationPage from "../admin/ProfileVerificationPage";
+import AdminWorkLogsPage from "../admin/AdminWorkLogsPage";
 import HRContactEmployeePage from "./HRContactEmployeePage";
 import DashboardSkeleton from "../../components/DashboardSkeleton";
 
@@ -40,7 +41,7 @@ const fetchJson = async (path, opts = {}) => {
   return t ? JSON.parse(t) : null;
 };
 
-const TABS = ["Dashboard", "Profile", "My Attendance", "My Leaves", "Manage Attendance", "Manage Leaves", "Salary", "Generate Letter", "Hiring", "Profile Verification", "Contact Employee"];
+const TABS = ["Dashboard", "Profile", "My Attendance", "My Leaves", "Manage Attendance", "Manage Leaves", "Salary", "Work Activity Logs", "Generate Letter", "Hiring", "Profile Verification", "Contact Employee"];
 
 const HRDashboard = () => {
   const [active, setActive] = useState("Dashboard");
@@ -186,6 +187,7 @@ const HRDashboard = () => {
           {active === "My Leaves" && <HRLeavePage />}
           {active === "Manage Leaves" && <HRManageLeavesPage />}
           {active === "Salary" && <HRSalaryPage />}
+          {active === "Work Activity Logs" && <AdminWorkLogsPage />}
           {active === "Generate Letter" && <HRGenerateLetterPage />}
           {active === "Hiring" && <HRHiringPage />}
           {active === "Profile Verification" && <ProfileVerificationPage />}

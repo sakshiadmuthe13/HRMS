@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, TrendingUp, Calculator, History, ShieldCheck, Info, FileText, Download, Printer, X } from "lucide-react";
+import { Banknote, TrendingUp, Calculator, History, ShieldCheck, Info, FileText, Download, Printer, X, Edit3 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -39,8 +39,8 @@ const apiPost = (p, body) =>
 
 // Utiliy function to calculate payslip details
 const calculatePayslipData = (totalSalary, presentDays, absentDays, month, year, pfEnabled, bonusAmount = 0) => {
-  const ctc = Number(totalSalary) || 0;
-  const monthlySalary = ctc / 12;
+  const annualCtc = Number(totalSalary) || 0;
+  const monthlySalary = annualCtc / 12;
   presentDays = Number(presentDays) || 0;
   absentDays = Number(absentDays) || 0;
   bonusAmount = Number(bonusAmount) || 0;
@@ -51,10 +51,9 @@ const calculatePayslipData = (totalSalary, presentDays, absentDays, month, year,
   const bonus = Math.round(monthlySalary * 0.04);
   const specialAllowance = monthlySalary - (basic + hra + lta + bonus);
 
-  let pt = 0;
-  if (monthlySalary >= 7500 && monthlySalary <= 10000) pt = 175;
-  else if (monthlySalary > 10000) pt = 200;
-
+  // TDS is 1% of monthly salary (e.g. 150 for 15000 salary)
+  const tds = Math.round(monthlySalary * 0.01);
+  const pt = 0;
   const pf = pfEnabled ? Math.round(basic * 0.12) : 0;
 
   // LOP Calculation
@@ -66,13 +65,13 @@ const calculatePayslipData = (totalSalary, presentDays, absentDays, month, year,
   const lopDeduction = Math.round(perDaySalary * absentDays);
 
   const totalEarnings = monthlySalary + bonusAmount;
-  const totalDeductions = pt + pf + lopDeduction;
-  const netSalary = totalEarnings - totalDeductions;
+  const totalDeductions = tds + pt + pf + lopDeduction;
+  const netSalary = Math.max(0, totalEarnings - totalDeductions);
 
   return {
     basic, hra, lta, bonus, specialAllowance,
     bonusAmount,
-    pt, pf, lopDays: absentDays, lopDeduction,
+    tds, pt, pf, lopDays: absentDays, lopDeduction,
     totalEarnings, totalDeductions, netSalary,
     daysInMonth, effectiveWorkDays: daysInMonth - absentDays
   };
@@ -114,28 +113,73 @@ const convertNumberToWords = (amount) => {
   return words.trim();
 };
 
-const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
+const PayslipModal = ({ employee, month, year, data, onClose, logoBase64, paymentDate }) => {
   const printRef = useRef();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const formattedPayDate = paymentDate
+    ? new Date(paymentDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    : new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+  // Editable state fields initialized from props
+  const [editEmpName, setEditEmpName] = useState(employee?.name || "");
+  const [editEmpId, setEditEmpId] = useState(employee?.employeeId || (employee?._id ? `QT-${employee._id.toString().slice(-6).toUpperCase()}` : ""));
+  const [editDesignation, setEditDesignation] = useState(employee?.position || "");
+  const [editDepartment, setEditDepartment] = useState(employee?.department || "");
+  const [editLocation, setEditLocation] = useState(employee?.location || "Pune");
+  const [editBankName, setEditBankName] = useState(employee?.bankName || employee?.documents?.bankName || "-");
+  const [editBankAccount, setEditBankAccount] = useState(employee?.bankAccount || employee?.documents?.bankAccountNumber || "-");
+  const [editPanNumber, setEditPanNumber] = useState(employee?.panNumber || employee?.documents?.panNumber || "-");
+  const [editPaymentDate, setEditPaymentDate] = useState(formattedPayDate);
+  const [editEffectiveDays, setEditEffectiveDays] = useState(data?.effectiveWorkDays ?? 30);
+  const [editDaysInMonth, setEditDaysInMonth] = useState(data?.daysInMonth ?? 30);
+  const [editLopDays, setEditLopDays] = useState(data?.lopDays ?? 0);
+
+  const [editBasic, setEditBasic] = useState(data?.basic || 0);
+  const [editHra, setEditHra] = useState(data?.hra || 0);
+  const [editSpecialAllowance, setEditSpecialAllowance] = useState(data?.specialAllowance || 0);
+  const [editLta, setEditLta] = useState(data?.lta || 0);
+  const [editBonus, setEditBonus] = useState(data?.bonus || 0);
+  const [editBonusAmount, setEditBonusAmount] = useState(data?.bonusAmount || 0);
+  const [editTds, setEditTds] = useState(data?.tds || Math.round((data?.totalEarnings || 0) * 0.01) || 150);
+  const [editPf, setEditPf] = useState(data?.pf || 0);
+  const [editPt, setEditPt] = useState(data?.pt || 0);
+  const [editLopDeduction, setEditLopDeduction] = useState(data?.lopDeduction || 0);
+
+  // Live recalculated totals
+  const calcTotalEarnings = Number(editBasic) + Number(editHra) + Number(editSpecialAllowance) + Number(editLta) + Number(editBonus) + Number(editBonusAmount);
+  const calcTotalDeductions = Number(editTds) + Number(editPf) + Number(editPt) + Number(editLopDeduction);
+  const calcNetSalary = Math.max(0, calcTotalEarnings - calcTotalDeductions);
+
   const displayMonth = (month || "").charAt(0).toUpperCase() + (month || "").slice(1);
-  const printDate = new Date().toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
   const handleDownloadPDF = () => {
     const element = printRef.current;
     if (!element) return;
+
+    // Clone element to sanitize inputs for print
+    const clone = element.cloneNode(true);
+    const inputs = clone.querySelectorAll("input");
+    inputs.forEach((input) => {
+      const span = document.createElement("span");
+      span.textContent = input.value;
+      span.style.fontFamily = "'Times New Roman', Times, serif";
+      span.style.fontSize = "12px";
+      if (input.dataset.align === "right") {
+        span.style.display = "block";
+        span.style.textAlign = "right";
+      }
+      if (input.style.fontWeight === "bold") span.style.fontWeight = "bold";
+      input.parentNode.replaceChild(span, input);
+    });
 
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Payslip_${employee?.name?.replace(/\s+/g, '_') || 'Employee'}_${month}_${year}</title>
+          <title>Payslip_${(editEmpName || 'Employee').replace(/\s+/g, '_')}_${month}_${year}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             @page { size: A4; margin: 0; }
@@ -152,7 +196,7 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
           </style>
         </head>
         <body>
-          ${element.outerHTML}
+          ${clone.outerHTML}
         </body>
       </html>
     `);
@@ -165,7 +209,6 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
 
   const handlePrint = handleDownloadPDF;
 
-
   if (!data || !employee) return null;
 
   return (
@@ -177,11 +220,27 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
         className="bg-white w-full max-w-6xl rounded-[28px] shadow-2xl overflow-hidden flex flex-col max-h-[94vh]"
       >
         <div className="flex justify-between items-center p-5 sm:p-6 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-xl sm:text-2xl font-black text-primary flex items-center gap-2">
-            <FileText size={24} className="text-blue-500" />
-            Payslip Preview
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl sm:text-2xl font-black text-primary flex items-center gap-2">
+              <FileText size={24} className="text-blue-500" />
+              Payslip Preview
+            </h2>
+            {isEditing && (
+              <span className="px-3 py-1 bg-amber-100 text-amber-800 border border-amber-300 rounded-full text-xs font-black uppercase tracking-wider animate-pulse">
+                ✏️ Edit Mode Active
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 font-bold rounded-xl transition-all shadow-sm ${isEditing
+                  ? "bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/20"
+                  : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+            >
+              <Edit3 size={18} /> {isEditing ? "Done Editing" : "Edit Payslip"}
+            </button>
             <button
               onClick={handlePrint}
               disabled={isGenerating}
@@ -222,67 +281,123 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
           >
             <div style={{ position: 'relative', backgroundColor: 'white', color: 'black' }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{ width: '128px', flexShrink: 0 }}>
+                <div style={{ width: '140px', flexShrink: 0 }}>
                   {logoBase64 ? (
-                    <img src={logoBase64} alt="Company Logo" style={{ height: '40px', objectFit: 'contain', objectPosition: 'left' }} />
+                    <img src={logoBase64} alt="Company Logo" style={{ height: '42px', objectFit: 'contain', objectPosition: 'left' }} />
                   ) : (
-                    <div style={{ height: '40px', display: 'flex', alignItems: 'center', fontSize: '18px', fontWeight: 'bold' }}>QIRO TECH</div>
+                    <img src="/qiro-logo.png" alt="Company Logo" style={{ height: '42px', objectFit: 'contain', objectPosition: 'left' }} onError={(e) => { e.target.style.display = 'none'; }} />
                   )}
                 </div>
                 <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '18px' }}>Qiro Tech Innovation Pvt. Ltd.</div>
-                  <div style={{ fontSize: '10px' }}>Unit 602, Floor 6th, The Business, AdvantEDGE, Hinjewadi Phase 1, Pune - 411057</div>
+                  <div style={{ fontWeight: 'bold', fontSize: '19px', color: '#000' }}>Qiro Tech Innovation Pvt. Ltd.</div>
+                  <div style={{ fontSize: '10px', color: '#333' }}>Unit 602, Floor 6th, The Business, AdvantEDGE, Hinjewadi Phase 1, Pune - 411057</div>
                 </div>
-                <div style={{ width: '128px' }}></div>
+                <div style={{ width: '140px' }}></div>
               </div>
 
-              <div style={{ textAlign: 'center', fontWeight: 'bold', padding: '0px 0px', marginBottom: '8px', marginTop: '-6px' }}>
+              <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '13px', padding: '2px 0px', marginBottom: '10px' }}>
                 Payslip for the month of {displayMonth || "-"} {year || "-"}
               </div>
 
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', marginBottom: '8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black', marginBottom: '10px' }}>
                 <tbody>
                   <tr>
-                    <td style={{ width: '22%', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Name:</td>
-                    <td style={{ width: '31%', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.name || "-"}</td>
-                    <td style={{ width: '25%', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PAN Number:</td>
-                    <td style={{ width: '25%', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.panNumber || "-"}</td>
+                    <td style={{ width: '20%', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Name:</td>
+                    <td style={{ width: '30%', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editEmpName} onChange={(e) => setEditEmpName(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editEmpName || "-")}
+                    </td>
+                    <td style={{ width: '25%', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PAN Number:</td>
+                    <td style={{ width: '25%', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editPanNumber} onChange={(e) => setEditPanNumber(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editPanNumber || "-")}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Employee No:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.employeeId || employee._id || "-"}</td>
-                    <td style={{ whiteSpace: 'nowrap', padding: '2px 4px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Emp Effective Workdays For Display:</td>
-                    <td style={{ padding: '2px 4px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.effectiveWorkDays}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Employee ID:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editEmpId} onChange={(e) => setEditEmpId(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editEmpId || "-")}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Emp Effective Workdays:</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" value={editEffectiveDays} onChange={(e) => setEditEffectiveDays(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : editEffectiveDays}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '2px 4px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Designation:</td>
-                    <td style={{ padding: '2px 4px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.position || "-"}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>DAYS IN MONTH:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.daysInMonth}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Designation:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editDesignation} onChange={(e) => setEditDesignation(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editDesignation || "-")}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>DAYS IN MONTH:</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" value={editDaysInMonth} onChange={(e) => setEditDaysInMonth(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : editDaysInMonth}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Department:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.department || "-"}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PF No:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.pfNumber || "-"}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Department:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editDepartment || "-")}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PF No:</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>-</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Location:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.location || "Pune"}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PF UAN:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.uanNumber || "-"}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Location:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editLocation} onChange={(e) => setEditLocation(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editLocation || "Pune")}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>PF UAN:</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>-</td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Employee Bank:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.bankName || "-"}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>LOP:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.lopDays}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Employee Bank:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editBankName} onChange={(e) => setEditBankName(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editBankName || "-")}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>LOP:</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" value={editLopDays} onChange={(e) => setEditLopDays(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editLopDays || 0)}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Bank Account No:</td>
-                    <td style={{ padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{employee.bankAccount || "-"}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Bank Account No:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editBankAccount} onChange={(e) => setEditBankAccount(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editBankAccount || "-")}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontWeight: 'bold', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Gross Salary:</td>
+                    <td style={{ padding: '4px 6px', fontWeight: 'bold', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {calcTotalEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Pay Date:</td>
+                    <td style={{ padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="text" value={editPaymentDate} onChange={(e) => setEditPaymentDate(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none font-sans text-xs" />
+                      ) : (editPaymentDate || "-")}
+                    </td>
+                    <td style={{ padding: '4px 6px' }}></td>
+                    <td style={{ padding: '4px 6px' }}></td>
                   </tr>
                 </tbody>
               </table>
@@ -290,67 +405,107 @@ const PayslipModal = ({ employee, month, year, data, onClose, logoBase64 }) => {
               <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid black' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '35%', textAlign: 'left', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Earnings</th>
-                    <th style={{ width: '15%', textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderRight: '1px solid black', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Rs.</th>
-                    <th style={{ width: '35%', textAlign: 'left', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Deductions</th>
-                    <th style={{ width: '15%', textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderBottom: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Rs.</th>
+                    <th style={{ width: '35%', textAlign: 'left', fontWeight: 'bold', padding: '5px 6px', borderBottom: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Earnings</th>
+                    <th style={{ width: '15%', textAlign: 'right', fontWeight: 'bold', padding: '5px 6px', borderRight: '1px solid black', borderBottom: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Rs.</th>
+                    <th style={{ width: '35%', textAlign: 'left', fontWeight: 'bold', padding: '5px 6px', borderBottom: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Deductions</th>
+                    <th style={{ width: '15%', textAlign: 'right', fontWeight: 'bold', padding: '5px 6px', borderBottom: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Rs.</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Basic Pay</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.basic.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Provident Fund</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.pf ? data.pf.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Basic Salary</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editBasic} onChange={(e) => setEditBasic(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : Number(editBasic).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>TDS / Income Tax</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editTds} onChange={(e) => setEditTds(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : (Number(editTds) > 0 ? Number(editTds).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-")}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>House Rent Allowance</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.hra.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Income Tax</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>-</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>House Rent Allowance</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editHra} onChange={(e) => setEditHra(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : Number(editHra).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Provident Fund</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editPf} onChange={(e) => setEditPf(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : (Number(editPf) > 0 ? Number(editPf).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-")}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Special Allowance</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.specialAllowance.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Professional Tax</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.pt ? data.pt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Special Allowance</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editSpecialAllowance} onChange={(e) => setEditSpecialAllowance(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : Number(editSpecialAllowance).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Professional Tax</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editPt} onChange={(e) => setEditPt(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : (Number(editPt) > 0 ? Number(editPt).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-")}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Leave Travel Allowance</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.lta.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Lop / Absence Deduction</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.lopDeduction ? data.lopDeduction.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Leave Travel Allowance</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editLta} onChange={(e) => setEditLta(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : Number(editLta).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Lop / Absence Deduction</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editLopDeduction} onChange={(e) => setEditLopDeduction(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : (Number(editLopDeduction) > 0 ? Number(editLopDeduction).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-")}
+                    </td>
                   </tr>
                   <tr>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Statutory Bonus</td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.bonus.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
-                    <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                    <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Statutory Bonus</td>
+                    <td style={{ textAlign: 'right', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                      {isEditing ? (
+                        <input type="number" data-align="right" value={editBonus} onChange={(e) => setEditBonus(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                      ) : Number(editBonus).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td style={{ padding: '4px 6px' }}></td>
+                    <td style={{ padding: '4px 6px' }}></td>
                   </tr>
-                  {Number(data.bonusAmount) > 0 && (
+                  {Number(editBonusAmount) > 0 && (
                     <tr>
-                      <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Bonus Allocation</td>
-                      <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', borderRight: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{Number(data.bonusAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td style={{ padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
-                      <td style={{ textAlign: 'right', padding: '4px 6px', border: 'none', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}></td>
+                      <td style={{ padding: '4px 6px', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Bonus Allocation</td>
+                      <td style={{ textAlign: 'right', padding: '4px 6px', borderRight: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>
+                        {isEditing ? (
+                          <input type="number" data-align="right" value={editBonusAmount} onChange={(e) => setEditBonusAmount(e.target.value)} className="w-full border border-blue-400 bg-blue-50 px-1 rounded outline-none text-right font-sans text-xs" />
+                        ) : Number(editBonusAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ padding: '4px 6px' }}></td>
+                      <td style={{ padding: '4px 6px' }}></td>
                     </tr>
                   )}
                   <tr>
-                    <td style={{ fontWeight: 'bold', padding: '4px 6px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Total Earnings:</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderRight: '1px solid black', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.totalEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td style={{ fontWeight: 'bold', padding: '4px 6px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Total Deductions:</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '4px 6px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.totalDeductions ? data.totalDeductions.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
+                    <td style={{ fontWeight: 'bold', padding: '5px 6px', borderTop: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Total Earnings:</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '5px 6px', borderRight: '1px solid black', borderTop: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{calcTotalEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style={{ fontWeight: 'bold', padding: '5px 6px', borderTop: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Total Deductions:</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '5px 6px', borderTop: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{calcTotalDeductions ? calcTotalDeductions.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "-"}</td>
                   </tr>
                   <tr>
-                    <td colSpan={3} style={{ fontWeight: 'bold', padding: '3px 4px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Net Salary: {convertNumberToWords(data.netSalary)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '3px 4px', border: 'none', borderTop: '1px solid black', textDecoration: 'none', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{data.netSalary.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td colSpan={3} style={{ fontWeight: 'bold', padding: '5px 6px', borderTop: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>Net Salary: {convertNumberToWords(calcNetSalary)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '5px 6px', borderTop: '1px solid black', fontFamily: "'Times New Roman', Times, serif", fontSize: '12px' }}>{calcNetSalary.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>
 
-            </div>
-            <div style={{ position: 'absolute', bottom: '40px', left: '48px', fontSize: '11px', textAlign: 'left' }}>
-              Print Date: {printDate}
+              <div style={{ borderTop: '1px solid #ccc', marginTop: '40px', paddingTop: '8px', textAlign: 'center', fontSize: '10px', color: '#555' }}>
+                This is a computer-generated payslip and does not require a signature.
+              </div>
             </div>
           </div>
         </div>
@@ -371,6 +526,9 @@ const HRSalaryPage = () => {
   const [isCrediting, setIsCrediting] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
+  const [salaryDate, setSalaryDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customAbsentDays, setCustomAbsentDays] = useState("");
+  const [customPresentDays, setCustomPresentDays] = useState("");
   const [salaryDetails, setSalaryDetails] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [logoBase64, setLogoBase64] = useState(null);
@@ -378,19 +536,18 @@ const HRSalaryPage = () => {
   const [previewData, setPreviewData] = useState(null);
   const [creditSummary, setCreditSummary] = useState(null);
 
+  const activeAbsentDays = customAbsentDays !== "" ? Number(customAbsentDays) : (salaryDetails?.absentDays || 0);
+  const activePresentDays = customPresentDays !== "" ? Number(customPresentDays) : (salaryDetails?.presentDays || 0);
+
   const buildCreditSummary = () => {
     if (!selected || !selectedMonth || !selectedYear || !salaryDetails) return null;
 
     const bonusAmount = Number(bonus || 0);
 
-    // Derive the full payslip (including statutory bonus and deductions)
-    // then compute base payout as (net salary - bonus allocation) so the
-    // popup shows the actual amount credited from the company's payroll
-    // excluding the bonus allocation.
     const payslip = calculatePayslipData(
       selected.salary,
-      salaryDetails.presentDays,
-      salaryDetails.absentDays,
+      activePresentDays,
+      activeAbsentDays,
       selectedMonth,
       selectedYear,
       selected.pfEnabled,
@@ -403,11 +560,12 @@ const HRSalaryPage = () => {
       employee: selected,
       month: selectedMonth,
       year: selectedYear,
+      paymentDate: salaryDate,
       basePayout,
       bonus: bonusAmount,
       total: basePayout + bonusAmount,
-      presentDays: Number(salaryDetails.presentDays) || 0,
-      absentDays: Number(salaryDetails.absentDays) || 0,
+      presentDays: activePresentDays,
+      absentDays: activeAbsentDays,
       dailyRate: Number(salaryDetails.dailyRate) || 0,
     };
   };
@@ -422,6 +580,8 @@ const HRSalaryPage = () => {
         year: yr,
       });
       setSalaryDetails(details);
+      setCustomAbsentDays(details.absentDays !== undefined ? String(details.absentDays) : "");
+      setCustomPresentDays(details.presentDays !== undefined ? String(details.presentDays) : "");
     } catch (e) {
       console.error("Error calculating salary:", e);
       setSalaryDetails(null);
@@ -498,6 +658,9 @@ const HRSalaryPage = () => {
         bonus: Number(bonus || 0),
         month: selectedMonth.toLowerCase(),
         year: yr,
+        paymentDate: salaryDate,
+        absentDays: activeAbsentDays,
+        presentDays: activePresentDays,
       });
       // Derive stable values from API response but prefer computed fallbacks
       const basePayoutVal = Number(creditedRecord.baseSalary) || summary.basePayout;
@@ -510,6 +673,7 @@ const HRSalaryPage = () => {
         employee: creditedRecord.user || selected,
         month: creditedRecord.month || selectedMonth,
         year: creditedRecord.year || yr,
+        paymentDate: salaryDate,
         basePayout: basePayoutVal,
         bonus: bonusVal,
         total: totalVal,
@@ -531,8 +695,8 @@ const HRSalaryPage = () => {
     if (!selected || !selectedMonth || !selectedYear || !salaryDetails) return;
     const payslipData = calculatePayslipData(
       selected.salary,
-      salaryDetails.presentDays,
-      salaryDetails.absentDays,
+      activePresentDays,
+      activeAbsentDays,
       selectedMonth,
       selectedYear,
       selected.pfEnabled,
@@ -542,6 +706,7 @@ const HRSalaryPage = () => {
       employee: selected,
       month: selectedMonth,
       year: selectedYear,
+      paymentDate: salaryDate,
       data: payslipData
     });
   };
@@ -579,6 +744,7 @@ const HRSalaryPage = () => {
       employee,
       month: record.month || "Unknown",
       year: record.year || new Date().getFullYear(),
+      paymentDate: record.paymentDate || record.creditedOn,
       data
     });
   };
@@ -617,7 +783,7 @@ const HRSalaryPage = () => {
                   <option value="">Select an Employee/Lead</option>
                   {users.map((u) => (
                     <option key={u._id} value={u._id.toString()}>
-                      {u.name} ({u.position}) - ₹{u.salary}
+                      {u.name} ({u.position}) - ₹{u.salary}/year
                     </option>
                   ))}
                 </select>
@@ -651,6 +817,16 @@ const HRSalaryPage = () => {
               </div>
 
               <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Salary / Disbursal Date</label>
+                <input
+                  type="date"
+                  value={salaryDate}
+                  onChange={(e) => setSalaryDate(e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Bonus Allocation (₹)</label>
                 <input
                   type="number"
@@ -660,7 +836,35 @@ const HRSalaryPage = () => {
                 />
               </div>
 
-              <div className="flex items-end">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">LOP / Absent Days (Override)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="31"
+                  value={customAbsentDays}
+                  onChange={(e) => setCustomAbsentDays(e.target.value)}
+                  placeholder={salaryDetails ? String(salaryDetails.absentDays) : "0"}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Present Days (Override)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="31"
+                  value={customPresentDays}
+                  onChange={(e) => setCustomPresentDays(e.target.value)}
+                  placeholder={salaryDetails ? String(salaryDetails.presentDays) : "0"}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                />
+              </div>
+
+              <div className="flex items-end md:col-span-2">
                 <button
                   onClick={credit}
                   disabled={isCrediting || !salaryDetails}
@@ -702,8 +906,14 @@ const HRSalaryPage = () => {
                           {/* <div className="text-[10px] text-secondary font-medium">BASE: ₹{record.baseSalary ?? 0}</div> */}
                         </td>
                         <td className="p-5">
-                          <div className="font-black text-primary">₹ {data.netSalary.toLocaleString("en-IN")}</div>
-                          {/* {record.bonus > 0 && <div className="text-[10px] text-green-600 font-bold">BONUS: +₹{record.bonus}</div>} */}
+                          {(() => {
+                            const amountVal = (record.totalCredited && record.totalCredited >= 3000)
+                              ? record.totalCredited
+                              : (data.netSalary && data.netSalary >= 3000 ? data.netSalary : (record.baseSalary >= 3000 ? record.baseSalary : data.netSalary));
+                            return (
+                              <div className="font-black text-primary">₹ {amountVal.toLocaleString("en-IN")}</div>
+                            );
+                          })()}
                         </td>
                         <td className="p-5">
                           <span className="px-3 py-1 bg-gray-50 text-secondary rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -761,11 +971,11 @@ const HRSalaryPage = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-white/10 p-4 rounded-2xl">
                       <div className="text-[10px] font-black opacity-60 uppercase tracking-widest">Effective Present</div>
-                      <div className="text-xl font-black">{Number(salaryDetails.presentDays).toFixed(2)} <span className="text-xs opacity-60">DAYS</span></div>
+                      <div className="text-xl font-black">{Number(activePresentDays).toFixed(2)} <span className="text-xs opacity-60">DAYS</span></div>
                     </div>
                     <div className="bg-white/10 p-4 rounded-2xl">
                       <div className="text-[10px] font-black opacity-60 uppercase tracking-widest">Total LOP (Absences)</div>
-                      <div className="text-xl font-black">{Number(salaryDetails.absentDays).toFixed(2)} <span className="text-xs opacity-60">DAYS</span></div>
+                      <div className="text-xl font-black">{Number(activeAbsentDays).toFixed(2)} <span className="text-xs opacity-60">DAYS</span></div>
                     </div>
                   </div>
 
@@ -782,32 +992,64 @@ const HRSalaryPage = () => {
                       <span>Unmarked Absences</span>
                       <span className="font-bold">{salaryDetails.unmarkedAbsences || 0} Days</span>
                     </div>
-                    <div className="flex justify-between text-sm pt-2">
-                      <span className="opacity-60">Daily Rate</span>
-                      <span className="font-bold">₹{salaryDetails.dailyRate}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="opacity-60">Calculated</span>
-                      <span className="font-bold">₹{salaryDetails.calculatedSalary}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="opacity-60">Bonus</span>
-                      <span className="font-bold">₹{bonus || 0}</span>
-                    </div>
                   </div>
 
-                  <div className="pt-6 border-t border-gray-200/10 flex flex-col gap-4">
-                    <div>
-                      <div className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Final Net Payout</div>
-                      <div className="text-4xl font-black tracking-tighter">₹{salaryDetails.calculatedSalary + Number(bonus || 0)}</div>
-                    </div>
-                    <button
-                      onClick={handlePreviewCurrent}
-                      className="w-full bg-white text-primary hover:bg-gray-50 p-4 rounded-2xl font-bold shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <FileText size={20} /> View Payslip Preview
-                    </button>
-                  </div>
+                  {(() => {
+                    const rawSal = Number(selected?.salary) || 0;
+                    const monthlySal = rawSal / 12;
+                    const daysInM = Number(salaryDetails?.daysInMonth) || 30;
+                    const perDay = monthlySal / daysInM;
+                    const lop = Math.round(perDay * activeAbsentDays);
+                    const bonusNum = Number(bonus || 0);
+                    const totalEarn = monthlySal + bonusNum;
+                    const tds = Math.round(monthlySal * 0.01);
+                    const basic = Math.round(monthlySal * 0.48);
+                    const pf = selected?.pfEnabled ? Math.round(basic * 0.12) : 0;
+                    const netPay = Math.max(0, totalEarn - tds - pf - lop);
+
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm pt-2">
+                          <span className="opacity-60">Daily Rate</span>
+                          <span className="font-bold">₹{Math.round(perDay).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="opacity-60">Gross Salary</span>
+                          <span className="font-bold">₹{monthlySal.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-red-200">
+                          <span className="opacity-80">TDS Deduction (1%)</span>
+                          <span className="font-bold">- ₹{tds.toLocaleString("en-IN")}</span>
+                        </div>
+                        {pf > 0 && (
+                          <div className="flex justify-between text-sm text-red-200">
+                            <span className="opacity-80">Provident Fund</span>
+                            <span className="font-bold">- ₹{pf.toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        {bonusNum > 0 && (
+                          <div className="flex justify-between text-sm text-emerald-300">
+                            <span className="opacity-90">Bonus</span>
+                            <span className="font-bold">+ ₹{bonusNum.toLocaleString("en-IN")}</span>
+                          </div>
+                        )}
+                        <div className="pt-6 border-t border-gray-200/10 flex flex-col gap-4">
+                          <div>
+                            <div className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Final Net Payout</div>
+                            <div className="text-4xl font-black tracking-tighter">
+                              ₹{netPay.toLocaleString("en-IN")}
+                            </div>
+                          </div>
+                          <button
+                            onClick={handlePreviewCurrent}
+                            className="w-full bg-white text-primary hover:bg-gray-50 p-4 rounded-2xl font-bold shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+                          >
+                            <FileText size={20} /> View Payslip Preview
+                          </button>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </motion.div>
             ) : (
@@ -871,6 +1113,7 @@ const HRSalaryPage = () => {
             month={previewData.month}
             year={previewData.year}
             data={previewData.data}
+            paymentDate={previewData.paymentDate}
             logoBase64={logoBase64}
             onClose={() => setPreviewData(null)}
           />

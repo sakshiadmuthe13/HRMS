@@ -4,20 +4,20 @@ import { jsPDF } from "jspdf";
 import { FileText, Send, Download, Eye, X, Mail, Printer } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "react-toastify";
-import { 
-  Document, 
-  Packer, 
-  Paragraph, 
-  TextRun, 
-  ImageRun, 
-  Table, 
-  TableRow, 
-  TableCell, 
-  TableBorders, 
-  BorderStyle, 
-  WidthType, 
-  AlignmentType, 
-  Footer 
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  ImageRun,
+  Table,
+  TableRow,
+  TableCell,
+  TableBorders,
+  BorderStyle,
+  WidthType,
+  AlignmentType,
+  Footer
 } from "docx";
 
 const base64ToUint8Array = (base64DataUrl) => {
@@ -49,7 +49,7 @@ const FULL_TIME_CATEGORIES = [
 ];
 
 const INTERN_CATEGORIES = [
-  "Offer Letter",
+  "Internship Offer Letter",
   "Internship Completion Certificate",
   "Termination Letter",
 ];
@@ -99,10 +99,10 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
   const pPos = gender === "Female" ? "her" : "his";
   const pPosCap = gender === "Female" ? "Her" : "His";
 
-  const { 
-    name = "[Employee Name]", 
-    startDate = "[Start Date]", 
-    endDate = "[End Date]", 
+  const {
+    name = "[Employee Name]",
+    startDate = "[Start Date]",
+    endDate = "[End Date]",
     reason = "[Reason]",
     ctc = "3,40,000",
     ctcInWords = "Three Lakh Forty Thousand Rupees Only",
@@ -114,7 +114,7 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 
   if (employeeType === "Full-Time" && category === "Termination Letter") {
     return [
-      `This letter serves as formal notice that your employment with **Qiro Tech Innovation Pvt. Ltd.** in the position of **${position}** will be terminated effective from **${endDate}**`,
+      `This letter serves as formal notice that your employment with **Qirotech Innovation Pvt. Ltd.** in the position of **${position}** will be terminated effective from **${endDate}**`,
       "",
       `This decision has been made due to **${reason || "[Reason]"}** Despite previous discussions/warnings/performance reviews, the required improvements and expectations have not been satisfactorily met.`,
       "",
@@ -126,7 +126,7 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 
   if (employeeType === "Intern" && category === "Termination Letter") {
     return [
-      `This letter is to formally inform you that your internship with **Qiro Tech Innovation Pvt. Ltd.** as a **${position}** is being terminated effective from **${endDate}**`,
+      `This letter is to formally inform you that your internship with **Qirotech Innovation Pvt. Ltd.** as a **${position}** is being terminated effective from **${endDate}**`,
       "",
       `The decision has been taken due to **${reason || "[Reason]"}** Despite prior discussions and feedback, the expected level of participation/performance/professional conduct has not been met during the internship period.`,
       "",
@@ -138,7 +138,7 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 
   if (employeeType === "Full-Time" && category === "Offer Letter") {
     return [
-      `We are pleased to make an offer as a **${position}** at **Qiro Tech Innovation Pvt. Ltd.**, effective from **${startDate}** at Pune location.`,
+      `We are pleased to make an offer as a **${position}** at **Qirotech Innovation Pvt. Ltd.**, effective from **${startDate}** at Pune location.`,
       "",
       `We propose to pay you an Annual (CTC) of Rs. ${ctc}/- (${ctcInWords}). ${ctcShort} CTC = ${fixedSalary} Fixed & ${variableSalary} Variable (${variablePerQuarter} Rs per quarter will be paid based on the performance against the given objectives). The Variable component can be converted to profit sharing after initial 6 months based-on the performance.`,
       "",
@@ -154,7 +154,7 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 
   if (employeeType === "Full-Time" && category === "Experience Letter") {
     return [
-      `This is to certify that **${name}** was working with **Qiro Tech Innovation Pvt. Ltd.** as a **${position}** from **${startDate}** to **${endDate}**.`,
+      `This is to certify that **${name}** was working with **Qirotech Innovation Pvt. Ltd.** as a **${position}** from **${startDate}** to **${endDate}**.`,
       "",
       `During ${pPos} tenure, ${p} was found to be sincere, hardworking, and professional in discharging the responsibilities assigned to ${pObj}. ${pPosCap} performance and conduct throughout the employment period were satisfactory.`,
       "",
@@ -164,7 +164,7 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 
   if (employeeType === "Full-Time" && category === "Relieving Letter") {
     return [
-      `We would like to inform you that the management of **Qiro Tech Innovation Pvt. Ltd.** has accepted your resignation and agreed to relieve you from your duties at the close of business hours on **${endDate}**.`,
+      `We would like to inform you that the management of **Qirotech Innovation Pvt. Ltd.** has accepted your resignation and agreed to relieve you from your duties at the close of business hours on **${endDate}**.`,
       "",
       `You have been associated with the organization from **${startDate}** to **${endDate}**. At the time of separation, you were designated as **${position}**.`,
       "",
@@ -174,13 +174,13 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
     ];
   }
 
-  if (employeeType === "Intern" && category === "Offer Letter") {
+  if (employeeType === "Intern" && (category === "Offer Letter" || category === "Internship Offer Letter")) {
     return [
       `Congratulations!`,
       "",
       `We are pleased to offer you the position of **${position}** at **Qiro Tech Innovation Pvt. Ltd.** We are impressed with your background and are excited to welcome you to our team.`,
       "",
-      `Your onboarding is scheduled for **${startDate}** at **9:30 AM.** This position reports directly to the respective department mentor, and your standard working hours will be from 9:30 AM to 6:30 PM, Monday through Saturday, while Sunday will be observed as a weekly off.`,
+      `Your onboarding is scheduled for **${startDate}** at **9:30 AM.** This position reports directly to the respective department mentor and your standard working hours will be from 9:30 AM to 6:30 PM, Monday through Saturday, while Sunday will be observed as a weekly off.`,
       "",
       `**Internship Terms:**`,
       "",
@@ -188,15 +188,15 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
       "",
       `• **Duration:** This internship is for a mandatory period of 6 months, starting from your date of joining.`,
       "",
-      `• **Commitment Clause:** By signing and accepting this offer, you agree not to terminate or abandon the internship before completion of the full 6-month duration. This letter will serve as a binding contract between you and QiroTech Innovation Pvt. Ltd. during this period.`,
+      `• **Commitment Clause:** By signing and accepting this offer, you agree not to terminate or abandon the internship before completion of the full 6-month duration. This letter will serve as a binding contract between you and Qiro Tech Innovation Pvt. Ltd. during this period.`,
       "",
-      `• **Performance and Termination Clause:** Your internship is for a period of 6 months. However, please note that continued engagement is subject to satisfactory performance and adherence to company policies. The company reserves the right to terminate the internship at any time before the completion of the 6-month period if your performance is found to be unsatisfactory or if there is any breach of discipline, conduct, or company policies. Such termination will be communicated in writing and will be effective immediately upon notice.`,
+      `• **Performance and Termination Clause:** Your internship is for a period of 6 months. However, please note that continued engagement is subject to satisfactory performance and adherence to company policies. The company reserves the right to terminate the internship at any time before the completion of the 6-month period if your performance is found to be unsatisfactory or if there is any breach of discipline, conduct or company policies. Such termination will be communicated in writing and will be effective immediately upon notice.`,
       "",
-      `• **Performance Review:** Your performance will be evaluated throughout the internship. Based on your performance, you may be considered for a full-time opportunity at the end of the internship term.`,
+      `• **Performance Review:** Your performance will be evaluated throughout the internship. Based on your performance, you may be considered for a full-time opportunity at the end of the internship term. Along with this, company evaluate technical performance, promptness in work and attendance, behavior during internship also factors in market leads to employment-ship.`,
       "",
-      `Please find enclosed a list of documents required for onboarding. You are requested to email the scanned copies to the official HR email ID of QiroTech Innovation Pvt. Ltd., and also bring the hard copies with you on the date of joining.`,
+      `Please find enclosed a list of documents required for onboarding. You are requested to email the scanned copies to the official HR email ID of Qiro Tech Innovation Pvt. Ltd., and also bring the hard copies with you on the date of joining.`,
       "",
-      `We are confident in your potential to contribute meaningfully to the success of QiroTech Innovation Pvt. Ltd. and look forward to seeing your growth during your time with us.`,
+      `We are confident in your potential to contribute meaningfully to the success of Qiro Tech Innovation Pvt. Ltd. and look forward to seeing your growth during your time with us.`,
       "",
       `Kindly sign and return the enclosed copy of this letter to confirm your acceptance of the offer.`
     ];
@@ -204,7 +204,7 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 
   if (employeeType === "Intern" && category === "Internship Completion Certificate") {
     return [
-      `This is to certify that **${name}** has successfully completed the internship with **Qiro Tech Innovation Pvt. Ltd.** as a **${position}** from **${startDate}** to **${endDate}**.`,
+      `This is to certify that **${name}** has successfully completed the internship with **Qirotech Innovation Pvt. Ltd.** as a **${position}** from **${startDate}** to **${endDate}**.`,
       "",
       `During the internship tenure, ${p} was actively involved in department related responsibilities and contributed effectively to assigned tasks and projects.`,
       "",
@@ -238,17 +238,23 @@ const getLetterContent = (employeeType, category, formData, position, gender) =>
 };
 
 const renderJustifiedLine = (doc, tokens, x, y, maxWidth, currentWidth, isLastLine) => {
+  doc.setFontSize(10.5);
+  const normalSpaceWidth = doc.getTextWidth(" ");
   if (tokens.length === 1 || isLastLine) {
     let currentX = x;
     tokens.forEach((token) => {
       doc.setFont("helvetica", token.isBold ? "bold" : "normal");
       doc.text(token.text, currentX, y);
-      const spaceWidth = doc.getTextWidth(" ");
-      currentX += token.width + spaceWidth;
+      currentX += token.width + normalSpaceWidth;
     });
   } else {
     let totalWordWidth = tokens.reduce((sum, t) => sum + t.width, 0);
-    let spaceWidth = (maxWidth - totalWordWidth) / (tokens.length - 1);
+    let spaceWidth = (maxWidth - totalWordWidth) / Math.max(1, tokens.length - 1);
+
+    // Ensure spaces never collapse or stretch unnaturally
+    if (spaceWidth < normalSpaceWidth || spaceWidth > normalSpaceWidth * 2.2) {
+      spaceWidth = normalSpaceWidth;
+    }
 
     let currentX = x;
     tokens.forEach((token) => {
@@ -259,7 +265,39 @@ const renderJustifiedLine = (doc, tokens, x, y, maxWidth, currentWidth, isLastLi
   }
 };
 
+const estimateParagraphLines = (doc, text, maxWidth) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  const words = [];
+  parts.forEach(part => {
+    if (!part) return;
+    const isBold = part.startsWith("**") && part.endsWith("**");
+    const content = isBold ? part.slice(2, -2) : part;
+    content.split(/\s+/).filter(w => w.length > 0).forEach(word => {
+      words.push({ word, isBold });
+    });
+  });
+  if (words.length === 0) return 0;
+  let lines = 1;
+  let currentWidth = 0;
+  words.forEach(w => {
+    doc.setFont("helvetica", w.isBold ? "bold" : "normal");
+    doc.setFontSize(10.5);
+    const wordW = doc.getTextWidth(w.word);
+    const spaceW = doc.getTextWidth(" ");
+    if (currentWidth === 0) {
+      currentWidth = wordW;
+    } else if (currentWidth + spaceW + wordW > maxWidth) {
+      lines++;
+      currentWidth = wordW;
+    } else {
+      currentWidth += spaceW + wordW;
+    }
+  });
+  return lines;
+};
+
 const renderJustifiedMarkdownText = (doc, text, startX, startY, maxWidth, lineHeight, bottomMargin, addNewPage) => {
+  doc.setFontSize(10.5);
   const tokens = [];
   const parts = text.split(/(\*\*.*?\*\*)/g);
   parts.forEach(part => {
@@ -436,11 +474,11 @@ const HRGenerateLetterPage = () => {
     const contentLeft = pageMargin;
     const contentRight = pageWidth - pageMargin;
     const contentWidth = contentRight - contentLeft;
-    const headerLineY = pageMargin + 9.6;
-    const footerLineY = pageHeight - 10; // bring footer line closer to bottom
-    const footerTextY = pageHeight - 6; // place website URL at bottom area
-    const contentStartY = pageMargin + 24.6;
-    const contentBottomY = footerLineY - 2; // allow main content to extend closer to bottom
+    const headerLineY = pageMargin + 12;
+    const footerLineY = pageHeight - 18; // Keep footer line safely within printable margin
+    const footerTextY = pageHeight - 12; // Place website URL clearly above printer bottom margin
+    const contentStartY = headerLineY + 22; // Increased top spacing below header line
+    const contentBottomY = footerLineY - 10; // Content stops comfortably above footer line
 
     const drawHeaderFooter = () => {
       if (logoBase64 && logoBase64.data) {
@@ -455,13 +493,26 @@ const HRGenerateLetterPage = () => {
       doc.setTextColor(0, 0, 0);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
-      doc.text("Qiro Tech Innovation Pvt. Ltd.", contentRight, pageMargin - 10.4, { align: "right" });
+      doc.text("Qiro Tech Innovation Pvt. Ltd.", contentRight, pageMargin - 12.4, { align: "right" });
 
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text("Unit 602, Floor 6th, The Business", contentRight, pageMargin - 5.4, { align: "right" });
-      doc.text("AdvantEDGE, Hinjewadi Phase 1", contentRight, pageMargin - 1.4, { align: "right" });
-      doc.text("Pune - 411057.", contentRight, pageMargin + 2.6, { align: "right" });
+      doc.setFontSize(8.5);
+      doc.text("Unit 602, Floor 6th, The Business AdvantEDGE, Hinjawadi", contentRight, pageMargin - 8.0, { align: "right" });
+      doc.text("Phase 1, Pune – 411057 (MH) IND.", contentRight, pageMargin - 3.8, { align: "right" });
+
+      const phoneStr = "  +91 7843094847";
+      const phoneW = doc.getTextWidth(phoneStr);
+      doc.setTextColor(0, 0, 0);
+      doc.text(phoneStr, contentRight, pageMargin + 0.4, { align: "right" });
+
+      doc.setTextColor(0, 51, 204);
+      const emailStr = "hr@qirotec.com";
+      const emailX = contentRight - phoneW;
+      doc.text(emailStr, emailX, pageMargin + 0.4, { align: "right" });
+      const emailW = doc.getTextWidth(emailStr);
+      doc.setDrawColor(0, 51, 204);
+      doc.setLineWidth(0.2);
+      doc.line(emailX - emailW, pageMargin + 0.9, emailX, pageMargin + 0.9);
 
       doc.setDrawColor(150, 150, 150);
       doc.setLineWidth(0.5);
@@ -470,13 +521,17 @@ const HRGenerateLetterPage = () => {
       doc.line(contentLeft, footerLineY, contentRight, footerLineY);
 
       doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
       doc.text("www.qirotec.com", contentRight, footerTextY, { align: "right" });
+
+      // Reset text color to black for body content
+      doc.setTextColor(0, 0, 0);
     };
 
     const addNewPage = () => {
       doc.addPage();
       drawHeaderFooter();
-      return pageMargin + 14; // Minimal top margin for continuation pages
+      return headerLineY + 16; // Continuation content starts comfortably below header line
     };
 
     const checkPageBreak = (currentY, requiredSpace = 10) => {
@@ -491,55 +546,67 @@ const HRGenerateLetterPage = () => {
     let y = contentStartY;
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.text(formData.date || format(new Date(), "dd MMMM yyyy"), contentLeft, y);
-    y += 16;
+    y += 18; // Increased gap between Date and OFFER LETTER heading
 
     // If this is an Experience Letter, render the 'TO WHOMSO EVER IT MAY CONCERN' heading above the category
     if (selectedCategory === 'Experience Letter') {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.text('TO WHOMSO EVER IT MAY CONCERN', pageWidth / 2, y, { align: 'center' });
       const headingWidth = doc.getTextWidth('TO WHOMSO EVER IT MAY CONCERN');
       doc.setLineWidth(0.6);
       doc.setDrawColor(0, 0, 0);
-      doc.line(pageWidth / 2 - headingWidth / 2, y + 1.8, pageWidth / 2 + headingWidth / 2, y + 1.8);
-      y += 16;
+      doc.line(pageWidth / 2 - headingWidth / 2, y + 1.5, pageWidth / 2 + headingWidth / 2, y + 1.5);
+      y += 14;
     }
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.text((selectedCategory || "").toUpperCase(), pageWidth / 2, y, { align: "center" });
-    y += 16;
+    doc.setFontSize(14);
+    let headingTitle = (selectedCategory || "").toUpperCase();
+    if (employeeType === "Intern" && headingTitle === "OFFER LETTER") {
+      headingTitle = "INTERNSHIP OFFER LETTER";
+    }
+    doc.text(headingTitle, pageWidth / 2, y, { align: "center" });
+    y += 25; // Reduced spacing below heading by 20mm (2 cm) to 15mm
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(12);
+    doc.setFontSize(10.5);
 
     const employeeName = formData.name || "[Employee Name]";
 
-    y = checkPageBreak(y, 25);
-    doc.text("To,", contentLeft, y); y += 8;
+    y = checkPageBreak(y, 20);
+    doc.text("To,", contentLeft, y); y += 6;
     doc.setFont("helvetica", "bold");
-    doc.text(employeeName + ",", contentLeft, y); y += 15;
+    doc.text(employeeName + ",", contentLeft, y); y += 14;
 
     doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.5);
 
     const paragraphs = getLetterContent(employeeType, selectedCategory, formData, position, gender);
     paragraphs.forEach(paragraph => {
       if (paragraph === "") {
-        y = checkPageBreak(y, 5);
-        y += 5;
+        y = checkPageBreak(y, 4);
+        y += 4;
       } else {
-        const newY = renderJustifiedMarkdownText(doc, paragraph, contentLeft, y, contentWidth, 6, contentBottomY, addNewPage);
-        y = newY + 6;
+        const linesCount = estimateParagraphLines(doc, paragraph, contentWidth);
+        const neededHeight = linesCount * 5.5;
+        if (y + neededHeight > contentBottomY) {
+          y = addNewPage();
+        }
+        const newY = renderJustifiedMarkdownText(doc, paragraph, contentLeft, y, contentWidth, 5.5, contentBottomY, addNewPage);
+        y = newY + 5.5;
       }
     });
 
-    y = checkPageBreak(y, 70); // Keep enough room for the signature block and footer
+    y = checkPageBreak(y, 50); // Keep enough room for the signature block and footer
 
-    y += 10;
+    y += 8;
 
-    doc.text("Yours Faithfully,", contentLeft, y); y += 8;
+    doc.setFontSize(10.5);
+    doc.setFont("helvetica", "normal");
+    doc.text("Yours Faithfully,", contentLeft, y); y += 6;
     doc.setFont("helvetica", "bold");
     doc.text("For Qiro Tech Innovation Pvt. Ltd.", contentLeft, y);
 
@@ -549,8 +616,8 @@ const HRGenerateLetterPage = () => {
 
     const finalSign = customSignBase64 || signBase64;
     if (finalSign && finalSign.data) {
-      const maxWidth = 34;
-      const maxHeight = 24;
+      const maxWidth = 48;
+      const maxHeight = 32;
       let renderWidth = maxWidth;
       let renderHeight = maxHeight;
 
@@ -560,7 +627,7 @@ const HRGenerateLetterPage = () => {
         renderHeight = finalSign.height * ratio;
       }
 
-      doc.addImage(finalSign.data, "PNG", contentLeft + 40, y + 5 + (maxHeight - renderHeight) / 2, renderWidth, renderHeight);
+      doc.addImage(finalSign.data, "PNG", contentLeft + 28, y + 2 + (maxHeight - renderHeight) / 2, renderWidth, renderHeight);
     }
 
     y += 38;
@@ -660,8 +727,8 @@ const HRGenerateLetterPage = () => {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "Unit 602, Floor 6th, The Business\nAdvantEDGE, Hinjewadi Phase 1\nPune - 411057.",
-                  size: 18,
+                  text: "Unit 602, Floor 6th, The Business AdvantEDGE, Hinjawadi\nPhase 1, Pune – 411057 (MH) IND.\nhr@qirotec.com   +91 7843094847",
+                  size: 17,
                 }),
               ],
               alignment: AlignmentType.RIGHT,
@@ -728,11 +795,16 @@ const HRGenerateLetterPage = () => {
         );
       }
 
+      let docxHeading = (selectedCategory || "").toUpperCase();
+      if (employeeType === "Intern" && docxHeading === "OFFER LETTER") {
+        docxHeading = "INTERNSHIP OFFER LETTER";
+      }
+
       sectionChildren.push(
         new Paragraph({
           children: [
             new TextRun({
-              text: (selectedCategory || "").toUpperCase(),
+              text: docxHeading,
               bold: true,
               size: 30,
             }),
@@ -1261,7 +1333,7 @@ const HRGenerateLetterPage = () => {
                       />
                     </div>
                   </>
-                  )}
+                )}
               </div>
             </div>
 

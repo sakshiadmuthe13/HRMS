@@ -18,9 +18,11 @@ import {
   searchEmployeesForEmployee,
   getTodayCelebrations,
   getHolidaysForEmployee,
+  addWorkLogEntry,
+  getWorkLogs,
 } from "../controllers/employeeController.js";
 import { protectEmployee } from "../middleware/authMiddleware.js";
-import { handleMultipleUploads } from "../middleware/uploadMiddleware.js";
+import { handleMultipleUploads, uploadSingleFile, uploadToImageKit, uploadAnyFiles, uploadFilesToImageKit } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -55,6 +57,10 @@ router.patch("/leave/:id", protectEmployee, updateMyLeave);
 // profile
 router.get("/profile", protectEmployee, getMyProfile);
 router.put("/profile", protectEmployee, handleMultipleUploads, updateMyProfile);
+
+// work logs
+router.post("/work-logs", protectEmployee, uploadAnyFiles, uploadFilesToImageKit, addWorkLogEntry);
+router.get("/work-logs", protectEmployee, getWorkLogs);
 
 // contact employees
 router.get("/contact", protectEmployee, searchEmployeesForEmployee);

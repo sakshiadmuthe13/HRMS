@@ -35,15 +35,26 @@ export default function AssignTaskPage() {
   const [form, setForm] = useState({ project: "", assignedTo: "", description: "", deadline: "", file: null });
 
   useEffect(() => { fetchProjects(); fetchMyTasks(); }, []);
-  useEffect(() => { if (form.project) fetchTeammates(form.project); else setTeammates([]); }, [form.project]);
 
   const fetchProjects = async () => { try { setProjects(await apiGet("/leader/projects") || []); } catch (e) { console.error(e); } };
-  const fetchTeammates = async (projectId) => { try { setTeammates(await apiGet(`/leader/team-members?projectId=${projectId}`) || []); } catch (e) { console.error(e); setTeammates([]); } };
+  const fetchTeammates = async (projectId) => {
+    setTeammates([]);
+    setForm(f => ({ ...f, assignedTo: "" }));
+    if (!projectId) return;
+
+    try {
+      const res = await apiGet(`/leader/team-members?projectId=${encodeURIComponent(projectId)}`);
+      setTeammates(Array.isArray(res) ? res : []);
+    } catch (e) {
+      console.error("Failed to fetch project teammates:", e);
+      setTeammates([]);
+    }
+  };
   const fetchMyTasks = async () => { try { setTasks(await apiGet("/leader/my-assigned-tasks") || []); } catch (e) { console.error(e); } };
 
   const assignTask = async () => {
-    if (!form.project || !form.assignedTo || !form.description.trim()) {
-      setSuccessMessage("Please complete all fields.");
+    if (!form.assignedTo || !form.description.trim()) {
+      setSuccessMessage("Please select an employee and enter task description.");
       return;
     }
     try {
@@ -109,7 +120,11 @@ export default function AssignTaskPage() {
             <label className="text-[10px] font-black text-secondary uppercase tracking-widest px-1">Project</label>
             <select
               value={form.project}
-              onChange={e => setForm(f => ({ ...f, project: e.target.value, assignedTo: "" }))}
+              onChange={e => {
+                const projectId = e.target.value;
+                setForm(f => ({ ...f, project: projectId, assignedTo: "" }));
+                fetchTeammates(projectId);
+              }}
               className="w-full bg-gray-50 border border-gray-200 text-primary font-bold p-4 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 transition-all appearance-none"
             >
               <option value="">Select Project</option>

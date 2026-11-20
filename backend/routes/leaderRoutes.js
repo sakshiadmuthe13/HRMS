@@ -9,6 +9,8 @@ import {
   leaderEndBreak,
   getLeaderAttendance,
   assignTask,
+  updateTaskByAdminLeader,
+  deleteTaskByAdminLeader,
   getTasksAssignedByLeader,
   getTeamMembersByProject,
   applyLeaderLeave,
@@ -33,8 +35,9 @@ import {
   deleteProject,
   getAllLeadersAdmin,
   getAllEmployeesAdmin,
+  getDailyWorkLogsAdmin,
 } from "../controllers/adminController.js";
-import { protectLeader } from "../middleware/authMiddleware.js";
+import { protectLeader, protectLeaderOrAdmin } from "../middleware/authMiddleware.js";
 import { handleMultipleUploads, uploadSingleFile, uploadToImageKit } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
@@ -69,7 +72,9 @@ router.post("/attendance/break/end", protectLeader, leaderEndBreak);
 router.get("/attendance", protectLeader, getLeaderAttendance);
 
 // Task management
-router.post("/assign-task", protectLeader, uploadSingleFile, uploadToImageKit, assignTask);
+router.post("/assign-task", protectLeaderOrAdmin, uploadSingleFile, uploadToImageKit, assignTask);
+router.put("/tasks/:taskId", protectLeaderOrAdmin, uploadSingleFile, uploadToImageKit, updateTaskByAdminLeader);
+router.delete("/tasks/:taskId", protectLeaderOrAdmin, deleteTaskByAdminLeader);
 router.get("/my-assigned-tasks", protectLeader, getTasksAssignedByLeader);
 router.get("/team-members", protectLeader, getTeamMembersByProject);
 
@@ -94,6 +99,9 @@ router.get("/celebrations/today", protectLeader, getTodayCelebrations);
 
 // holidays (shared with employees)
 router.get("/holidays", protectLeader, getHolidaysForLeader);
+
+// work logs
+router.get("/work-logs", protectLeaderOrAdmin, getDailyWorkLogsAdmin);
 
 export default router;
 

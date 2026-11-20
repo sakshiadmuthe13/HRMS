@@ -4,7 +4,7 @@ export const sendMail = async (to, subject, text, html, attachments = []) => {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"QiroTech Innovation Pvt. Ltd." <${process.env.MAIL_USER}>`,
+      from: `"Qirotech Innovation Pvt. Ltd." <${process.env.MAIL_USER}>`,
       to,
       subject,
       text,

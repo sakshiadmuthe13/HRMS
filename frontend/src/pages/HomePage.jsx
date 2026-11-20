@@ -208,7 +208,7 @@ const HomePage = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-6 text-sm text-slate-500 border-t border-gray-200/80">
-          © {new Date().getFullYear()} QiroTech Innovation Pvt. Ltd. - All rights reserved.
+          © {new Date().getFullYear()} Qirotech Innovation Pvt. Ltd. - All rights reserved.
         </div>
       </footer>
     </div>

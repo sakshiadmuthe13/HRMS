@@ -59,7 +59,7 @@ const ResetPassword = () => {
       <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-primary/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
       <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-secondary/5 rounded-full blur-3xl -ml-20 -mb-20"></div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -120,7 +120,7 @@ const ResetPassword = () => {
             </button>
 
             {message && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center text-sm font-bold text-primary bg-primary/5 p-4 rounded-xl border border-primary/10"
@@ -149,14 +149,14 @@ const ResetPassword = () => {
           }}
         >
           <div className="absolute top-0 left-0 w-full h-full opacity-10">
-             <div className="grid grid-cols-6 gap-4 rotate-12">
-               {[...Array(24)].map((_, i) => (
-                 <div key={i} className="w-12 h-12 bg-white rounded-xl"></div>
-               ))}
-             </div>
+            <div className="grid grid-cols-6 gap-4 rotate-12">
+              {[...Array(24)].map((_, i) => (
+                <div key={i} className="w-12 h-12 bg-white rounded-xl"></div>
+              ))}
+            </div>
           </div>
 
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}

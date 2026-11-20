@@ -71,10 +71,10 @@ const Home = () => {
 
         <div className="max-w-7xl mx-auto px-6 py-8 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center sm:text-left">
           <div className="flex-1">
-            © {new Date().getFullYear()} QiroTech Innovation Pvt. Ltd. — All rights reserved.
+            © {new Date().getFullYear()} Qirotech Innovation Pvt. Ltd. — All rights reserved.
           </div>
           <div className="flex-1 text-center font-medium">
-            Developed by QiroTech Innovation Private Limited
+            Developed by Qirotech Innovation Pvt. Ltd.
           </div>
           <div className="flex flex-1 justify-center sm:justify-end gap-6">
             <Link to="/privacy" className="hover:text-slate-650 transition">Privacy Policy</Link>

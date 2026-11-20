@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -47,29 +47,19 @@ const SharedContactEmployee = ({ role = "employee" }) => {
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const fetchDirectory = async (query = "") => {
     setError("");
-    const query = searchTerm.trim();
-    if (!query) {
-      setError("Please enter a search term.");
-      return;
-    }
-
     setLoading(true);
     setSearched(true);
     try {
       const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      // Use the appropriate endpoint based on the role prop
-      const response = await fetch(
-        `${API_BASE}/${role}/contact?query=${encodeURIComponent(query)}`,
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : undefined,
-          },
-          credentials: "include",
-        }
-      );
+      const url = `${API_BASE}/${role}/contact${query ? `?query=${encodeURIComponent(query)}` : ""}`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Employee directory is currently inaccessible.");
       const data = await response.json();
       setResults(data || []);
@@ -79,6 +69,15 @@ const SharedContactEmployee = ({ role = "employee" }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchDirectory("");
+  }, [role]);
+
+  const handleSubmit = async (event) => {
+    if (event) event.preventDefault();
+    fetchDirectory(searchTerm.trim());
   };
 
   const roleLabels = {

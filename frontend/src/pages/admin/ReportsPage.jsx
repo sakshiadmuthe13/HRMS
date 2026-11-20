@@ -90,14 +90,18 @@ const ReportsPage = () => {
     }
   }, [selectedRole, fetchUsers]);
 
-  const fetchUserData = async () => {
-    if (!selectedUser) return;
+  const fetchUserData = async (userToFetch = selectedUser) => {
+    if (!userToFetch) {
+      toast.error("Select an employee first");
+      return;
+    }
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.append("userId", selectedUser._id);
+      params.append("userId", userToFetch._id);
       if (filters.startDate) params.append("startDate", filters.startDate);
       if (filters.endDate) params.append("endDate", filters.endDate);
+      if (filters.projectStatus) params.append("projectStatus", filters.projectStatus);
 
       const data = await apiGet(`/admin/reports/user-data?${params}`);
       setReportData(data);
@@ -159,7 +163,7 @@ const ReportsPage = () => {
     doc.text("Attendance Summary", 20, yPosition);
     yPosition += 10;
     doc.setFontSize(12);
-    doc.text(`Total Days: ${reportData.performanceSummary.totalAttendance}`, 20, yPosition);
+    doc.text(`Attendance Check-ins: ${reportData.performanceSummary.totalAttendance}`, 20, yPosition);
     yPosition += 10;
     doc.text(`Present Days: ${reportData.performanceSummary.presentDays}`, 20, yPosition);
     yPosition += 10;
@@ -278,7 +282,7 @@ const ReportsPage = () => {
                 {users.map((user) => (
                   <button
                     key={user._id}
-                    onClick={() => { setSelectedUser(user); fetchUserData(); }}
+                    onClick={() => { setSelectedUser(user); fetchUserData(user); }}
                     className="flex items-center gap-4 p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-primary hover:bg-white transition-all text-left group"
                   >
                     <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black">
@@ -332,13 +336,21 @@ const ReportsPage = () => {
                       className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                     >
                       <option value="">All Statuses</option>
-                      <option value="Active">Active</option>
+                      <option value="Planning">Planning</option>
+                      <option value="In Progress">In Progress</option>
                       <option value="Completed">Completed</option>
                       <option value="On Hold">On Hold</option>
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={fetchUserData} className="p-4 bg-primary text-white rounded-2xl hover:bg-[var(--color-secondary)] transition-all shadow-lg shadow-primary/20">
+                    <button
+                      type="button"
+                      onClick={() => fetchUserData()}
+                      disabled={loading}
+                      aria-label="Search report"
+                      title={loading ? "Loading report…" : "Search report"}
+                      className="p-4 bg-primary text-white rounded-2xl hover:bg-[var(--color-secondary)] transition-all shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-wait"
+                    >
                       <Search size={24} />
                     </button>
                     <button onClick={generatePDF} className="p-4 bg-[var(--color-secondary)] text-white rounded-2xl hover:bg-primary transition-all shadow-lg shadow-[0_12px_30px_rgba(26,157,194,0.2)]">
@@ -367,7 +379,7 @@ const ReportsPage = () => {
                         { label: 'Tasks Assigned', val: reportData.performanceSummary.totalTasks },
                         { label: 'Finalized', val: reportData.performanceSummary.completedTasks },
                         { label: 'Delayed', val: reportData.performanceSummary.delayedTasks },
-                        { label: 'Attendance', val: reportData.performanceSummary.totalAttendance }
+                        { label: 'Check-ins', val: reportData.performanceSummary.totalAttendance }
                       ].map((item, idx) => (
                         <div key={idx} className="bg-white/10 p-5 rounded-2xl border border-gray-200/5">
                           <div className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">{item.label}</div>

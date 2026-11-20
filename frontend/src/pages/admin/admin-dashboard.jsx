@@ -17,6 +17,7 @@ import ProjectsPage from "./ProjectsPage";
 import ReportsPage from "./ReportsPage";
 import VacancyManagementPage from "../../components/VacancyManagementPage";
 import AdminTasksPage from "./AdminTasksPage";
+import AdminWorkLogsPage from "./AdminWorkLogsPage";
 import AdminContactEmployeePage from "./AdminContactEmployeePage";
 import DashboardSkeleton from "../../components/DashboardSkeleton";
 import { Users, UserCheck, FileText, Briefcase, Calendar, AlertTriangle, Shield, CheckCircle } from "lucide-react";
@@ -77,6 +78,7 @@ const TABS = [
   "Teams",
   "Projects",
   "Tasks",
+  "Work Activity Logs",
   "Contact Employee",
   "Profile Verification",
   "Generate Letter",
@@ -407,6 +409,7 @@ const AdminDashboard = () => {
           {active === "Teams" && <TeamsPage />}
           {active === "Projects" && <ProjectsPage />}
           {active === "Tasks" && <AdminTasksPage />}
+          {(active === "Work Activity Logs" || active === "Activity Logs") && <AdminWorkLogsPage />}
           {active === "Contact Employee" && <AdminContactEmployeePage />}
           {active === "Profile Verification" && <ProfileVerificationPage />}
           {active === "Reports" && <ReportsPage />}

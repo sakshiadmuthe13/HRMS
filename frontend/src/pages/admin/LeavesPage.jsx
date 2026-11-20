@@ -78,7 +78,10 @@ const LeavesPage = () => {
       setModal({ show: true, type: "success", message: `Leave ${action}ed successfully!` });
     } catch (e) {
       console.error(e);
-      setModal({ show: true, type: "error", message: "Failed to perform action." });
+      // The server may have committed the status before a secondary action failed.
+      // Reload to avoid leaving a stale Pending row on screen.
+      await fetchAllLeaves();
+      setModal({ show: true, type: "error", message: e.message || "Failed to perform action." });
     } finally {
       setPendingAction({ id: null, type: "" });
     }

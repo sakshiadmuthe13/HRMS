@@ -9,6 +9,7 @@ import LeaderTeamsPage from "../admin/TeamsPage";
 import LeaderProjectsPage from "../admin/ProjectsPage";
 import LeaderLeavesPage from "./Leave";
 import AssignTaskPage from "./Task";
+import AdminWorkLogsPage from "../admin/AdminWorkLogsPage";
 import Profile from "./Profile";
 import ContactEmployeeLeaderPage from "./ContactEmployee";
 import VacancyManagementPage from "../../components/VacancyManagementPage";
@@ -33,6 +34,7 @@ const TABS = [
   { id: "My Projects", label: "Projects", icon: Briefcase },
   { id: "Leaves", label: "Leaves", icon: FileText },
   { id: "Assign Task", label: "Assign Task", icon: ClipboardCheck },
+  { id: "Work Activity Logs", label: "Work Activity Logs", icon: Clock },
   { id: "Contact Employee", label: "Contact Employee", icon: Users },
   { id: "Hiring Requirements", label: "Hiring Requirements", icon: Briefcase },
 ];
@@ -373,6 +375,7 @@ const LeaderDashboard = () => {
           {active === "My Projects" && <LeaderProjectsPage isLeader={true} />}
           {active === "Leaves" && <LeaderLeavesPage />}
           {active === "Assign Task" && <AssignTaskPage />}
+          {active === "Work Activity Logs" && <AdminWorkLogsPage />}
           {active === "Hiring Requirements" && <VacancyManagementPage />}
           {active === "Profile" && <Profile />}
           {active === "Contact Employee" && <ContactEmployeeLeaderPage />}

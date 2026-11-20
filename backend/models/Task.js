@@ -2,14 +2,14 @@
 import mongoose from "mongoose";
 
 const taskSchema = new mongoose.Schema({
-  project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: true },
+  project: { type: mongoose.Schema.Types.ObjectId, ref: "Project", required: false },
   assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   description: { type: String, required: true },
   // Added Delayed status and deadline/delay tracking
   status: {
     type: String,
-    enum: ["Pending", "In Progress", "Completed"],
+    enum: ["Pending", "In Progress", "R&D", "Development", "Under Testing", "Completed"],
     default: "Pending",
   },
   assignedAt: { type: Date, default: Date.now },
@@ -29,6 +29,7 @@ const taskSchema = new mongoose.Schema({
   ],
   completionDescription: { type: String },
   deployedLink: { type: String },
+  referenceUrl: { type: String, default: "" },
   attachmentUrl: { type: String },
   attachmentName: { type: String },
 });

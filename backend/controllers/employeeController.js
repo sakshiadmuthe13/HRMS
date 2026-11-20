@@ -5,6 +5,7 @@ import Project from "../models/Project.js";
 import Task from "../models/Task.js";
 import Leave from "../models/Leave.js";
 import User from "../models/User.js";
+import DailyWorkLog from "../models/DailyWorkLog.js";
 import { sendMail } from "../config/nodemailer.js";
 import Holiday from "../models/Holiday.js";
 import { createNotification } from "./notificationController.js";
@@ -561,11 +562,61 @@ export const getMyTeams = async (req, res) => {
 // Get projects assigned to the logged-in employee
 export const getProjectsForEmployee = async (req, res) => {
   try {
-    const employeeId = req.user._id; // assuming you have auth middleware setting req.user
+    const employeeId = req.user._id;
+    const employeeTeamIds = await getEmployeeTeams(employeeId);
+    
+    // Also find projects where tasks are assigned to employee
+    const taskProjectIds = await Task.find({ assignedTo: employeeId }).distinct("project");
+
     const projects = await Project.find({
-      assignedTeams: { $in: await getEmployeeTeams(employeeId) },
-    }).populate("assignedTeams", "name");
-    res.status(200).json(projects);
+      $or: [
+        { assignedTeams: { $in: employeeTeamIds } },
+        { _id: { $in: taskProjectIds.filter(Boolean) } }
+      ]
+    }).populate({
+      path: "assignedTeams",
+      populate: { path: "members leader", select: "name position email" }
+    });
+
+    // Calculate real-time progress & collect members for each project
+    const updatedProjects = await Promise.all(
+      projects.map(async (proj) => {
+        const pObj = proj.toObject();
+        
+        const totalTasks = await Task.countDocuments({ project: proj._id });
+        const completedTasks = await Task.countDocuments({ project: proj._id, status: "Completed" });
+        
+        // Prioritize explicit completion percentage added by Manager/Admin/TL if present
+        const calcProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        pObj.completion = (typeof proj.completion === "number" && proj.completion > 0)
+          ? proj.completion
+          : (calcProgress > 0 ? calcProgress : (proj.status === "Completed" ? 100 : (proj.completion || 0)));
+        if (pObj.completion >= 100) {
+          pObj.status = "Completed";
+        }
+
+        pObj.totalTasks = totalTasks;
+        pObj.completedTasks = completedTasks;
+
+        // Collect team members
+        const membersSet = new Map();
+        if (Array.isArray(proj.assignedTeams)) {
+          proj.assignedTeams.forEach((team) => {
+            if (team.leader && team.leader._id) membersSet.set(team.leader._id.toString(), team.leader);
+            if (Array.isArray(team.members)) {
+              team.members.forEach((m) => {
+                if (m && m._id) membersSet.set(m._id.toString(), m);
+              });
+            }
+          });
+        }
+        pObj.members = Array.from(membersSet.values());
+
+        return pObj;
+      })
+    );
+
+    res.status(200).json(updatedProjects);
   } catch (err) {
     console.error("Failed to fetch employee projects:", err);
     res.status(500).json({ message: "Failed to fetch projects" });
@@ -602,8 +653,8 @@ export const updateTaskStatus = async (req, res) => {
     const { taskId } = req.params;
     const { status } = req.body;
 
-    // Employees cannot set "Delayed" manually; it's computed from completedAt vs deadline
-    if (!["Pending", "In Progress", "Completed"].includes(status)) {
+    const ALLOWED_STATUSES = ["Pending", "In Progress", "R&D", "Development", "Under Testing", "Completed"];
+    if (!ALLOWED_STATUSES.includes(status)) {
       return res.status(400).json({ message: "Invalid status value" });
     }
 
@@ -715,7 +766,7 @@ export const applyLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -744,7 +795,7 @@ export const applyLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1002,7 +1053,10 @@ export const updateMyProfile = async (req, res) => {
     if (!existingUser) return res.status(404).json({ message: "User not found" });
 
     const updates = {};
-    const allowedFields = ["phone", "address", "dateOfBirth"];
+    const allowedFields = [
+      "phone", "address", "dateOfBirth", "employeeId", "department", "location",
+      "bankName", "bankAccount", "bankIFSC", "panNumber", "pfNumber", "uanNumber"
+    ];
 
     // Handle text fields
     allowedFields.forEach((field) => {
@@ -1010,6 +1064,15 @@ export const updateMyProfile = async (req, res) => {
         updates[field] = req.body[field];
       }
     });
+
+    // Handle nested document copies for backward compatibility
+    if (req.body.bankIFSC) updates["documents.bankIFSC"] = req.body.bankIFSC;
+    if (req.body.bankAccount || req.body.bankAccountNumber) {
+      const acc = req.body.bankAccount || req.body.bankAccountNumber;
+      updates["bankAccount"] = acc;
+      updates["documents.bankAccountNumber"] = acc;
+    }
+    if (req.body.panNumber) updates["documents.panNumber"] = req.body.panNumber;
 
     // Marital fields
     if (req.body.isMarried !== undefined) {
@@ -1110,7 +1173,7 @@ export const updateMyProfile = async (req, res) => {
                 <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                   <tr>
                     <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                      <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+                      <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
                     </td>
                   </tr>
                   <tr>
@@ -1130,7 +1193,7 @@ export const updateMyProfile = async (req, res) => {
                   <tr>
                     <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                       <p style="margin:0; font-size:12px; color:#999;">
-                        &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                        &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
                       </p>
                     </td>
                   </tr>
@@ -1155,5 +1218,86 @@ export const updateMyProfile = async (req, res) => {
   } catch (error) {
     console.error("updateMyProfile error:", error);
     res.status(500).json({ message: "Failed to update profile" });
+  }
+};
+
+// Add or append a half-hourly work log entry for today
+export const addWorkLogEntry = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { timeSlot, activity, projectId, taskId, linkUrl, status } = req.body;
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    if (!timeSlot || !activity) {
+      return res.status(400).json({ message: "Time slot and activity are required" });
+    }
+
+    let dailyLog = await DailyWorkLog.findOne({ user: userId, date: todayStr });
+
+    if (!dailyLog) {
+      dailyLog = new DailyWorkLog({
+        user: userId,
+        date: todayStr,
+        entries: []
+      });
+    }
+
+    const uploadedAttachments = Array.isArray(req.imageUrls) ? req.imageUrls : (req.imageUrl ? [req.imageUrl] : []);
+
+    dailyLog.entries.push({
+      timeSlot,
+      activity,
+      project: (projectId && projectId !== "null" && projectId !== "undefined" && projectId !== "") ? projectId : undefined,
+      task: (taskId && taskId !== "null" && taskId !== "undefined" && taskId !== "") ? taskId : undefined,
+      linkUrl: linkUrl || req.body.deployedLink || "",
+      attachmentUrl: uploadedAttachments[0] || req.body.attachmentUrl || "",
+      attachments: uploadedAttachments,
+      status: status || "Completed"
+    });
+
+    await dailyLog.save();
+    res.status(200).json({ message: "Hourly work log saved successfully", dailyLog });
+  } catch (error) {
+    console.error("addWorkLogEntry error:", error);
+    res.status(500).json({ message: "Failed to save work log", error: error.message });
+  }
+};
+
+// Get work logs for employee
+export const getWorkLogs = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { date, projectId } = req.query;
+
+    const query = { user: userId };
+    if (date && date !== "all") {
+      query.date = date || new Date().toISOString().split("T")[0];
+    }
+
+    let logs = await DailyWorkLog.find(query)
+      .populate("user", "name role position employeeId documents avatar profilePhoto")
+      .populate("entries.project", "name")
+      .populate({ path: "entries.task", select: "description status project" });
+
+    if (projectId && projectId !== "All") {
+      logs = logs.map(doc => {
+        const obj = doc.toObject();
+        obj.entries = (obj.entries || []).filter(e => {
+          const pId = e.project?._id?.toString() || e.project?.toString();
+          const tProjId = e.task?.project?._id?.toString() || e.task?.project?.toString();
+          return pId === projectId.toString() || tProjId === projectId.toString();
+        });
+        return obj;
+      }).filter(doc => doc.entries && doc.entries.length > 0);
+    }
+
+    if (projectId || (date && date === "all")) {
+      return res.status(200).json(logs || []);
+    }
+
+    res.status(200).json(logs[0] || { date: date || new Date().toISOString().split("T")[0], entries: [] });
+  } catch (error) {
+    console.error("getWorkLogs error:", error);
+    res.status(500).json({ message: "Failed to fetch work logs" });
   }
 };

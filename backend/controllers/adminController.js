@@ -7,6 +7,7 @@ import { sendMail } from "../config/nodemailer.js";
 import Team from "../models/Team.js";
 import Project from "../models/Project.js";
 import Holiday from "../models/Holiday.js";
+import DailyWorkLog from "../models/DailyWorkLog.js";
 import mongoose from "mongoose";
 import { createNotification } from "./notificationController.js";
 import { generateAndSendSalarySlip, generateSalarySlipBuffer } from "../utils/salarySlipGenerator.js";
@@ -39,6 +40,21 @@ const parseDateDMY = (dateStr) => {
   return dateStr;
 };
 
+const cleanOptionalString = (value) => {
+  if (typeof value !== "string") return value;
+  const cleaned = value.trim();
+  return cleaned || undefined;
+};
+
+const parseOptionalNumber = (value, fieldName) => {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${fieldName} must be a valid positive number`);
+  }
+  return parsed;
+};
+
 import Task from "../models/Task.js";
 
 // ---------------- Employee CRUD for Admin ----------------
@@ -56,27 +72,55 @@ export const getAllEmployeesAdmin = async (req, res) => {
 // Create a new employee
 export const createEmployeeAdmin = async (req, res) => {
   try {
-    const { name, email, password, phone, address, position, salary, dateOfBirth, reportingManager, technicalReporting, administrativeReporting } =
-      req.body;
+    const {
+      name, email, password, employeeId, phone, address, position, department, location,
+      salary, bankName, bankAccount, bankIFSC, panNumber, pfNumber, uanNumber,
+      dateOfBirth, reportingManager, technicalReporting, administrativeReporting, leaveAllowance, pfEnabled
+    } = req.body;
+
+    const normalizedName = cleanOptionalString(name);
+    const normalizedEmail = cleanOptionalString(email)?.toLowerCase();
+    if (!normalizedName || !normalizedEmail || !password) {
+      return res.status(400).json({ message: "Name, email, and password are required" });
+    }
 
     // Check if email already exists
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing)
       return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const normalizedSalary = parseOptionalNumber(salary, "Salary");
+    const normalizedLeaveAllowance = parseOptionalNumber(leaveAllowance, "Leave allowance");
 
     // Build employee data object, excluding empty/undefined reporting fields
     const employeeData = {
-      name,
-      email,
+      name: normalizedName,
+      email: normalizedEmail,
       password: hashedPassword,
-      phone,
-      address,
-      position,
-      salary,
+      employeeId: cleanOptionalString(employeeId),
+      phone: cleanOptionalString(phone),
+      address: cleanOptionalString(address),
+      position: cleanOptionalString(position),
+      department: cleanOptionalString(department),
+      location: cleanOptionalString(location) || "Pune",
+      bankName: cleanOptionalString(bankName),
+      bankAccount: cleanOptionalString(bankAccount),
+      bankIFSC: cleanOptionalString(bankIFSC),
+      panNumber: cleanOptionalString(panNumber),
+      pfNumber: cleanOptionalString(pfNumber),
+      uanNumber: cleanOptionalString(uanNumber),
       role: "employee",
+      documents: {
+        bankName: cleanOptionalString(bankName),
+        bankAccountNumber: cleanOptionalString(bankAccount),
+        bankIFSC: cleanOptionalString(bankIFSC),
+        panNumber: cleanOptionalString(panNumber)
+      }
     };
+    if (normalizedSalary !== undefined) employeeData.salary = normalizedSalary;
+    if (normalizedLeaveAllowance !== undefined) employeeData.leaveAllowance = normalizedLeaveAllowance;
+    employeeData.pfEnabled = Boolean(pfEnabled);
 
     // Only add optional fields if they have valid values
     if (dateOfBirth) employeeData.dateOfBirth = parseDateDMY(dateOfBirth);
@@ -93,11 +137,24 @@ export const createEmployeeAdmin = async (req, res) => {
 
     const employee = await User.create(employeeData);
 
+    if (!employee.employeeId) {
+      employee.employeeId = `QT-${employee._id.toString().slice(-6).toUpperCase()}`;
+      await employee.save();
+    }
+
     res.status(201).json(employee);
   } catch (err) {
     console.error("Error creating employee:", err);
-    res.status(500).json({
-      message: "Failed to create employee",
+    if (err?.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+    if (err?.code === 11000) {
+      return res.status(409).json({ message: "Email or employee ID already exists" });
+    }
+    return res.status(err.message?.includes("must be a valid positive number") ? 400 : 500).json({
+      message: err.message?.includes("must be a valid positive number")
+        ? err.message
+        : "Failed to create employee",
       error: err.message
     });
   }
@@ -108,6 +165,17 @@ export const updateEmployeeAdmin = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+
+    if (updates.email) updates.email = updates.email.trim().toLowerCase();
+    for (const field of ["name", "phone", "address", "position", "department", "location", "bankName", "bankAccount", "bankIFSC", "panNumber", "pfNumber", "uanNumber", "employeeId"]) {
+      if (updates[field] !== undefined) updates[field] = cleanOptionalString(updates[field]);
+    }
+    if (updates.salary !== undefined) {
+      updates.salary = parseOptionalNumber(updates.salary, "Salary");
+    }
+    if (updates.leaveAllowance !== undefined) {
+      updates.leaveAllowance = parseOptionalNumber(updates.leaveAllowance, "Leave allowance");
+    }
 
     // If password is updated, hash it
     if (updates.password) {
@@ -137,8 +205,13 @@ export const updateEmployeeAdmin = async (req, res) => {
     res.json(employee);
   } catch (err) {
     console.error("Error updating employee:", err);
-    res.status(500).json({
-      message: "Failed to update employee",
+    if (err?.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(err.message?.includes("must be a valid positive number") ? 400 : 500).json({
+      message: err.message?.includes("must be a valid positive number")
+        ? err.message
+        : "Failed to update employee",
       error: err.message
     });
   }
@@ -554,7 +627,7 @@ export const getAttendanceByDate = async (req, res) => {
     }).populate("user", "name role email");
 
     // Fetch all users
-    const allUsers = await User.find({}, "name role");
+    const allUsers = await User.find({ role: { $ne: "admin" } }, "name role");
 
     // Create maps for quick lookup
     const attendanceMap = new Map(
@@ -770,7 +843,7 @@ export const createHoliday = async (req, res) => {
       // Send emails to all users
       const emailPromises = allUsers.map((user) => {
         const emailSubject = `🎉 Holiday Announcement - ${description}`;
-        const emailText = `Dear ${user.name},\n\nA new holiday has been announced!\n\nDate: ${formattedDate}\nReason: ${description}\n\nEnjoy your day off!\n\nBest regards,\nQiroTech Innovation Pvt. Ltd.`;
+        const emailText = `Dear ${user.name},\n\nA new holiday has been announced!\n\nDate: ${formattedDate}\nReason: ${description}\n\nEnjoy your day off!\n\nBest regards,\nQirotech Innovation Pvt. Ltd.`;
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
             <div style="background: linear-gradient(135deg, #0EA6F0 0%, #667eea 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
@@ -793,7 +866,7 @@ export const createHoliday = async (req, res) => {
 
               <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
                 <p style="font-size: 14px; color: #666; margin: 0;">Best regards,</p>
-                <p style="font-size: 14px; color: #0EA6F0; font-weight: bold; margin: 5px 0 0 0;">QiroTech Innovation Pvt. Ltd.</p>
+                <p style="font-size: 14px; color: #0EA6F0; font-weight: bold; margin: 5px 0 0 0;">Qirotech Innovation Pvt. Ltd.</p>
               </div>
             </div>
           </div>
@@ -859,7 +932,20 @@ export const getAllTeams = async (req, res) => {
 export const createTeam = async (req, res) => {
   try {
     const { name, leader, members, projects } = req.body;
-    const newTeam = new Team({ name, leader, members, projects });
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    if (!normalizedName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
+
+    const escapedName = normalizedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingTeam = await Team.findOne({
+      name: new RegExp(`^${escapedName}$`, "i"),
+    });
+    if (existingTeam) {
+      return res.status(409).json({ message: "A team with this name already exists" });
+    }
+
+    const newTeam = new Team({ name: normalizedName, leader, members, projects });
     await newTeam.save();
     res.status(201).json(newTeam);
   } catch (err) {
@@ -874,11 +960,28 @@ export const updateTeam = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, leader, members, projects } = req.body;
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    if (!normalizedName) {
+      return res.status(400).json({ message: "Team name is required" });
+    }
+
+    const escapedName = normalizedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const existingTeam = await Team.findOne({
+      _id: { $ne: id },
+      name: new RegExp(`^${escapedName}$`, "i"),
+    });
+    if (existingTeam) {
+      return res.status(409).json({ message: "A team with this name already exists" });
+    }
+
     const updatedTeam = await Team.findByIdAndUpdate(
       id,
-      { name, leader, members, projects },
+      { name: normalizedName, leader, members, projects },
       { new: true }
     );
+    if (!updatedTeam) {
+      return res.status(404).json({ message: "Team not found" });
+    }
     res.status(200).json(updatedTeam);
   } catch (err) {
     res
@@ -908,7 +1011,14 @@ export const deleteTeam = async (req, res) => {
 export const getAllProjects = async (req, res) => {
   try {
     const projects = await Project.find().populate("assignedTeams");
-    res.status(200).json(projects);
+    const projectsWithEffectiveStatus = projects.map((project) => {
+      const projectData = project.toObject();
+      if (Number(projectData.completion) >= 100) {
+        projectData.status = "Completed";
+      }
+      return projectData;
+    });
+    res.status(200).json(projectsWithEffectiveStatus);
   } catch (err) {
     res
       .status(500)
@@ -939,7 +1049,7 @@ export const createProject = async (req, res) => {
       description,
       startDate,
       endDate,
-      status,
+      status: Number(completion) >= 100 ? "Completed" : status || "Planning",
       completion,
       assignedTeams,
     });
@@ -962,11 +1072,19 @@ export const updateProject = async (req, res) => {
       return res.status(400).json({ message: "Project name is required" });
     }
 
-    const project = await Project.findByIdAndUpdate(id, updates, { new: true });
-
-    if (!project) {
+    const existingProject = await Project.findById(id).select("completion");
+    if (!existingProject) {
       return res.status(404).json({ message: "Project not found" });
     }
+
+    const effectiveCompletion = updates.completion === undefined
+      ? existingProject.completion
+      : Number(updates.completion);
+    if (effectiveCompletion >= 100) {
+      updates.status = "Completed";
+    }
+
+    const project = await Project.findByIdAndUpdate(id, updates, { new: true });
 
     res.json(project);
   } catch (err) {
@@ -1033,22 +1151,26 @@ export const approveLeave = async (req, res) => {
     leave.status = "Approved";
     await leave.save();
 
-    // Notify the employee about leave approval
-    await createNotification({
-      message: `Your leave from ${new Date(leave.fromDate).toLocaleDateString()} to ${new Date(leave.toDate).toLocaleDateString()} has been approved`,
-      role: leave.user.role || "employee",
-      recipient: leave.user._id,
-      triggeredBy: req.user._id,
-    });
-
-    // Notify reporting manager if exists
-    if (leave.user.reportingManager) {
+    // Notifications are secondary to the approval decision. A notification
+    // failure must not make an already-saved approval look unsuccessful.
+    try {
       await createNotification({
-        message: `Leave application of ${leave.user.name} from ${new Date(leave.fromDate).toLocaleDateString()} to ${new Date(leave.toDate).toLocaleDateString()} has been approved`,
-        role: "leader",
-        recipient: leave.user.reportingManager._id,
+        message: `Your leave from ${new Date(leave.fromDate).toLocaleDateString()} to ${new Date(leave.toDate).toLocaleDateString()} has been approved`,
+        role: leave.user.role || "employee",
+        recipient: leave.user._id,
         triggeredBy: req.user._id,
       });
+
+      if (leave.user.reportingManager) {
+        await createNotification({
+          message: `Leave application of ${leave.user.name} from ${new Date(leave.fromDate).toLocaleDateString()} to ${new Date(leave.toDate).toLocaleDateString()} has been approved`,
+          role: "leader",
+          recipient: leave.user.reportingManager._id,
+          triggeredBy: req.user._id,
+        });
+      }
+    } catch (notificationError) {
+      console.error("Leave approved, but notification delivery failed:", notificationError.message);
     }
 
     // Send email notification to the applicant
@@ -1069,7 +1191,7 @@ export const approveLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1098,7 +1220,7 @@ export const approveLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1110,7 +1232,11 @@ export const approveLeave = async (req, res) => {
 </body>
 </html>
     `;
-    await sendMail(leave.user.email, "Leave Approved", "", htmlContent);
+    try {
+      await sendMail(leave.user.email, "Leave Approved", "", htmlContent);
+    } catch (mailError) {
+      console.error("Leave approved, but applicant email could not be sent:", mailError.message);
+    }
 
     // Send email notification to the reporting manager if exists
     if (leave.user.reportingManager && leave.user.reportingManager.email) {
@@ -1131,7 +1257,7 @@ export const approveLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1161,7 +1287,7 @@ export const approveLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1173,7 +1299,11 @@ export const approveLeave = async (req, res) => {
 </body>
 </html>
       `;
-      await sendMail(leave.user.reportingManager.email, "Leave Approved - Team Member Notification", "", managerHtmlContent);
+      try {
+        await sendMail(leave.user.reportingManager.email, "Leave Approved - Team Member Notification", "", managerHtmlContent);
+      } catch (mailError) {
+        console.error("Leave approved, but manager email could not be sent:", mailError.message);
+      }
     }
 
     res.status(200).json(leave);
@@ -1241,7 +1371,7 @@ export const rejectLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1270,7 +1400,7 @@ export const rejectLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1303,7 +1433,7 @@ export const rejectLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -1333,7 +1463,7 @@ export const rejectLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -1454,15 +1584,26 @@ const calculateSalaryDetails = async (userId, monthName, year) => {
   const attendanceMap = new Map(attendances.map(a => [new Date(a.date).getDate(), a]));
 
   const leaveDaysSet = new Set();
+  const priorPaidLeaveDaysSet = new Set();
   leaves.forEach(leave => {
     const leaveStart = new Date(leave.fromDate);
     const leaveEnd = new Date(leave.toDate);
     for (let d = new Date(leaveStart); d <= leaveEnd; d.setDate(d.getDate() + 1)) {
       if (d.getMonth() === monthIndex && d.getFullYear() === year) {
-        leaveDaysSet.add(d.getDate());
+        const day = d.getDate();
+        if (d.getDay() !== 0) leaveDaysSet.add(day);
+      }
+      if (d.getFullYear() === year && d < monthStart) {
+        const dayIndex = d.getDay();
+        if (dayIndex !== 0) priorPaidLeaveDaysSet.add(d.toISOString().slice(0, 10));
       }
     }
   });
+
+  const leaveAllowance = Math.max(0, Number(user.leaveAllowance) || 12);
+  let paidLeaveUsed = priorPaidLeaveDaysSet.size;
+  let paidLeaveDays = 0;
+  let unpaidLeaveDays = 0;
 
   for (let i = 1; i <= daysInMonth; i++) {
     if (weekendSet.has(i) || holidaySet.has(i)) {
@@ -1473,7 +1614,18 @@ const calculateSalaryDetails = async (userId, monthName, year) => {
     const isLeave = leaveDaysSet.has(i);
     const att = attendanceMap.get(i);
 
-    if (att) {
+    if (isLeave) {
+      if (paidLeaveUsed < leaveAllowance) {
+        presentDays += 1;
+        paidLeaveUsed++;
+        paidLeaveDays++;
+        leaveDays++;
+      } else {
+        absentDays++;
+        unpaidLeaveDays++;
+        unmarkedAbsences++;
+      }
+    } else if (att) {
       if (
         att.status === 'Present' ||
         att.status === 'Late' ||
@@ -1519,12 +1671,20 @@ const calculateSalaryDetails = async (userId, monthName, year) => {
     }
   }
 
-  // Calculate salary using CTC logic
-  // user.salary is considered annual CTC
+  // Salary entered in User.salary is annual CTC.
   const annualCTC = Number(user.salary) || 0;
   const monthlySalary = annualCTC / 12;
   const dailyRate = monthlySalary / daysInMonth;
-  const calculatedSalary = Math.round(dailyRate * presentDays * 100) / 100;
+  const lopDeduction = Math.round(dailyRate * absentDays);
+  const basic = Math.round(monthlySalary * 0.48);
+  const hra = Math.round(monthlySalary * 0.20);
+  const lta = Math.round(monthlySalary * 0.05);
+  const statutoryBonus = Math.round(monthlySalary * 0.04);
+  const specialAllowance = monthlySalary - (basic + hra + lta + statutoryBonus);
+  const tds = Math.round(monthlySalary * 0.01);
+  const pf = user.pfEnabled ? Math.round(basic * 0.12) : 0;
+  const totalDeductions = lopDeduction + tds + pf;
+  const calculatedSalary = Math.max(0, Math.round(monthlySalary - totalDeductions));
 
   return {
     baseSalary: annualCTC,
@@ -1533,11 +1693,25 @@ const calculateSalaryDetails = async (userId, monthName, year) => {
     presentDays: Math.round(presentDays * 100) / 100,
     absentDays: Math.round(absentDays * 100) / 100,
     leaveDays,
+    paidLeaveDays,
+    unpaidLeaveDays,
+    leaveAllowance,
     fractionalAbsences: Math.round(fractionalAbsences * 100) / 100,
     unmarkedAbsences,
     overtimeDays,
     dailyRate: Math.round(dailyRate * 100) / 100,
     calculatedSalary,
+    basic,
+    hra,
+    lta,
+    statutoryBonus,
+    specialAllowance,
+    tds,
+    pf,
+    lopDeduction,
+    totalDeductions,
+    netSalary: calculatedSalary,
+    effectiveWorkDays: Math.max(0, daysInMonth - absentDays),
     weekends: weekendSet.size,
     holidays: holidaySet.size
   };
@@ -1590,6 +1764,8 @@ export const previewSalarySlip = async (req, res) => {
     // detailed calculation (present/absent, daily rate, deductions) as the
     // calculate endpoint.
     const salaryDetails = await calculateSalaryDetails(record.user._id, record.month, record.year);
+    if (record.absentDays !== undefined && record.absentDays !== null) salaryDetails.absentDays = record.absentDays;
+    if (record.presentDays !== undefined && record.presentDays !== null) salaryDetails.presentDays = record.presentDays;
 
     const pdfBuffer = await generateSalarySlipBuffer(record.user, salaryDetails, record);
 
@@ -1605,7 +1781,7 @@ export const previewSalarySlip = async (req, res) => {
 // POST /api/admin/salary/credit
 export const creditSalary = async (req, res) => {
   try {
-    const { userId, bonus = 0, month, year } = req.body;
+    const { userId, bonus = 0, month, year, paymentDate, absentDays, presentDays } = req.body;
 
     if (!userId) return res.status(400).json({ message: "userId is required" });
     if (!month) return res.status(400).json({ message: "month is required" });
@@ -1626,9 +1802,30 @@ export const creditSalary = async (req, res) => {
     }
 
     const salaryDetails = await calculateSalaryDetails(userId, monthNormalized, numericYear);
+    
+    // Override absent/present days if customized by HR
+    if (absentDays !== undefined && absentDays !== null && absentDays !== "") {
+      salaryDetails.absentDays = Number(absentDays);
+    }
+    if (presentDays !== undefined && presentDays !== null && presentDays !== "") {
+      salaryDetails.presentDays = Number(presentDays);
+    }
+
+    // Recalculate salary using the same deductions as the payslip.
+    const annualUserSalary = Number(user.salary) || 0;
+    const monthlyUserSalary = annualUserSalary / 12;
+    const perDaySalary = monthlyUserSalary / salaryDetails.daysInMonth;
+    const lopDeduction = Math.round(perDaySalary * salaryDetails.absentDays);
+    const basic = Math.round(monthlyUserSalary * 0.48);
+    const tds = Math.round(monthlyUserSalary * 0.01);
+    const pf = user.pfEnabled ? Math.round(basic * 0.12) : 0;
+    salaryDetails.calculatedSalary = Math.max(0, Math.round(monthlyUserSalary - lopDeduction - tds - pf));
+    salaryDetails.effectiveWorkDays = Math.max(0, salaryDetails.daysInMonth - salaryDetails.absentDays);
+
     const baseSalary = salaryDetails.calculatedSalary;
     const bonusNum = Number(bonus) || 0;
     const totalCredited = baseSalary + bonusNum;
+    const creditedDateObj = paymentDate ? new Date(paymentDate) : new Date();
 
     const record = await Salary.create({
       user: userId,
@@ -1637,7 +1834,8 @@ export const creditSalary = async (req, res) => {
       totalCredited,
       month: monthNormalized,   // store lowercase month string
       year: numericYear,
-      creditedOn: new Date(),
+      creditedOn: creditedDateObj,
+      paymentDate: creditedDateObj,
       isCredited: true,
       presentDays: salaryDetails.presentDays,
       absentDays: salaryDetails.absentDays,
@@ -1853,7 +2051,7 @@ export const getDelayReport = async (req, res) => {
 // Get detailed report data for a user
 export const getUserReportData = async (req, res) => {
   try {
-    const { userId, startDate, endDate } = req.query;
+    const { userId, startDate, endDate, projectStatus } = req.query;
 
     if (!userId) {
       return res.status(400).json({ message: "userId is required" });
@@ -1870,6 +2068,8 @@ export const getUserReportData = async (req, res) => {
     const endBase = endDate ? new Date(endDate) : new Date();
     const { start: uStart } = getIndiaDayRange(new Date(startBase));
     const { end: uEnd } = getIndiaDayRange(new Date(endBase));
+    const reportStart = startDate ? getIndiaDayRange(new Date(startDate)).start : null;
+    const reportEnd = endDate ? getIndiaDayRange(new Date(endDate)).end : null;
 
     // Fetch records in range
     const [rawAttendances, rawHolidays, rawLeaves] = await Promise.all([
@@ -1944,18 +2144,22 @@ export const getUserReportData = async (req, res) => {
 
     // Assigned projects
     let projects = [];
+    const projectQuery = {};
+    if (projectStatus) projectQuery.status = projectStatus;
+    if (reportEnd) projectQuery.startDate = { $lte: reportEnd };
+    if (reportStart) projectQuery.endDate = { $gte: reportStart };
     if (user.role === 'leader') {
       // For leaders: projects where they are the leader of the team
       const teamsLed = await Team.find({ leader: userId }).select('_id');
       const teamIds = teamsLed.map(t => t._id);
-      projects = await Project.find({ assignedTeams: { $in: teamIds } })
+      projects = await Project.find({ ...projectQuery, assignedTeams: { $in: teamIds } })
         .populate('assignedTeams', 'name')
         .select('name status description startDate endDate');
     } else {
       // For employees: projects via teams where they are a member
       const teamsMember = await Team.find({ members: userId }).select('_id');
       const teamIds = teamsMember.map(t => t._id);
-      projects = await Project.find({ assignedTeams: { $in: teamIds } })
+      projects = await Project.find({ ...projectQuery, assignedTeams: { $in: teamIds } })
         .populate('assignedTeams', 'name')
         .select('name status description startDate endDate');
     }
@@ -1965,8 +2169,10 @@ export const getUserReportData = async (req, res) => {
     if (user.role === 'leader') {
       // For leaders: tasks they assigned (assignedBy)
       const taskQuery = { assignedBy: userId };
-      if (startDate && endDate) {
-        taskQuery.assignedAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+      if (reportStart || reportEnd) {
+        taskQuery.assignedAt = {};
+        if (reportStart) taskQuery.assignedAt.$gte = reportStart;
+        if (reportEnd) taskQuery.assignedAt.$lte = reportEnd;
       }
       tasks = await Task.find(taskQuery)
         .populate('project', 'name')
@@ -1976,8 +2182,10 @@ export const getUserReportData = async (req, res) => {
     } else {
       // For employees: tasks assigned to them
       const taskQuery = { assignedTo: userId };
-      if (startDate && endDate) {
-        taskQuery.assignedAt = { $gte: new Date(startDate), $lte: new Date(endDate) };
+      if (reportStart || reportEnd) {
+        taskQuery.assignedAt = {};
+        if (reportStart) taskQuery.assignedAt.$gte = reportStart;
+        if (reportEnd) taskQuery.assignedAt.$lte = reportEnd;
       }
       tasks = await Task.find(taskQuery)
         .populate('project', 'name')
@@ -1989,7 +2197,7 @@ export const getUserReportData = async (req, res) => {
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === 'Completed').length;
     const delayedTasks = tasks.filter(t => t.delayCount > 0).length;
-  const totalAttendance = attendances.length;
+  const totalAttendance = rawAttendances.filter((attendance) => Boolean(attendance.checkIn)).length;
   const presentDays = attendances.filter(a => a.status === 'Present' || a.status === 'Over-time').length;
 
     const performanceSummary = {
@@ -2144,12 +2352,16 @@ export const verifyDocument = async (req, res) => {
       ? `Your document "${documentType}" has been verified by admin.`
       : `Your document "${documentType}" has been rejected by admin. Reason: ${rejectionReason || "No reason specified"}`;
 
-    await createNotification({
-      message: notificationMsg,
-      role: user.role,
-      recipient: userId,
-      triggeredBy: req.user._id,
-    });
+    try {
+      await createNotification({
+        message: notificationMsg,
+        role: user.role,
+        recipient: userId,
+        triggeredBy: req.user._id,
+      });
+    } catch (notificationError) {
+      console.error("Document status saved, but notification delivery failed:", notificationError.message);
+    }
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -2166,7 +2378,7 @@ export const verifyDocument = async (req, res) => {
               <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                 <tr>
                   <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                    <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+                    <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
                   </td>
                 </tr>
                 <tr>
@@ -2194,7 +2406,7 @@ export const verifyDocument = async (req, res) => {
                 <tr>
                   <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                     <p style="margin:0; font-size:12px; color:#999;">
-                      &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                      &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -2206,12 +2418,16 @@ export const verifyDocument = async (req, res) => {
       </html>
     `;
 
-    await sendMail(
-      user.email,
-      `Document ${verified ? "Verified" : "Rejected"}`,
-      "",
-      htmlContent
-    );
+    try {
+      await sendMail(
+        user.email,
+        `Document ${verified ? "Verified" : "Rejected"}`,
+        "",
+        htmlContent
+      );
+    } catch (mailError) {
+      console.error("Document status saved, but email could not be sent:", mailError.message);
+    }
 
     res.status(200).json({
       message: `Document ${statusMsg} successfully`,
@@ -2314,7 +2530,7 @@ export const unverifyDocument = async (req, res) => {
               <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                 <tr>
                   <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                    <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+                    <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
                   </td>
                 </tr>
                 <tr>
@@ -2333,7 +2549,7 @@ export const unverifyDocument = async (req, res) => {
                 <tr>
                   <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                     <p style="margin:0; font-size:12px; color:#999;">
-                      &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                      &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -2410,27 +2626,25 @@ export const searchEmployeesForAdmin = async (req, res) => {
   try {
     const { query = "" } = req.query;
 
-    if (!query.trim()) {
-      return res.status(400).json({ message: "Search query is required" });
-    }
-
-    const safeQuery = escapeRegexAdmin(query.trim());
-    const regex = new RegExp(safeQuery, "i");
-
     const filters = { isActive: true };
 
-    if (/^\d{10}$/.test(query.trim())) {
-      filters.$or = [{ phone: query.trim() }, { email: regex }, { name: regex }];
-    } else if (query.includes("@")) {
-      filters.$or = [{ email: regex }, { name: regex }, { phone: regex }];
-    } else {
-      filters.$or = [{ name: regex }, { email: regex }, { phone: regex }];
+    if (query.trim()) {
+      const safeQuery = escapeRegexAdmin(query.trim());
+      const regex = new RegExp(safeQuery, "i");
+
+      if (/^\d{10}$/.test(query.trim())) {
+        filters.$or = [{ phone: query.trim() }, { email: regex }, { name: regex }];
+      } else if (query.includes("@")) {
+        filters.$or = [{ email: regex }, { name: regex }, { phone: regex }];
+      } else {
+        filters.$or = [{ name: regex }, { email: regex }, { phone: regex }, { department: regex }, { position: regex }];
+      }
     }
 
     const employees = await User.find(filters)
-      .select("name email phone address position dateOfBirth dateOfJoining role")
+      .select("name email phone address position department employeeId location dateOfBirth dateOfJoining role")
       .sort({ name: 1 })
-      .limit(50);
+      .limit(100);
 
     return res.status(200).json(employees);
   } catch (error) {
@@ -2486,7 +2700,7 @@ export const getPresenceReport = async (req, res) => {
     const endRange = new Date(endDate);
     endRange.setHours(23,59,59,999);
 
-    const allUsers = await User.find({}, "name role salary").lean();
+    const allUsers = await User.find({ role: { $ne: "admin" } }, "name role salary").lean();
     const holidays = await Holiday.find({ date: { $gte: startRange, $lte: endRange } });
     const attendances = await Attendance.find({ date: { $gte: startRange, $lte: endRange } });
     const leaves = await Leave.find({ status: "Approved", $or: [{ fromDate: { $lte: endRange }, toDate: { $gte: startRange } }] });
@@ -2562,7 +2776,8 @@ export const getPresenceReport = async (req, res) => {
         }
       }
 
-      const dailySalary = (user.salary || 0) / 30;
+      const monthlySalary = (user.salary || 0) / 12;
+      const dailySalary = monthlySalary / 30;
       const hourlyRate = dailySalary / 7.5;
       const salaryDeduction = (totalMissedMinutes / 60) * hourlyRate;
       
@@ -2581,5 +2796,40 @@ export const getPresenceReport = async (req, res) => {
   } catch (error) {
     console.error("Error generating presence report:", error);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Get half-hourly daily work logs for admin & leader
+export const getDailyWorkLogsAdmin = async (req, res) => {
+  try {
+    const { date, userId, projectId } = req.query;
+
+    const query = {};
+    if (date && date !== "all") {
+      query.date = date;
+    }
+    if (userId && userId !== "All") query.user = userId;
+
+    let logs = await DailyWorkLog.find(query)
+      .populate("user", "name email position department employeeId role documents avatar profilePhoto")
+      .populate("entries.project", "name")
+      .populate({ path: "entries.task", select: "description status project" });
+
+    if (projectId && projectId !== "All") {
+      logs = logs.map(doc => {
+        const obj = doc.toObject();
+        obj.entries = (obj.entries || []).filter(e => {
+          const pId = e.project?._id?.toString() || e.project?.toString();
+          const tProjId = e.task?.project?._id?.toString() || e.task?.project?.toString();
+          return pId === projectId.toString() || tProjId === projectId.toString();
+        });
+        return obj;
+      }).filter(doc => doc.entries && doc.entries.length > 0);
+    }
+
+    res.status(200).json(logs || []);
+  } catch (err) {
+    console.error("Error fetching work logs for admin:", err);
+    res.status(500).json({ message: "Failed to fetch daily work logs" });
   }
 };

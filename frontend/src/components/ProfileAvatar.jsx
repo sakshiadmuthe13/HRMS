@@ -1,9 +1,23 @@
 import React, { useState } from "react";
 import { User } from "lucide-react";
 
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
+
+const getProfileImageUrl = (user) => {
+  if (!user) return null;
+  const path = user?.documents?.passportPhoto?.path || user?.avatar || user?.profilePhoto;
+  if (!path) return null;
+  if (typeof path === "string") {
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+    const backendUrl = API_BASE.replace(/\/api\/?$/, "");
+    return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+  }
+  return null;
+};
+
 const ProfileAvatar = ({ user, className = "w-10 h-10 text-sm" }) => {
   const [imgError, setImgError] = useState(false);
-  const photoPath = user?.documents?.passportPhoto?.path;
+  const photoPath = getProfileImageUrl(user);
   const name = user?.name || "";
   const initial = name ? name.trim().charAt(0).toUpperCase() : "";
 

@@ -80,7 +80,7 @@ const About = () => {
             className="md:col-span-7 flex flex-col justify-center space-y-6 text-left"
           >
             <p className="text-lg md:text-xl text-slate-600 leading-relaxed font-semibold">
-              QIROTECH INNOVATION PVT. LTD. was founded by a team of forward-thinking
+              Qirotech Innovation Pvt. Ltd. was founded by a team of forward-thinking
               entrepreneurs who recognized the need for reliable, high-impact
               development services.
             </p>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Plus, Edit2, Trash2, Mail, Phone, MapPin, Briefcase, IndianRupee, X, Save, AlertTriangle } from "lucide-react";
+import { Shield, Plus, Eye, Edit2, Trash2, Mail, Phone, MapPin, Briefcase, IndianRupee, X, Save, AlertTriangle } from "lucide-react";
 import ProfileAvatar from "../../components/ProfileAvatar";
 import UserViewModal from "../../components/UserViewModal";
 
@@ -153,8 +153,10 @@ const AdminsPage = () => {
                       {e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB') : "—"}
                     </td>
                     <td className="p-5 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setViewingUserId(e._id)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold text-xs">View</button>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setViewingUserId(e._id)} title="View" aria-label="View" className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <Eye size={18} />
+                        </button>
                         <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
                           <Edit2 size={18} />
                         </button>

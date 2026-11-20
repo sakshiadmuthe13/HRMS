@@ -22,22 +22,31 @@ export const login = async (req, res) => {
 
 // Send OTP
 export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "User not found" });
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: "Please enter your email address." });
+    }
 
-  const otp = generateOTP();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins validity
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: { $regex: new RegExp(`^${cleanEmail}$`, "i") } });
+    if (!user) {
+      return res.status(404).json({ message: "No registered account found with this email." });
+    }
 
-  await ResetToken.deleteMany({ email }); // clear old
-  await ResetToken.create({ email, otp, expiresAt });
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins validity
 
-  await sendMail(
-    email,
-    "Password Reset OTP",
-    `Your OTP for password reset is ${otp}. It is valid for 5 minutes.`,
-    `
-    <!DOCTYPE html>
+    await ResetToken.deleteMany({ email: cleanEmail }); // clear old
+    await ResetToken.create({ email: cleanEmail, otp, expiresAt });
+
+    console.log(`🔑 [Forgot Password] Generating OTP ${otp} for ${cleanEmail}...`);
+    await sendMail(
+      cleanEmail,
+      "Password Reset OTP - Qirotech EMS",
+      `Your OTP for password reset is ${otp}. It is valid for 10 minutes.`,
+      `
+      <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -53,23 +62,28 @@ export const forgotPassword = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
           
           <!-- Body -->
           <tr>
             <td style="padding:30px 25px; text-align:center;">
-              <p style="font-size:16px; color:#555; margin-bottom:30px;">
-                You requested a password reset. Use the OTP below to reset your password. This OTP is valid for <strong>5 minutes</strong>.
+              <p style="font-size:16px; color:#555; margin-bottom:20px;">
+                Hello <strong>${user.name}</strong>,
+              </p>
+              <p style="font-size:15px; color:#555; margin-bottom:30px;">
+                You requested a password reset for your EMS account. Use the OTP below to reset your password. This OTP is valid for <strong>10 minutes</strong>.
               </p>
               
               <!-- OTP Code -->
-              <p style="font-size:28px; font-weight:bold; color:#0EA6F0; letter-spacing:3px; margin:20px 0;">
-                ${otp}
-              </p>
+              <div style="background-color:#f0f9ff; border: 2px dashed #0EA6F0; padding: 15px; border-radius: 12px; display: inline-block;">
+                <p style="font-size:32px; font-weight:bold; color:#0EA6F0; letter-spacing:5px; margin:0;">
+                  ${otp}
+                </p>
+              </div>
               
-              <p style="font-size:14px; color:#777; margin-top:20px;">
+              <p style="font-size:13px; color:#777; margin-top:25px;">
                 If you did not request a password reset, please ignore this email.
               </p>
             </td>
@@ -79,7 +93,7 @@ export const forgotPassword = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2026 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -90,27 +104,48 @@ export const forgotPassword = async (req, res) => {
   </table>
 </body>
 </html>
+      `
+    );
+    console.log(`✅ [Forgot Password] OTP email successfully sent to ${cleanEmail}`);
 
-    `
-  );
-
-  res.json({ message: "OTP sent to your registered email." });
+    return res.status(200).json({ message: "OTP sent to your registered email successfully." });
+  } catch (error) {
+    console.error("forgotPassword error:", error);
+    return res.status(500).json({ message: "Failed to send OTP email", error: error.message });
+  }
 };
 
 // Reset Password
 export const resetPassword = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-  const tokenData = await ResetToken.findOne({ email, otp });
-  if (!tokenData) return res.status(400).json({ message: "Invalid OTP." });
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: "Email, OTP, and new password are required." });
+    }
 
-  if (tokenData.expiresAt < Date.now())
-    return res.status(400).json({ message: "OTP expired." });
+    const cleanEmail = email.trim().toLowerCase();
+    const tokenData = await ResetToken.findOne({
+      email: { $regex: new RegExp(`^${cleanEmail}$`, "i") },
+      otp: otp.trim(),
+    });
 
-  const hashed = await bcrypt.hash(newPassword, 10);
-  await User.findOneAndUpdate({ email }, { password: hashed });
-  await ResetToken.deleteMany({ email });
+    if (!tokenData) return res.status(400).json({ message: "Invalid OTP code." });
 
-  res.json({ message: "Password reset successfully. Please login again." });
+    if (tokenData.expiresAt < Date.now())
+      return res.status(400).json({ message: "OTP has expired. Please request a new OTP." });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await User.findOneAndUpdate(
+      { email: { $regex: new RegExp(`^${cleanEmail}$`, "i") } },
+      { password: hashed }
+    );
+    await ResetToken.deleteMany({ email: { $regex: new RegExp(`^${cleanEmail}$`, "i") } });
+
+    res.json({ message: "Password reset successfully. Please login with your new password." });
+  } catch (error) {
+    console.error("resetPassword error:", error);
+    res.status(500).json({ message: "Failed to reset password", error: error.message });
+  }
 };
 
 // Logout (clear cookie/session)

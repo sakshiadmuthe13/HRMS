@@ -15,6 +15,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -26,6 +27,7 @@ const tabIcons = {
   "My Projects": <Briefcase size={18} />,
   Leaves: <FileText size={18} />,
   "Assign Task": <ClipboardCheck size={18} />,
+  "Work Activity Logs": <Clock size={18} />,
   "Contact Employee": <Phone size={18} />,
   "Hiring Requirements": <Briefcase size={18} />,
   Profile: <User size={18} />,

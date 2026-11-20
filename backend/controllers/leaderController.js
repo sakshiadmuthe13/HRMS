@@ -109,7 +109,15 @@ export const getLeaderProjects = async (req, res) => {
       .populate("assignedTeams", "name")
       .sort({ startDate: -1 });
 
-    res.status(200).json(projects);
+    const projectsWithEffectiveStatus = projects.map((project) => {
+      const projectData = project.toObject();
+      if (Number(projectData.completion) >= 100) {
+        projectData.status = "Completed";
+      }
+      return projectData;
+    });
+
+    res.status(200).json(projectsWithEffectiveStatus);
   } catch (err) {
     console.error("Error fetching leader projects:", err);
     res.status(500).json({ message: "Failed to fetch leader projects." });
@@ -448,66 +456,86 @@ export const assignTask = async (req, res) => {
     const leaderId = req.user._id;
     const { description, assignedTo, projectId, deadline } = req.body;
 
-    // Check if project exists and leader manages it
-    const project = await Project.findById(projectId).populate("assignedTeams");
-    if (!project) return res.status(404).json({ message: "Project not found" });
-
-    const leaderTeam = await Team.findOne({
-      leader: leaderId,
-      _id: { $in: project.assignedTeams.map((t) => t._id) },
-      members: assignedTo,
-    });
-
-    if (!leaderTeam) {
-      return res.status(403).json({
-        message:
-          "You are not managing this project or the employee is not part of your team",
-      });
+    if (!assignedTo || !description) {
+      return res.status(400).json({ message: "Employee and task description are required" });
     }
 
-    // Check if the employee is on holiday/leave today
-    const { start: todayStart, end: todayEnd } = getIndiaDayRange(new Date());
-    const leaveToday = await Leave.findOne({
-      user: assignedTo,
-      status: "Approved",
-      fromDate: { $lte: todayEnd },
-      toDate: { $gte: todayStart },
-    });
-
-    if (leaveToday) {
-      return res.status(400).json({
-        message: "Cannot assign task to an employee who is on holiday/leave today.",
-      });
+    // Support single employee ID, array of IDs, or comma-separated string
+    let targetEmployees = [];
+    if (Array.isArray(assignedTo)) {
+      targetEmployees = assignedTo;
+    } else if (typeof assignedTo === "string") {
+      targetEmployees = assignedTo.includes(",") ? assignedTo.split(",") : [assignedTo];
     }
 
-    const taskData = {
-      description,
-      assignedTo,
-      assignedBy: leaderId,
-      project: projectId,
-      attachmentUrl: req.imageUrl || undefined,
-      attachmentName: req.file ? req.file.originalname : undefined,
-    };
+    const createdTasks = [];
 
-    if (deadline) {
-      const dl = new Date(deadline);
-      if (isNaN(dl.getTime())) {
-        return res.status(400).json({ message: "Invalid deadline" });
+    for (const empId of targetEmployees) {
+      const cleanEmpId = typeof empId === "string" ? empId.trim() : empId;
+      if (!cleanEmpId) continue;
+
+      // Auto-detect Reporting Manager (Team Leader) for each assigned employee
+      let assignedByManager = leaderId;
+      const userTeam = await Team.findOne({ members: cleanEmpId }).populate("leader");
+      if (userTeam && userTeam.leader) {
+        assignedByManager = userTeam.leader._id;
       }
-      taskData.deadline = dl;
+
+      const taskData = {
+        description,
+        assignedTo: cleanEmpId,
+        assignedBy: assignedByManager,
+        project: (projectId && projectId !== "undefined" && projectId !== "null" && projectId !== "") ? projectId : undefined,
+        referenceUrl: req.body.referenceUrl || "",
+        attachmentUrl: req.imageUrl || undefined,
+        attachmentName: req.file ? req.file.originalname : undefined,
+      };
+
+      if (deadline) {
+        const dl = new Date(deadline);
+        if (!isNaN(dl.getTime())) {
+          taskData.deadline = dl;
+        }
+      }
+
+      const task = await Task.create(taskData);
+      createdTasks.push(task);
+
+      // Notify each employee via in-app notification
+      await createNotification({
+        message: `New task assigned: ${description}${deadline ? ` (Deadline: ${new Date(deadline).toLocaleDateString()})` : ''}`,
+        role: "employee",
+        recipient: cleanEmpId,
+        triggeredBy: leaderId,
+      });
+
+      // Send Email Notification
+      const empUser = await User.findById(cleanEmpId).select("name email");
+      if (empUser && empUser.email) {
+        const emailSubject = `🎯 New Task Assigned: ${description.slice(0, 40)}...`;
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #ffffff;">
+            <h2 style="color: #0f172a; margin-top: 0;">New Task Assigned to You</h2>
+            <p>Hello <strong>${empUser.name}</strong>,</p>
+            <p>You have been assigned a new task on the <strong>Qirotech EMS Portal</strong>.</p>
+            <div style="background-color: #f8fafc; padding: 15px; border-left: 4px solid #0284c7; margin: 15px 0; border-radius: 6px;">
+              <p style="margin: 0; font-weight: bold; color: #334155;">Task Description:</p>
+              <p style="margin: 5px 0 0 0; color: #1e293b; white-space: pre-wrap;">${description}</p>
+              ${deadline ? `<p style="margin: 10px 0 0 0; font-size: 13px; color: #dc2626;"><strong>Deadline:</strong> ${new Date(deadline).toLocaleString()}</p>` : ''}
+              ${req.body.referenceUrl ? `<p style="margin: 10px 0 0 0; font-size: 13px;"><strong>Reference Link:</strong> <a href="${req.body.referenceUrl}" target="_blank" style="color: #0284c7;">${req.body.referenceUrl}</a></p>` : ''}
+            </div>
+            <p>Please log in to your dashboard to view and manage your assigned tasks.</p>
+            <br/>
+            <p style="font-size: 12px; color: #64748b;">Best regards,<br/><strong>Qirotech Innovation Team</strong></p>
+          </div>
+        `;
+        sendMail(empUser.email, emailSubject, description, emailHtml).catch((err) =>
+          console.error(`❌ Failed to send email to ${empUser.email}:`, err.message)
+        );
+      }
     }
 
-    const task = await Task.create(taskData);
-
-    // Notify the employee about task assignment
-    await createNotification({
-      message: `New task assigned: ${description}${deadline ? ` (Deadline: ${new Date(deadline).toLocaleDateString()})` : ''}`,
-      role: "employee",
-      recipient: assignedTo,
-      triggeredBy: leaderId,
-    });
-
-    res.status(201).json({ message: "Task assigned successfully", task });
+    res.status(201).json({ message: `${createdTasks.length} task(s) assigned successfully`, tasks: createdTasks });
   } catch (error) {
     console.error("Error assigning task:", error);
     res.status(500).json({ message: "Server error" });
@@ -529,6 +557,49 @@ export const getTasksAssignedByLeader = async (req, res) => {
   }
 };
 
+// EDIT TASK BY ADMIN/LEADER
+export const updateTaskByAdminLeader = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { description, assignedTo, projectId, deadline, status, referenceUrl } = req.body;
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if (description) task.description = description;
+    if (assignedTo) task.assignedTo = assignedTo;
+    if (projectId !== undefined) task.project = (projectId && projectId !== "null" && projectId !== "") ? projectId : undefined;
+    if (deadline) task.deadline = new Date(deadline);
+    if (status) task.status = status;
+    if (referenceUrl !== undefined) task.referenceUrl = referenceUrl;
+
+    if (req.imageUrl) {
+      task.attachmentUrl = req.imageUrl;
+      task.attachmentName = req.file ? req.file.originalname : "attachment.jpg";
+    }
+
+    await task.save();
+    res.status(200).json({ message: "Task updated successfully", task });
+  } catch (error) {
+    console.error("Error updating task:", error);
+    res.status(500).json({ message: "Failed to update task" });
+  }
+};
+
+// DELETE TASK BY ADMIN/LEADER
+export const deleteTaskByAdminLeader = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const task = await Task.findByIdAndDelete(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    res.status(200).json({ message: "Task deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    res.status(500).json({ message: "Failed to delete task" });
+  }
+};
+
 // GET TEAM MEMBERS FOR A PROJECT
 export const getTeamMembersByProject = async (req, res) => {
   try {
@@ -546,7 +617,13 @@ export const getTeamMembersByProject = async (req, res) => {
       _id: { $in: project.assignedTeams },
     }).populate("members", "name email");
 
-    const members = teams.flatMap((t) => t.members);
+    const memberMap = new Map();
+    teams.forEach((team) => {
+      team.members.forEach((member) => {
+        if (member?._id) memberMap.set(member._id.toString(), member);
+      });
+    });
+    const members = Array.from(memberMap.values());
 
     // Check approved leaves today
     const { start: todayStart, end: todayEnd } = getIndiaDayRange(new Date());
@@ -641,7 +718,7 @@ export const applyLeaderLeave = async (req, res) => {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-              <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+              <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
             </td>
           </tr>
 
@@ -670,7 +747,7 @@ export const applyLeaderLeave = async (req, res) => {
           <tr>
             <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
               <p style="margin:0; font-size:12px; color:#999;">
-                &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
               </p>
             </td>
           </tr>
@@ -772,16 +849,6 @@ export const searchEmployeesForLeader = async (req, res) => {
   try {
     const { query = "" } = req.query;
 
-    if (!query.trim()) {
-      return res
-        .status(400)
-        .json({ message: "Search query is required to lookup employees" });
-    }
-
-    const safeQuery = escapeRegex(query.trim());
-    const regex = new RegExp(safeQuery, "i");
-
-    // Leaders can search for active users in their teams.
     const leaderId = req.user._id;
     const teams = await Team.find({ leader: leaderId })
       .select("members")
@@ -791,29 +858,21 @@ export const searchEmployeesForLeader = async (req, res) => {
       team.members.map((member) => member._id)
     );
 
-    if (!teamMemberIds.length) {
-      return res.status(200).json([]);
+    const filters = { isActive: true };
+    if (teamMemberIds.length > 0) {
+      filters._id = { $in: teamMemberIds };
     }
 
-    const filters = {
-      _id: { $in: teamMemberIds },
-      isActive: true,
-    };
-
-    if (/^\d{10}$/.test(query.trim())) {
-      filters.$or = [{ phone: query.trim() }, { email: regex }, { name: regex }];
-    } else if (query.includes("@")) {
-      filters.$or = [{ email: regex }, { name: regex }, { phone: regex }];
-    } else {
-      filters.$or = [{ name: regex }, { email: regex }, { phone: regex }];
+    if (query.trim()) {
+      const safeQuery = escapeRegex(query.trim());
+      const regex = new RegExp(safeQuery, "i");
+      filters.$or = [{ name: regex }, { email: regex }, { phone: regex }, { department: regex }, { position: regex }];
     }
 
     const employees = await User.find(filters)
-      .select(
-        "name email phone address position dateOfBirth dateOfJoining"
-      )
+      .select("name email phone address position department employeeId location dateOfBirth dateOfJoining role")
       .sort({ name: 1 })
-      .limit(25);
+      .limit(100);
 
     return res.status(200).json(employees);
   } catch (error) {
@@ -1118,7 +1177,7 @@ export const updateMyLeaderProfile = async (req, res) => {
                 <table width="500" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
                   <tr>
                     <td style="background: linear-gradient(90deg, #0EA6F0, #A756FA); text-align:center; padding:30px 20px; border-top-left-radius:12px; border-top-right-radius:12px;">
-                      <h1 style="margin:0; color:#fff; font-size:24px;">QiroTech Innovation Pvt. Ltd.</h1>
+                      <h1 style="margin:0; color:#fff; font-size:24px;">Qirotech Innovation Pvt. Ltd.</h1>
                     </td>
                   </tr>
                   <tr>
@@ -1138,7 +1197,7 @@ export const updateMyLeaderProfile = async (req, res) => {
                   <tr>
                     <td style="background-color:#f0f3f8; text-align:center; padding:20px 15px;">
                       <p style="margin:0; font-size:12px; color:#999;">
-                        &copy; 2025 QiroTech Innovation Pvt. Ltd. All rights reserved.
+                        &copy; 2025 Qirotech Innovation Pvt. Ltd. All rights reserved.
                       </p>
                     </td>
                   </tr>

@@ -36,6 +36,12 @@ const fetchJson = async (path, opts = {}) => {
 
 const apiGet = (p) => fetchJson(p);
 
+const isAdminRow = (row) => {
+  if (row?.user?.role) return row.user.role === "admin";
+  if (row?.role) return row.role === "admin";
+  return false;
+};
+
 const formatDuration = (mins) => {
   if (!mins) return "0 mins";
   if (mins < 60) return `${mins} mins`;
@@ -113,7 +119,7 @@ const AttendancePage = () => {
         ? `${API_BASE}/hr/manage/attendance?date=${ymdDate}`
         : `${API_BASE}/admin/attendance/by-date?date=${ymdDate}`;
       const res = await apiGet(endpoint);
-      setRows(res || []);
+      setRows((res || []).filter((row) => !isAdminRow(row)));
     } catch (err) {
       console.error("Error fetching attendance:", err);
       setError("Failed to load attendance data. Please check server or date.");
@@ -132,7 +138,7 @@ const AttendancePage = () => {
         ? `${API_BASE}/hr/manage/presence-report?startDate=${start}&endDate=${end}`
         : `${API_BASE}/admin/attendance/presence-report?startDate=${start}&endDate=${end}`;
       const res = await apiGet(endpoint);
-      setReportRows(res || []);
+      setReportRows((res || []).filter((row) => !isAdminRow(row)));
     } catch (err) {
       console.error("Error generating report:", err);
       setReportError("Failed to generate report.");

@@ -37,7 +37,8 @@ import {
   addCandidate,
   getCandidates,
   updateCandidate,
-  sendCandidateEmail
+  sendCandidateEmail,
+  parseResume
 } from "../controllers/hiringCandidateController.js";
 import {
   getTodayCelebrations,
@@ -103,6 +104,7 @@ router.post("/hiring/candidates", uploadSingleFile, uploadToImageKit, addCandida
 router.get("/hiring/candidates", getCandidates);
 router.put("/hiring/candidates/:id", updateCandidate);
 router.post("/hiring/candidates/:id/email", uploadArray, sendCandidateEmail);
+router.post("/hiring/parse-resume", uploadSingleFile, parseResume);
 
 // Contact Employee Search
 router.get("/contact", searchEmployeesForHR);

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FolderKanban, Calendar, Users, BarChart3, Clock, ArrowRight, MoreVertical, Layers } from "lucide-react";
 
+import ProjectLogsModal from "../../components/ProjectLogsModal";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const fetchJson = async (path, opts = {}) => {
@@ -32,9 +34,17 @@ const formatDateDMY = (date) => {
   return `${day}/${month}/${year}`;
 };
 
+const getInitials = (name) => {
+  if (!name) return "EM";
+  const parts = name.trim().split(" ");
+  if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
+
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     const fetchMyProjects = async () => {
@@ -74,7 +84,8 @@ const Projects = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200 hover:border-primary transition-all group flex flex-col"
+            className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-200 hover:border-primary transition-all group flex flex-col cursor-pointer"
+            onClick={() => setSelectedProject(p)}
           >
             <div className="flex justify-between items-start mb-6">
               <div className="p-4 bg-gray-50 rounded-3xl text-secondary group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
@@ -90,14 +101,14 @@ const Projects = () => {
 
             <h3 className="text-xl font-black text-primary tracking-tight mb-2 group-hover:text-primary transition-colors">{p.name}</h3>
             <p className="text-xs text-secondary/70 font-bold leading-relaxed mb-8 line-clamp-2">
-              {p.description || "Building the next generation of scalable enterprise solutions with precision and modern architectural standards."}
+              {p.description || "Active software development project."}
             </p>
 
             <div className="mt-auto space-y-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-[10px] font-black text-secondary uppercase tracking-widest px-1">
-                  <span>Development Progress</span>
-                  <span className="text-primary">{p.completion}%</span>
+                  <span>Development Progress {p.totalTasks ? `(${p.completedTasks}/${p.totalTasks} Tasks)` : ''}</span>
+                  <span className="text-primary font-black">{p.completion}%</span>
                 </div>
                 <div className="h-3 bg-gray-50 rounded-full overflow-hidden border border-gray-200">
                   <motion.div 
@@ -110,16 +121,34 @@ const Projects = () => {
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <div className="flex -space-x-3">
-                  {[1, 2, 3].map((_, i) => (
-                    <div key={i} className="w-10 h-10 rounded-2xl bg-gray-50 border-4 border-gray-200 flex items-center justify-center text-secondary text-[10px] font-black shadow-sm">
-                      {i === 2 ? '+' : 'JD'}
+                <div className="flex -space-x-2 overflow-hidden">
+                  {Array.isArray(p.members) && p.members.length > 0 ? (
+                    p.members.slice(0, 4).map((m, idx) => (
+                      <div
+                        key={m._id || idx}
+                        title={`${m.name} (${m.position || "Member"})`}
+                        className="w-9 h-9 rounded-xl bg-primary text-white border-2 border-white flex items-center justify-center text-[10px] font-black shadow-sm"
+                      >
+                        {getInitials(m.name)}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="w-9 h-9 rounded-xl bg-gray-100 text-secondary border-2 border-white flex items-center justify-center text-[10px] font-black">
+                      TEAM
                     </div>
-                  ))}
+                  )}
+                  {Array.isArray(p.members) && p.members.length > 4 && (
+                    <div className="w-9 h-9 rounded-xl bg-gray-200 text-secondary border-2 border-white flex items-center justify-center text-[10px] font-black">
+                      +{p.members.length - 4}
+                    </div>
+                  )}
                 </div>
-                <div className="text-[10px] font-black text-secondary/40 uppercase tracking-widest flex items-center gap-2">
-                  <Clock size={12} /> {formatDateDMY(p.endDate)}
-                </div>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSelectedProject(p); }}
+                  className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest hover:text-blue-600 transition-all"
+                >
+                  Project Logs <ArrowRight size={12} />
+                </button>
               </div>
             </div>
           </motion.div>
@@ -131,6 +160,12 @@ const Projects = () => {
           </div>
         )}
       </div>
+
+      <ProjectLogsModal
+        isOpen={!!selectedProject}
+        onClose={() => setSelectedProject(null)}
+        project={selectedProject}
+      />
     </div>
   );
 };

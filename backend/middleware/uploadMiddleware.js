@@ -26,6 +26,9 @@ export const uploadSingleFile = upload.single("file");
 // Middleware to upload an array of files
 export const uploadArray = upload.array("files", 5);
 
+// Middleware to upload any files (supports single or multiple file fields)
+export const uploadAnyFiles = upload.any();
+
 // Middleware to upload single file to ImageKit
 export const uploadToImageKit = async (req, res, next) => {
   try {
@@ -41,6 +44,36 @@ export const uploadToImageKit = async (req, res, next) => {
     next();
   } catch (error) {
     console.error("ImageKit upload error:", error);
+    res.status(500).json({ message: "File upload failed" });
+  }
+};
+
+// Middleware to upload multiple files to ImageKit
+export const uploadFilesToImageKit = async (req, res, next) => {
+  try {
+    const urls = [];
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      for (const f of req.files) {
+        const result = await imagekit.upload({
+          file: f.buffer,
+          fileName: `${Date.now()}_${f.originalname}`,
+          folder: "/employee-documents",
+        });
+        urls.push(result.url);
+      }
+    } else if (req.file) {
+      const result = await imagekit.upload({
+        file: req.file.buffer,
+        fileName: `${Date.now()}_${req.file.originalname}`,
+        folder: "/employee-documents",
+      });
+      urls.push(result.url);
+      req.imageUrl = result.url;
+    }
+    req.imageUrls = urls;
+    next();
+  } catch (error) {
+    console.error("ImageKit files upload error:", error);
     res.status(500).json({ message: "File upload failed" });
   }
 };

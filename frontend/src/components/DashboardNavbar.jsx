@@ -58,6 +58,18 @@ const DashboardNavbar = () => {
       .slice(0, 2);
   };
 
+  const getProfileImageUrl = (user) => {
+    if (!user) return null;
+    const path = user?.documents?.passportPhoto?.path || user?.avatar || user?.profilePhoto;
+    if (!path) return null;
+    if (typeof path === "string") {
+      if (path.startsWith("http://") || path.startsWith("https://")) return path;
+      const backendUrl = API_BASE.replace(/\/api\/?$/, "");
+      return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+    }
+    return null;
+  };
+
   return (
     <header className="sticky top-0 z-30 w-full bg-surface/80 backdrop-blur-md border-b border-border transition-all duration-300">
       <div className="flex items-center justify-between px-6 py-4 md:px-8">
@@ -100,11 +112,12 @@ const DashboardNavbar = () => {
           <div className="flex items-center gap-3">
             {/* Avatar */}
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary bg-elevated flex items-center justify-center flex-shrink-0 shadow-sm">
-              {profile?.documents?.passportPhoto?.path ? (
+              {getProfileImageUrl(profile) ? (
                 <img
-                  src={profile.documents.passportPhoto.path}
-                  alt={profile.name}
+                  src={getProfileImageUrl(profile)}
+                  alt={profile?.name || "Profile"}
                   className="w-full h-full object-cover"
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
               ) : (
                 <span className="text-xs font-black text-primary">

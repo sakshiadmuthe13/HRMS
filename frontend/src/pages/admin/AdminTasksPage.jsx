@@ -12,6 +12,13 @@ import {
   RefreshCw,
   ExternalLink,
   FileText,
+  Plus,
+  X,
+  Send,
+  Edit3,
+  Trash2,
+  Link,
+  Image,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -38,13 +45,19 @@ const fetchJson = async (path, opts = {}) => {
   return t ? JSON.parse(t) : null;
 };
 
-const STATUS_OPTIONS = ["All", "Pending", "In Progress", "Completed", "Delayed"];
+const STATUS_OPTIONS = ["All", "Pending", "In Progress", "R&D", "Development", "Under Testing", "Completed", "Delayed"];
 
 const statusStyle = (status) => {
   switch (status) {
     case "Completed":
       return "bg-emerald-50 text-emerald-600 border-emerald-100";
     case "In Progress":
+      return "bg-blue-50 text-blue-600 border-blue-100";
+    case "R&D":
+      return "bg-purple-50 text-purple-600 border-purple-100";
+    case "Development":
+      return "bg-indigo-50 text-indigo-600 border-indigo-100";
+    case "Under Testing":
       return "bg-amber-50 text-amber-600 border-amber-100";
     case "Delayed":
       return "bg-red-50 text-red-500 border-red-200";
@@ -72,6 +85,108 @@ export default function AdminTasksPage() {
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
+
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [projectsList, setProjectsList] = useState([]);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [assignForm, setAssignForm] = useState({
+    assignedTo: "",
+    projectId: "",
+    description: "",
+    deadline: "",
+    referenceUrl: "",
+    file: null,
+  });
+  const [assignLoading, setAssignLoading] = useState(false);
+
+  const fetchAssignModalData = async () => {
+    try {
+      const empData = await fetchJson("/admin/employees");
+      setEmployees(empData || []);
+      const projData = await fetchJson("/admin/projects");
+      setProjectsList(projData || []);
+    } catch (e) { console.error("Failed to load assign modal data:", e); }
+  };
+
+  const handleEditClick = (task) => {
+    setEditingTaskId(task._id);
+    setAssignForm({
+      assignedTo: task.assignedTo?._id || task.assignedTo || "",
+      projectId: task.project?._id || task.project || "",
+      description: task.description || "",
+      deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : "",
+      referenceUrl: task.referenceUrl || "",
+      file: null,
+    });
+    if (employees.length === 0) fetchAssignModalData();
+    setShowAssignModal(true);
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    try {
+      await fetchJson(`/leader/tasks/${taskId}`, { method: "DELETE" });
+      alert("Task deleted successfully");
+      fetchTasks();
+    } catch (err) {
+      alert(err.message || "Failed to delete task");
+    }
+  };
+
+  const handleAssignSubmit = async (e) => {
+    e.preventDefault();
+    const hasSelection = Array.isArray(assignForm.assignedTo) ? assignForm.assignedTo.length > 0 : Boolean(assignForm.assignedTo);
+    if (!hasSelection || !assignForm.description.trim()) {
+      alert("Please select at least one employee and enter task description.");
+      return;
+    }
+
+    setAssignLoading(true);
+    try {
+      const endpoint = editingTaskId ? `/leader/tasks/${editingTaskId}` : "/leader/assign-task";
+      const method = editingTaskId ? "PUT" : "POST";
+
+      const formData = new FormData();
+      if (Array.isArray(assignForm.assignedTo)) {
+        assignForm.assignedTo.forEach(id => formData.append("assignedTo", id));
+      } else {
+        formData.append("assignedTo", assignForm.assignedTo);
+      }
+      formData.append("projectId", assignForm.projectId);
+      formData.append("description", assignForm.description);
+      if (assignForm.deadline) formData.append("deadline", new Date(assignForm.deadline).toISOString());
+      if (assignForm.referenceUrl) formData.append("referenceUrl", assignForm.referenceUrl);
+      if (assignForm.file) formData.append("file", assignForm.file);
+
+      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+      const headers = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method,
+        body: formData,
+        headers,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        let text = await res.text();
+        try { text = JSON.parse(text); } catch {}
+        throw new Error(text?.message || res.statusText || "API error");
+      }
+
+      alert(editingTaskId ? "Task updated successfully!" : "Task assigned successfully!");
+      setShowAssignModal(false);
+      setEditingTaskId(null);
+      setAssignForm({ assignedTo: "", projectId: "", description: "", deadline: "", referenceUrl: "", file: null });
+      fetchTasks();
+    } catch (err) {
+      alert(err.message || "Failed to save task");
+    } finally {
+      setAssignLoading(false);
+    }
+  };
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -136,13 +251,24 @@ export default function AdminTasksPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={fetchTasks}
-          className="p-3 bg-primary/10 hover:bg-primary/20 rounded-2xl text-primary transition-all"
-          title="Refresh"
-        >
-          <RefreshCw size={20} />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setShowAssignModal(true);
+              if (employees.length === 0) fetchAssignModalData();
+            }}
+            className="flex items-center gap-2 px-5 py-3 bg-primary text-white hover:bg-primary/90 rounded-2xl text-xs font-bold shadow-lg shadow-primary/20 transition-all"
+          >
+            <Plus size={18} /> Assign Task
+          </button>
+          <button
+            onClick={fetchTasks}
+            className="p-3 bg-primary/10 hover:bg-primary/20 rounded-2xl text-primary transition-all"
+            title="Refresh"
+          >
+            <RefreshCw size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Stats Row */}
@@ -251,13 +377,16 @@ export default function AdminTasksPage() {
                 <th className="p-5 text-[10px] font-black text-secondary uppercase tracking-widest text-center">
                   Status
                 </th>
+                <th className="p-5 text-[10px] font-black text-secondary uppercase tracking-widest text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 [1, 2, 3, 4, 5].map((i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan="5" className="p-5">
+                    <td colSpan="6" className="p-5">
                       <div className="h-12 bg-gray-100 rounded-2xl" />
                     </td>
                   </tr>
@@ -265,7 +394,7 @@ export default function AdminTasksPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     className="p-20 text-center text-secondary/20 font-black italic text-lg uppercase tracking-widest"
                   >
                     No tasks found
@@ -302,6 +431,27 @@ export default function AdminTasksPage() {
                       <p className="text-xs font-medium text-primary/70 line-clamp-2 leading-relaxed">
                         {task.description || "—"}
                       </p>
+                      {task.referenceUrl && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <Link size={12} className="text-blue-500 shrink-0" />
+                          <a
+                            href={task.referenceUrl.startsWith("http") ? task.referenceUrl : `https://${task.referenceUrl}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] font-bold text-blue-600 hover:underline truncate max-w-[200px]"
+                          >
+                            Reference Link
+                          </a>
+                        </div>
+                      )}
+                      {task.attachmentUrl && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <Image size={12} className="text-purple-500 shrink-0" />
+                          <a href={task.attachmentUrl} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-purple-600 hover:underline">
+                            View Attachment
+                          </a>
+                        </div>
+                      )}
                       {task.status === "Completed" && (task.completionDescription || task.deployedLink) && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-xl space-y-2 border border-gray-100">
                           {task.completionDescription && (
@@ -359,6 +509,24 @@ export default function AdminTasksPage() {
                         {task.status || "Pending"}
                       </span>
                     </td>
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleEditClick(task)}
+                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-xl transition-all"
+                          title="Edit Task"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTask(task._id)}
+                          className="p-2 hover:bg-red-50 text-red-600 rounded-xl transition-all"
+                          title="Delete Task"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
                   </motion.tr>
                 ))
               )}
@@ -366,6 +534,232 @@ export default function AdminTasksPage() {
           </table>
         </div>
       </div>
+
+      {/* Assign Task Modal */}
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl border border-gray-100 space-y-5 relative max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                  <ClipboardList size={20} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-primary">Assign New Task</h3>
+                  <p className="text-xs text-secondary font-medium">Direct Task Dispatch</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAssignModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full text-secondary transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-secondary uppercase tracking-widest">
+                  Project (Optional)
+                </label>
+                <select
+                  value={assignForm.projectId}
+                  onChange={(e) => {
+                    const projId = e.target.value;
+                    setAssignForm({ ...assignForm, projectId: projId });
+                  }}
+                  className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-primary font-bold outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                >
+                  <option value="">-- General / Direct Task (No Project) --</option>
+                  {projectsList.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-secondary uppercase tracking-widest">
+                    Select Employee(s) <span className="text-red-500">*</span>
+                  </label>
+                  {!editingTaskId && employees.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = employees.map(e => e._id);
+                        const isAllSelected = Array.isArray(assignForm.assignedTo) && assignForm.assignedTo.length === employees.length;
+                        setAssignForm({ ...assignForm, assignedTo: isAllSelected ? [] : allIds });
+                      }}
+                      className="text-[11px] font-black text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-all"
+                    >
+                      {Array.isArray(assignForm.assignedTo) && assignForm.assignedTo.length === employees.length ? "Deselect All" : "Select All Employees"}
+                    </button>
+                  )}
+                </div>
+                
+                {editingTaskId ? (
+                  <select
+                    required
+                    value={assignForm.assignedTo}
+                    onChange={(e) => setAssignForm({ ...assignForm, assignedTo: e.target.value })}
+                    className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-primary font-bold outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                  >
+                    <option value="">-- Choose Employee --</option>
+                    {employees.map((e) => (
+                      <option key={e._id} value={e._id}>
+                        {e.name} ({e.employeeId || "QT-B66A0F"})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3 max-h-48 overflow-y-auto space-y-2">
+                    {employees.length === 0 ? (
+                      <div className="text-xs text-secondary font-medium p-2 text-center">Loading employees list...</div>
+                    ) : (
+                      employees.map((e) => {
+                        const isSelected = Array.isArray(assignForm.assignedTo)
+                          ? assignForm.assignedTo.includes(e._id)
+                          : assignForm.assignedTo === e._id;
+                        const activeCount = tasks.filter(t => (t.assignedTo?._id === e._id || t.assignedTo === e._id) && ["Pending", "In Progress"].includes(t.status)).length;
+
+                        return (
+                          <label
+                            key={e._id}
+                            className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
+                              isSelected
+                                ? "bg-primary/10 border-primary text-primary font-bold shadow-sm"
+                                : "bg-white border-gray-100 text-gray-700 hover:bg-gray-100/60"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(evt) => {
+                                  let current = Array.isArray(assignForm.assignedTo)
+                                    ? [...assignForm.assignedTo]
+                                    : (assignForm.assignedTo ? [assignForm.assignedTo] : []);
+                                  if (evt.target.checked) {
+                                    if (!current.includes(e._id)) current.push(e._id);
+                                  } else {
+                                    current = current.filter(id => id !== e._id);
+                                  }
+                                  setAssignForm({ ...assignForm, assignedTo: current });
+                                }}
+                                className="w-4 h-4 text-primary rounded focus:ring-primary/20"
+                              />
+                              <span className="text-xs font-bold">{e.name}</span>
+                              <span className="text-[10px] font-semibold text-secondary/60">({e.employeeId || "QT-B66A0F"})</span>
+                            </div>
+                            {activeCount > 0 && (
+                              <span className="text-[10px] font-black px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md">
+                                ⚠️ {activeCount} Active
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {assignForm.assignedTo && (() => {
+                  const activeTasks = tasks.filter(t => (t.assignedTo?._id === assignForm.assignedTo || t.assignedTo === assignForm.assignedTo) && ["Pending", "In Progress"].includes(t.status));
+                  if (activeTasks.length === 0) return null;
+                  return (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold flex items-start gap-2.5 animate-fadeIn">
+                      <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-black text-amber-800">⚠️ Employee Already Has Active Work!</div>
+                        <p className="mt-0.5 text-amber-700">
+                          This employee is currently working on <strong>{activeTasks.length} active task/project</strong> ({activeTasks[0]?.project?.name || activeTasks[0]?.description?.slice(0, 30) || "In Progress"}).
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-secondary uppercase tracking-widest">
+                  Task Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Enter detailed task instructions..."
+                  value={assignForm.description}
+                  onChange={(e) => setAssignForm({ ...assignForm, description: e.target.value })}
+                  className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-primary font-bold outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-secondary uppercase tracking-widest flex items-center gap-1.5">
+                  <Link size={14} className="text-blue-500" /> Reference URL / Link (Optional)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://figma.com/design-link or https://github.com/..."
+                  value={assignForm.referenceUrl}
+                  onChange={(e) => setAssignForm({ ...assignForm, referenceUrl: e.target.value })}
+                  className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-primary font-bold outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-secondary uppercase tracking-widest flex items-center gap-1.5">
+                  <Image size={14} className="text-purple-500" /> Image / Reference File (Optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx"
+                  onChange={(e) => setAssignForm({ ...assignForm, file: e.target.files[0] })}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-secondary uppercase tracking-widest">
+                  Deadline (Optional)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={assignForm.deadline}
+                  onChange={(e) => setAssignForm({ ...assignForm, deadline: e.target.value })}
+                  className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-primary font-bold outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
+                  className="px-5 py-3 bg-gray-100 hover:bg-gray-200 text-secondary rounded-xl text-xs font-bold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assignLoading}
+                  className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
+                >
+                  <Send size={16} /> {assignLoading ? "Assigning..." : "Assign Task Now"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

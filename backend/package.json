@@ -5,10 +5,11 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "nodemon server.js",
+    "admin:create": "node scripts/createAdmin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "QiroTech Innovations Pvt. Ltd.",
+  "author": "Qirotech Innovation Pvt. Ltd.",
   "license": "ISC",
   "type": "module",
   "description": "",
@@ -26,6 +27,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.9",
     "nodemon": "^3.1.10",
+    "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
     "socket.io": "^4.8.1"
   }

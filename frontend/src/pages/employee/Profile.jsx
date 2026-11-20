@@ -48,7 +48,19 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [formData, setFormData] = useState({ phone: "", address: "", bankIFSC: "", bankAccountNumber: "", isMarried: false, marriageAnniversary: "" });
+  const [formData, setFormData] = useState({
+    employeeId: "",
+    phone: "",
+    address: "",
+    bankName: "",
+    bankIFSC: "",
+    bankAccountNumber: "",
+    panNumber: "",
+    pfNumber: "",
+    uanNumber: "",
+    isMarried: false,
+    marriageAnniversary: ""
+  });
   const [files, setFiles] = useState({ passportPhoto: null, tenthMarksheet: null, twelthDiplomaMarksheet: null, graduationMarksheet: null, bankPassbookPhoto: null, aadharFront: null, aadharBack: null, panCard: null, cv: null });
 
   const documentLabels = {
@@ -69,11 +81,19 @@ const Profile = () => {
     try {
       const response = await apiGet("/employee/profile");
       setProfile(response);
+      const autoEmpId = (response?.employeeId && response.employeeId.startsWith("QT-"))
+        ? response.employeeId
+        : (response?._id ? `QT-${response._id.toString().slice(-6).toUpperCase()}` : "QT-B66A0F");
       setFormData({
+        employeeId: autoEmpId,
         phone: response.phone || "",
         address: response.address || "",
-        bankIFSC: response.documents?.bankIFSC || "",
-        bankAccountNumber: response.documents?.bankAccountNumber || "",
+        bankName: response.bankName || response.documents?.bankName || "",
+        bankIFSC: response.bankIFSC || response.documents?.bankIFSC || "",
+        bankAccountNumber: response.bankAccount || response.documents?.bankAccountNumber || "",
+        panNumber: response.panNumber || response.documents?.panNumber || "",
+        pfNumber: response.pfNumber || "",
+        uanNumber: response.uanNumber || "",
         isMarried: !!response.isMarried,
         marriageAnniversary: response.marriageAnniversary ? formatDateDMY(response.marriageAnniversary) : "",
       });
@@ -94,10 +114,16 @@ const Profile = () => {
     e?.preventDefault();
     setUploading(true);
     const data = new FormData();
+    data.append("employeeId", formData.employeeId);
     data.append("phone", formData.phone);
     data.append("address", formData.address);
+    data.append("bankName", formData.bankName);
     data.append("bankIFSC", formData.bankIFSC);
+    data.append("bankAccount", formData.bankAccountNumber);
     data.append("bankAccountNumber", formData.bankAccountNumber);
+    data.append("panNumber", formData.panNumber);
+    data.append("pfNumber", formData.pfNumber);
+    data.append("uanNumber", formData.uanNumber);
     data.append("isMarried", String(formData.isMarried));
     if (formData.isMarried && formData.marriageAnniversary) data.append("marriageAnniversary", convertDMYToYMD(formData.marriageAnniversary));
     Object.keys(files).forEach(f => { if (files[f]) data.append(f, files[f]); });
@@ -117,6 +143,18 @@ const Profile = () => {
       } else { toast.error(result.message); }
     } catch (error) { toast.error("Update failed"); }
     finally { setUploading(false); }
+  };
+
+  const getProfileImageUrl = (user) => {
+    if (!user) return null;
+    const path = user?.documents?.passportPhoto?.path || user?.avatar || user?.profilePhoto;
+    if (!path) return null;
+    if (typeof path === "string") {
+      if (path.startsWith("http://") || path.startsWith("https://")) return path;
+      const backendUrl = API_BASE.replace(/\/api\/?$/, "");
+      return `${backendUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+    }
+    return null;
   };
 
   if (loading) return (
@@ -155,11 +193,12 @@ const Profile = () => {
           {/* Avatar Container */}
           <div className="relative group">
             <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-white flex items-center justify-center transition-transform duration-300 group-hover:scale-[1.02]">
-              {profile?.documents?.passportPhoto?.path ? (
+              {getProfileImageUrl(profile) ? (
                 <img
-                  src={profile?.documents?.passportPhoto?.path}
-                  alt="Profile"
+                  src={getProfileImageUrl(profile)}
+                  alt={profile?.name || "Profile"}
                   className="w-full h-full object-cover"
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-gray-400">
@@ -505,14 +544,26 @@ const Profile = () => {
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="ifsc-input">Bank IFSC Code</label>
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="empid-input">Employee ID (Auto-Generated)</label>
                     <input
-                      id="ifsc-input"
+                      id="empid-input"
                       type="text"
-                      name="bankIFSC"
-                      value={formData.bankIFSC}
+                      name="employeeId"
+                      disabled
+                      value={(formData.employeeId && formData.employeeId.startsWith("QT-")) ? formData.employeeId : (profile?._id ? `QT-${profile._id.toString().slice(-6).toUpperCase()}` : "QT-B66A0F")}
+                      className="input bg-gray-100/80 text-primary font-bold cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="bankname-input">Bank Name</label>
+                    <input
+                      id="bankname-input"
+                      type="text"
+                      name="bankName"
+                      value={formData.bankName}
                       onChange={handleInputChange}
-                      placeholder="Enter IFSC code (e.g. SBIN0001234)"
+                      placeholder="e.g. Canara Bank, HDFC Bank, SBI"
                       className="input"
                     />
                   </div>
@@ -526,6 +577,58 @@ const Profile = () => {
                       value={formData.bankAccountNumber}
                       onChange={handleInputChange}
                       placeholder="Enter account number"
+                      className="input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="ifsc-input">Bank IFSC Code</label>
+                    <input
+                      id="ifsc-input"
+                      type="text"
+                      name="bankIFSC"
+                      value={formData.bankIFSC}
+                      onChange={handleInputChange}
+                      placeholder="Enter IFSC code (e.g. SBIN0001234)"
+                      className="input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="pan-input">PAN Card Number</label>
+                    <input
+                      id="pan-input"
+                      type="text"
+                      name="panNumber"
+                      value={formData.panNumber}
+                      onChange={handleInputChange}
+                      placeholder="e.g. BHDPH9879R"
+                      className="input uppercase"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="pf-input">PF Number</label>
+                    <input
+                      id="pf-input"
+                      type="text"
+                      name="pfNumber"
+                      value={formData.pfNumber}
+                      onChange={handleInputChange}
+                      placeholder="e.g. MH/PUN/0012345/000/000000"
+                      className="input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-gray-500" htmlFor="uan-input">PF UAN Number</label>
+                    <input
+                      id="uan-input"
+                      type="text"
+                      name="uanNumber"
+                      value={formData.uanNumber}
+                      onChange={handleInputChange}
+                      placeholder="Enter 12-digit UAN"
                       className="input"
                     />
                   </div>

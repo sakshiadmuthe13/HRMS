@@ -7,8 +7,33 @@ const Hero = () => {
   const navigate = useNavigate();
   // Demo Dashboard States
   const [clockedIn, setClockedIn] = useState(false);
-  const [clockTime, setClockTime] = useState("09:00:00 AM");
+  const [clockTime, setClockTime] = useState(() => 
+    new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    })
+  );
   const [activeTab, setActiveTab] = useState("attendance");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setClockTime(
+        now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        })
+      );
+    };
+
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCheckDemo = () => {
     const token = localStorage.getItem("token");
@@ -42,11 +67,21 @@ const Hero = () => {
   return (
     <section
       id="home"
-      className="min-h-screen pt-28 pb-16 flex items-center justify-center relative overflow-hidden bg-gradient-to-b from-slate-50 via-white to-slate-100"
+      className="min-h-screen pt-28 pb-16 flex items-center justify-center relative overflow-hidden bg-[#0b1e28]"
     >
-      {/* Decorative Blur Blobs */}
-      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/8 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      {/* Background Company Image Layer */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-35 scale-105 transition-transform duration-1000 z-0"
+        style={{ backgroundImage: `url('/company-img.webp')` }}
+      ></div>
+
+      {/* Dark Gradient Overlay for Maximum White Text Contrast */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0b1e28]/95 via-[#0b1e28]/85 to-[#0b1e28]/95 z-0"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#12637E]/30 via-transparent to-transparent z-0"></div>
+
+      {/* Decorative Glow Blobs */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-[#1A9DC2]/20 rounded-full blur-[120px] animate-pulse z-0"></div>
+      <div className="absolute bottom-1/4 -right-20 w-[30rem] h-[30rem] bg-[#12637E]/25 rounded-full blur-[140px] animate-pulse delay-1000 z-0"></div>
 
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10 w-full">
         {/* Left Column: Title and CTA */}
@@ -57,22 +92,22 @@ const Hero = () => {
             animate="visible"
             className="space-y-6"
           >
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-900 leading-tight">
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight !text-white leading-tight" style={{ color: "#ffffff" }}>
               Empower Your <br />
               Workforce with{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400">
                 Efficiency
               </span>
             </h2>
 
-            <motion.p 
+            <motion.p
               variants={wordVariants}
-              className="text-lg md:text-xl text-slate-600 max-w-lg leading-relaxed font-medium"
+              className="text-lg md:text-xl text-slate-200 max-w-lg leading-relaxed font-medium"
             >
               Manage employees, attendance, and payroll all in one professional platform — simplified, automated, and powerful.
             </motion.p>
 
-            <motion.div 
+            <motion.div
               variants={wordVariants}
               className="flex flex-wrap gap-4 pt-4"
             >
@@ -80,7 +115,7 @@ const Hero = () => {
                 <motion.div
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="bg-primary hover:bg-secondary text-white px-8 py-4 rounded-2xl font-extrabold shadow-lg shadow-primary/30 flex items-center gap-2 cursor-pointer transition-colors duration-300"
+                  className="bg-gradient-to-r from-cyan-500 to-[#12637E] hover:from-cyan-600 hover:to-[#0f5269] text-white px-8 py-4 rounded-2xl font-extrabold shadow-xl shadow-cyan-500/25 flex items-center gap-2 cursor-pointer transition-all duration-300"
                 >
                   Get Started <ArrowRight size={18} />
                 </motion.div>
@@ -90,58 +125,21 @@ const Hero = () => {
                 onClick={handleCheckDemo}
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 rounded-2xl font-extrabold border border-gray-200 text-slate-650 hover:bg-gray-50 flex items-center gap-2 transition-colors shadow-sm bg-white"
+                className="px-8 py-4 rounded-2xl font-extrabold border border-gray-200 text-slate-800 hover:bg-gray-50 flex items-center gap-2 transition-colors shadow-sm bg-white"
               >
-                Portal Demo
+                Explore Portal
               </motion.button>
             </motion.div>
           </motion.div>
         </div>
-
-        {/* Right Column: High Fidelity Interactive Mockup */}
+        {/* Right Column: High Fidelity Modern Interactive Mockup */}
         <div className="lg:col-span-6 w-full flex justify-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, type: "spring" }}
-            className="w-full max-w-md bg-white border border-gray-200/80 rounded-3xl p-6 shadow-2xl relative overflow-hidden"
+            className="w-full max-w-md bg-white/95 backdrop-blur-2xl border border-gray-200/90 rounded-[2.5rem] p-7 shadow-[0_25px_60px_-15px_rgba(18,99,126,0.15)] relative overflow-hidden"
           >
-            {/* Header Bar */}
-            <div className="flex justify-between items-center pb-4 mb-6 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-3 h-3 rounded-full bg-red-450"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-450"></div>
-                <div className="w-3 h-3 rounded-full bg-green-450"></div>
-                <span className="text-[10px] font-black text-slate-400 sm:ml-26">PORTAL DEMO</span>
-              </div>
-              {/* <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${clockedIn ? 'bg-emerald-500 animate-ping' : 'bg-rose-500'}`} />
-                <span className="text-xs font-bold uppercase text-slate-500">
-                  {clockedIn ? "Clocked In" : "Clocked Out"}
-                </span>
-              </div> */}
-            </div>
-
-            {/* Simulated Navigation tabs for widgets */}
-            <div className="flex gap-2 mb-6 bg-slate-100/80 p-1 rounded-xl">
-              {[
-                { id: "attendance", label: "Attendance", icon: Clock }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-300 ${
-                    activeTab === tab.id
-                      ? "bg-white text-primary shadow-sm"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <tab.icon size={14} />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
             {/* Widget Contents */}
             <div className="min-h-[220px]">
               <AnimatePresence mode="wait">
@@ -153,41 +151,50 @@ const Hero = () => {
                     exit={{ opacity: 0, x: 10 }}
                     className="space-y-4"
                   >
-                    <div className="text-center py-4 bg-slate-50/70 rounded-2xl border border-gray-150/50 relative">
-                      {/* <span className="absolute top-2 right-2 text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full border border-amber-200">Demo</span> */}
-                      <div className="text-sm font-semibold text-slate-400">Current Time</div>
-                      <div className="text-3xl font-black text-slate-800 font-mono mt-1">{clockTime}</div>
-                      <div className="text-xs text-slate-500 mt-1">Pune, India (GMT+5:30)</div>
+                    {/* Live Clock Card */}
+                    <div className="text-center py-5 px-4 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 rounded-2xl border border-slate-200/80 shadow-inner relative overflow-hidden group">
+                      <div className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-1">
+                        <Clock size={13} className="text-[#12637E]" />
+                        Current Time (IST)
+                      </div>
+                      <div className="text-4xl font-black text-slate-900 font-mono tracking-wider my-1 drop-shadow-sm">
+                        {clockTime || "09:30:00 AM"}
+                      </div>
+                      <div className="text-xs text-slate-500 font-semibold flex items-center justify-center gap-1">
+                        <span>📍 Pune, India</span>
+                        <span className="text-slate-400">(GMT+5:30)</span>
+                      </div>
                     </div>
 
+                    {/* Clock In Action Button */}
                     <div className="flex justify-center">
                       <motion.button
                         onClick={handleCheckDemo}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        className={`w-full py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2.5 shadow-lg transition-all duration-300 ${
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`w-full py-4 px-6 rounded-2xl font-black flex items-center justify-center gap-2.5 shadow-xl transition-all duration-300 text-sm tracking-wide ${
                           clockedIn
-                            ? "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/25"
-                            : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/25"
+                            ? "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white shadow-rose-500/30"
+                            : "bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/30"
                         }`}
                       >
-                        <UserCheck size={18} />
-                        {clockedIn ? "CLOCK OUT" : "CLOCK IN"}
+                        <UserCheck size={20} className="stroke-[2.5]" />
+                        {clockedIn ? "CLOCK OUT NOW" : "CLOCK IN NOW"}
                       </motion.button>
                     </div>
 
-                    {/* Small activity ticker */}
-                    <div className="text-left text-xs bg-slate-50/80 p-3.5 rounded-xl border border-gray-150/40 text-slate-550 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={13} className="text-primary" />
-                        Today: {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {/* Today & Shift Info Bar */}
+                    <div className="text-xs bg-slate-50/90 p-4 rounded-2xl border border-gray-200/80 text-slate-600 flex items-center justify-between shadow-sm">
+                      <span className="flex items-center gap-2 font-bold text-slate-800">
+                        <Calendar size={14} className="text-[#12637E]" />
+                        Today: {new Date().toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })}
                       </span>
-                      <span>Shift: 9:30 AM - 6:30 PM</span>
+                      <span className="font-extrabold text-[#12637E] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                        Shift: 9:30 AM - 6:30 PM
+                      </span>
                     </div>
                   </motion.div>
                 )}
-
-
               </AnimatePresence>
             </div>
           </motion.div>

@@ -15,8 +15,6 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import vacancyRoutes from "./routes/vacancyRoutes.js";
 import { startCelebrationJob } from "./utils/celebrationJob.js";
 
-connectDB();
-
 const app = express();
 const configuredOrigins = (process.env.CLIENT_URLS || "http://localhost:5173")
   .split(",")
@@ -122,9 +120,17 @@ global.io = io;
 // Error middleware
 app.use(errorHandler);
 
-// Start cron jobs
-startCelebrationJob();
-
-// Start server
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const startServer = async () => {
+  try {
+    await connectDB();
+    startCelebrationJob();
+    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  } catch (error) {
+    console.error(`Server startup failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+};
+
+startServer();

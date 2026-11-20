@@ -50,6 +50,39 @@ export default function HRHiringPage() {
   const [emailModal, setEmailModal] = useState(null);
   // { type, candidateId, subject, body, extraFields: {} }
   const [isSending, setIsSending] = useState(false);
+  const [isParsingResume, setIsParsingResume] = useState(false);
+
+  const handleAutoParseResume = async (file) => {
+    if (!file) return;
+    setIsParsingResume(true);
+    const toastId = toast.loading("🤖 AI Parsing Resume PDF...");
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await axios.post(`${API_BASE}${prefix}/hiring/parse-resume`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const { name, email, phone, notes } = res.data;
+
+      if (name && document.getElementById('add-name')) document.getElementById('add-name').value = name;
+      if (email && document.getElementById('add-email')) document.getElementById('add-email').value = email;
+      if (phone && document.getElementById('add-phone')) document.getElementById('add-phone').value = phone;
+      if (notes && document.getElementById('add-notes')) document.getElementById('add-notes').value = notes;
+
+      toast.success("✨ Resume Parsed! Candidate details auto-filled.", { id: toastId });
+    } catch (err) {
+      console.error("Resume parsing error:", err);
+      toast.error("Could not parse resume automatically", { id: toastId });
+    } finally {
+      setIsParsingResume(false);
+    }
+  };
 
   // Confirmation Modal
   const [confirmModal, setConfirmModal] = useState({
@@ -179,36 +212,36 @@ export default function HRHiringPage() {
     switch (type) {
       case "SCHEDULE_INTERVIEW":
         subject = `Interview Invitation – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nWe are pleased to invite you for an interview for the position of ${candidate.role} at QiroTech.\n\nInterview Details:\nDate: [Date]\nTime: [Time]\nMode: Virtual Meet\nGoogle Meet Link: [Link]\n\nPlease confirm your availability by replying to this email.\n\nLooking forward to talk with you.\n\nBest Regards,\nHR Team\nQiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nWe are pleased to invite you for an interview for the position of ${candidate.role} at QiroTech.\n\nInterview Details:\nDate: [Date]\nTime: [Time]\nMode: Virtual Meet\nGoogle Meet Link: [Link]\n\nPlease confirm your availability by replying to this email.\n\nLooking forward to talk with you.\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         fields.date = "";
         fields.time = "";
         fields.link = "";
         break;
       case "TASK_SENT":
         subject = `Congratulations! You've been shortlisted – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nCongratulations! We are pleased to inform you that you have been shortlisted after your interview for the role of ${candidate.role}.\n\nAs the next step, we'd like you to complete the following assignment:\n\nTask: [Task Description]\nDeadline: [Deadline Date]\n\nPlease submit your completed task to this email address by the deadline.\n\nWe look forward to reviewing your work.\n\nBest Regards,\nHR Team\nQiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nCongratulations! We are pleased to inform you that you have been shortlisted after your interview for the role of ${candidate.role}.\n\nAs the next step, we'd like you to complete the following assignment:\n\nTask: [Task Description]\nDeadline: [Deadline Date]\n\nPlease submit your completed task to this email address by the deadline.\n\nWe look forward to reviewing your work.\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         fields.taskDesc = "";
         fields.deadline = "";
         fields.taskPdf = null;
         break;
       case "INTERVIEW_REJECT":
         subject = `Update on Your Application – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nThank you for taking the time to interview with us for the position of ${candidate.role}.\n\nAfter careful consideration, we regret to inform you that we will not be moving forward with your application at this time, as we have filled the position.\n\nWe appreciate your interest in QiroTech and encourage you to apply for future openings.\n\nWe wish you all the best in your career journey.\n\nBest Regards,\nHR Team\Qiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nThank you for taking the time to interview with us for the position of ${candidate.role}.\n\nAfter careful consideration, we regret to inform you that we will not be moving forward with your application at this time, as we have filled the position.\n\nWe appreciate your interest in QiroTech and encourage you to apply for future openings.\n\nWe wish you all the best in your career journey.\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         break;
       case "HR_ROUND_SCHEDULE":
         subject = `HR Round Invitation – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nWe are happy to inform you that your task submission has been reviewed and you have been shortlisted for the next round.\n\nYou are invited for an HR Round Interview:\n\nDate: [Date]\nTime: [Time]\nMode: Virtual Meet\nGoogle Meet Link: [Link]\n\nPlease confirm your availability by replying to this email.\n\nLooking forward to speaking with you.\n\nBest Regards,\nHR Team\nQiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nWe are happy to inform you that your task submission has been reviewed and you have been shortlisted for the next round.\n\nYou are invited for an HR Round Interview:\n\nDate: [Date]\nTime: [Time]\nMode: Virtual Meet\nGoogle Meet Link: [Link]\n\nPlease confirm your availability by replying to this email.\n\nLooking forward to speaking with you.\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         fields.date = "";
         fields.time = "";
         fields.link = "";
         break;
       case "TASK_REJECT":
         subject = `Update on Your Application – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nThank you for submitting your task for the ${candidate.role} position at QiroTech.\n\nAfter reviewing your submission, we regret to inform you that we will not be moving forward with your application at this stage.\n\nWe appreciate the effort you put in and wish you the very best in your future endeavours.\n\nBest Regards,\nHR Team\nQiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nThank you for submitting your task for the ${candidate.role} position at QiroTech.\n\nAfter reviewing your submission, we regret to inform you that we will not be moving forward with your application at this stage.\n\nWe appreciate the effort you put in and wish you the very best in your future endeavours.\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         break;
       case "OFFER_LETTER":
         subject = `Offer of Employment – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nWe are delighted to inform you that after a successful HR round, we would like to extend an offer of employment for the position of ${candidate.role} at QiroTech.\n\nPlease find attached your:\n1. Offer Letter\n2. Joining Letter\n\nYour joining date is confirmed as: [Joining Date] at [Joining Time]\n\nKindly review the attached documents and reply to confirm your acceptance.\n\nWe look forward to welcoming you to the team!\n\nBest Regards,\nHR Team\nQiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nWe are delighted to inform you that after a successful HR round, we would like to extend an offer of employment for the position of ${candidate.role} at QiroTech.\n\nPlease find attached your:\n1. Offer Letter\n2. Joining Letter\n\nYour joining date is confirmed as: [Joining Date] at [Joining Time]\n\nKindly review the attached documents and reply to confirm your acceptance.\n\nWe look forward to welcoming you to the team!\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         fields.joiningDate = "";
         fields.joiningTime = "";
         fields.offerPdf = null;
@@ -216,7 +249,7 @@ export default function HRHiringPage() {
         break;
       case "HR_REJECT":
         subject = `Update on Your Application – ${candidate.role} at QiroTech`;
-        body = `Dear ${candidate.name},\n\nThank you for your time and effort throughout our hiring process for the ${candidate.role} position.\n\nAfter careful consideration, we regret to inform you that we will not be proceeding further with your application.\n\nWe truly appreciate your interest in QiroTech and wish you the very best in your career ahead.\n\nBest Regards,\nHR Team\nQiro Tech Innovation Pvt Ltd`;
+        body = `Dear ${candidate.name},\n\nThank you for your time and effort throughout our hiring process for the ${candidate.role} position.\n\nAfter careful consideration, we regret to inform you that we will not be proceeding further with your application.\n\nWe truly appreciate your interest in QiroTech and wish you the very best in your career ahead.\n\nBest Regards,\nHR Team\nQirotech Innovation Pvt. Ltd.`;
         break;
       default:
         break;
@@ -300,14 +333,14 @@ export default function HRHiringPage() {
       const finalBody = `
 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
   <div style="background: linear-gradient(135deg, #12637E 0%, #1A9DC2 100%); padding: 24px; text-align: center;">
-    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 0.5px;">QiroTech Innovation</h1>
+    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 0.5px;">Qirotech Innovation Pvt. Ltd.</h1>
   </div>
   <div style="padding: 32px; background-color: #ffffff; color: #374151; font-size: 15px; line-height: 1.6;">
     ${htmlContent}
   </div>
   <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #334155;">
     <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.5;">
-      <strong>QiroTech Innovation Pvt. Ltd.</strong><br/>
+      <strong>Qirotech Innovation Pvt. Ltd.</strong><br/>
       This is an official communication regarding your application.<br/>
       &copy; ${new Date().getFullYear()} All rights reserved.
     </p>
@@ -738,6 +771,23 @@ export default function HRHiringPage() {
                 </button>
               </div>
               <div className="p-6 space-y-4">
+                <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 p-4 rounded-2xl border border-blue-500/20 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shrink-0 shadow-md shadow-blue-500/20">
+                      ⚡
+                    </div>
+                    <div>
+                      <div className="text-xs font-black text-primary uppercase tracking-wider">AI Resume Auto-Parser</div>
+                      <div className="text-xs text-gray-500 font-medium">Upload candidate PDF below to auto-fill Name, Email, Phone & Skills!</div>
+                    </div>
+                  </div>
+                  {isParsingResume && (
+                    <span className="text-xs font-bold text-blue-600 animate-pulse flex items-center gap-1">
+                      Parsing...
+                    </span>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">Full Name</label>
@@ -787,18 +837,23 @@ export default function HRHiringPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Resume Upload</label>
-                  <label className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition cursor-pointer block">
-                    <Upload size={20} className="mx-auto text-gray-500 mb-2" />
-                    <span className="text-xs text-gray-500 font-medium" id="resume-upload-text">Click to upload PDF</span>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Resume Upload (PDF Auto-Parses)</label>
+                  <label className="border-2 border-dashed border-blue-200 rounded-xl p-4 text-center hover:bg-blue-50/50 transition cursor-pointer block">
+                    <Upload size={20} className="mx-auto text-blue-500 mb-2" />
+                    <span className="text-xs text-gray-600 font-medium" id="resume-upload-text">
+                      {isParsingResume ? "Parsing PDF contents..." : "Click to upload Resume PDF"}
+                    </span>
                     <input
                       type="file"
                       accept=".pdf"
                       className="hidden"
                       id="add-resume"
                       onChange={(e) => {
-                        const fileName = e.target.files[0]?.name;
-                        document.getElementById('resume-upload-text').innerText = fileName || "Click to upload PDF";
+                        const file = e.target.files[0];
+                        if (file) {
+                          document.getElementById('resume-upload-text').innerText = file.name;
+                          handleAutoParseResume(file);
+                        }
                       }}
                     />
                   </label>

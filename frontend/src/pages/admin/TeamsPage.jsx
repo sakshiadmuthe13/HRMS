@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Edit2, Trash2, UserCheck, ShieldAlert, CheckCircle2 } from "lucide-react";
+
+import ProjectLogsModal from "../../components/ProjectLogsModal";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
@@ -52,9 +54,12 @@ const TeamsPage = ({ isLeader = false }) => {
   const [form, setForm] = useState(emptyForm);
   const [editingTeam, setEditingTeam] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const savingRef = useRef(false);
 
   const prefix = isLeader ? "/leader" : "/admin";
   const getTeamsPath = isLeader ? "/leader/all-teams" : "/admin/teams";
@@ -82,31 +87,41 @@ const TeamsPage = ({ isLeader = false }) => {
   const handleCreate = () => {
     setForm(emptyForm);
     setEditingTeam(null);
+    setError("");
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     if (!form.name || !form.leader) {
       setError("Please fill all required fields");
       return;
     }
+    savingRef.current = true;
+    setIsSaving(true);
+    setError("");
     try {
+      const teamData = { ...form, name: form.name.trim() };
       if (editingTeam) {
-        await apiPut(`${prefix}/teams/${editingTeam._id}`, form);
+        await apiPut(`${prefix}/teams/${editingTeam._id}`, teamData);
       } else {
-        await apiPost(`${prefix}/teams`, form);
+        await apiPost(`${prefix}/teams`, teamData);
       }
       setEditingTeam(null);
       setIsModalOpen(false);
-      loadData();
+      await loadData();
     } catch (err) {
       console.error(err);
       setError(err.message || "Failed to save team");
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
   const handleEdit = (team) => {
     setEditingTeam(team);
+    setError("");
     setForm({
       name: team.name,
       leader: team.leader?._id || "",
@@ -204,7 +219,13 @@ const TeamsPage = ({ isLeader = false }) => {
                       </div>
                     </td>
                     <td className="p-5 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end items-center gap-2">
+                        <button 
+                          onClick={() => setSelectedProject({ _id: team._id || team.project?._id, name: team.name })}
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 font-bold rounded-xl text-xs flex items-center gap-1 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        >
+                          <CheckCircle2 size={13} /> Project Logs
+                        </button>
                         <button onClick={() => handleEdit(team)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
                           <Edit2 size={18} />
                         </button>
@@ -223,10 +244,10 @@ const TeamsPage = ({ isLeader = false }) => {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-primary/20 backdrop-blur-md p-4">
+          <div className="fixed inset-0 bg-primary/20 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -236,6 +257,11 @@ const TeamsPage = ({ isLeader = false }) => {
               <h3 className="text-3xl font-black mb-8 text-primary tracking-tight">
                 {editingTeam ? "Refine Team Structure" : "Assemble New Team"}
               </h3>
+              {error && (
+                <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-600">
+                  {error}
+                </div>
+              )}
               <div className="space-y-6">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Team Designation</label>
@@ -278,42 +304,48 @@ const TeamsPage = ({ isLeader = false }) => {
                           }`}
                         >
                           <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
-                            form.members.includes(e._id) ? "bg-white border-gray-200 text-primary" : "border-gray-200"
+                            form.members.includes(e._id) ? "border-white bg-white/20" : "border-gray-300"
                           }`}>
-                            {form.members.includes(e._id) && <CheckCircle2 size={12} />}
+                            {form.members.includes(e._id) && <CheckCircle2 size={12} className="text-white" />}
                           </div>
                           <span className="text-sm font-bold truncate">{e.name}</span>
                         </button>
                       ))}
                     </div>
                   </div>
-                  <p className="text-[10px] text-secondary font-medium ml-1">Selected: {form.members.length} members</p>
                 </div>
-              </div>
 
-              <div className="mt-10 flex justify-end gap-4">
-                <button onClick={() => setIsModalOpen(false)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
-                <button
-                  onClick={handleSave}
-                  className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300"
-                >
-                  {editingTeam ? "Update Team" : "Finalize Team"}
-                </button>
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100">
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    disabled={isSaving}
+                    className="px-6 py-3 border border-gray-200 rounded-xl font-bold text-secondary hover:bg-gray-50 transition-all text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:bg-secondary transition-all text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSaving ? "Saving..." : editingTeam ? "Update Team" : "Deploy Team"}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-50 backdrop-blur-md p-4">
+          <div className="fixed inset-0 bg-primary/20 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-red-50 text-center"
+              className="bg-white p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl border border-gray-200 text-center"
             >
               <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Trash2 size={32} />
@@ -328,6 +360,12 @@ const TeamsPage = ({ isLeader = false }) => {
           </div>
         )}
       </AnimatePresence>
+
+      <ProjectLogsModal
+        isOpen={!!selectedProject}
+        onClose={() => setSelectedProject(null)}
+        project={selectedProject}
+      />
     </div>
   );
 };

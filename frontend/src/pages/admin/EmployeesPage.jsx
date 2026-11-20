@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Eye, Edit2, Trash2 } from "lucide-react";
 import DatePicker from "../../components/DatePicker";
 import ProfileAvatar from "../../components/ProfileAvatar";
 import UserViewModal from "../../components/UserViewModal";
@@ -32,7 +33,12 @@ const apiPost = (p, body) => fetchJson(p, { method: "POST", headers: { "Content-
 const apiPut = (p, body) => fetchJson(p, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 const apiDelete = (p) => fetchJson(p, { method: "DELETE" });
 
-const empty = { name: "", email: "", password: "", phone: "", address: "", position: "", salary: "", dateOfBirth: "", reportingManager: "", technicalReporting: "", administrativeReporting: "" };
+const empty = {
+  name: "", email: "", password: "", employeeId: "", phone: "", address: "",
+  position: "", department: "", salary: "", bankName: "", bankAccount: "",
+  bankIFSC: "", panNumber: "", pfNumber: "", uanNumber: "", dateOfBirth: "",
+  reportingManager: "", technicalReporting: "", administrativeReporting: ""
+};
 
 const formatDateDMY = (dateVal) => {
   if (!dateVal) return "";
@@ -89,11 +95,19 @@ const EmployeesPage = () => {
   const handleEdit = (u) => { setForm({ ...u, password: "", dateOfBirth: u.dateOfBirth ? formatDateDMY(u.dateOfBirth) : "" }); setEditing(u._id); };
   const handleSave = async () => {
     setError("");
-    if (!form.name || !form.email || (editing === "new" && !form.password)) return setError("Please fill required fields");
+    if (!form.name?.trim() || !form.email?.trim() || (editing === "new" && !form.password)) return setError("Please fill required fields");
     try {
-      if (editing === "new") await apiPost("/admin/employees", form);
+      const payload = Object.fromEntries(
+        Object.entries(form)
+          .filter(([, value]) => value !== null && value !== undefined && value !== "")
+          .map(([key, value]) => [key, typeof value === "string" ? value.trim() : value])
+      );
+      if (payload.salary !== undefined) payload.salary = Number(payload.salary);
+      if (payload.leaveAllowance === undefined) payload.leaveAllowance = 12;
+
+      if (editing === "new") await apiPost("/admin/employees", payload);
       else {
-        const payload = { ...form }; if (!payload.password) delete payload.password;
+        if (!payload.password) delete payload.password;
         await apiPut(`/admin/employees/${editing}`, payload);
       }
       setEditing(null); fetchEmployees();
@@ -176,10 +190,16 @@ const EmployeesPage = () => {
                       </button>
                     </td>
                     <td className="p-5 text-right">
-                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setViewingUserId(e._id)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold">View</button>
-                        <button onClick={() => handleEdit(e)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all font-bold">Edit</button>
-                        <button onClick={() => handleDeleteClick(e)} className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all font-bold">Delete</button>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setViewingUserId(e._id)} title="View" aria-label="View" className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <Eye size={18} />
+                        </button>
+                        <button onClick={() => handleEdit(e)} title="Edit" aria-label="Edit" className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
+                          <Edit2 size={18} />
+                        </button>
+                        <button onClick={() => handleDeleteClick(e)} title="Delete" aria-label="Delete" className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all">
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -200,11 +220,29 @@ const EmployeesPage = () => {
               {editing === "new" ? "New Professional Profile" : "Refine Profile"}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {["name","email","password","phone","address","position","salary"].map(k => (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Employee ID</label>
+                <input 
+                  type="text" 
+                  disabled 
+                  value={
+                    (form.employeeId && form.employeeId.startsWith("QT-"))
+                      ? form.employeeId
+                      : (form._id
+                          ? `QT-${form._id.toString().slice(-6).toUpperCase()}`
+                          : "QT-B66A0F")
+                  } 
+                  className="w-full p-4 bg-gray-100/80 border border-gray-200 rounded-2xl text-primary font-bold cursor-not-allowed outline-none" 
+                />
+              </div>
+              {["name","email","password","position","department","salary","phone","address","bankName","bankAccount","bankIFSC","panNumber","pfNumber","uanNumber"].map(k => (
                 <div key={k} className="space-y-1.5">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">{k.replace(/([A-Z])/g, ' $1')}</label>
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">
+                    {k === "salary" ? "Annual CTC" : k.replace(/([A-Z])/g, ' $1')}
+                  </label>
                   <input 
-                    type={k==="password"?"password":"text"} 
+                    type={k==="password" ? "password" : k==="salary" ? "number" : "text"}
+                    min={k==="salary" ? "0" : undefined}
                     value={form[k]||""} 
                     onChange={e=>setForm({...form,[k]:e.target.value})} 
                     placeholder={`Employee ${k}`} 
@@ -226,6 +264,15 @@ const EmployeesPage = () => {
                   className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                 />
               </div>
+              <label className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.pfEnabled)}
+                  onChange={e => setForm({...form, pfEnabled: e.target.checked})}
+                  className="w-4 h-4 accent-primary"
+                />
+                Enable Provident Fund deduction (12% of basic)
+              </label>
               {["reportingManager","technicalReporting","administrativeReporting"].map(k => (
                 <div key={k} className="space-y-1.5">
                   <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">{k.replace(/([A-Z])/g, ' $1')}</label>
@@ -240,7 +287,9 @@ const EmployeesPage = () => {
             </div>
             <div className="mt-10 flex justify-end gap-4">
               <button onClick={() => setEditing(null)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
-              <button onClick={handleSave} className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300">Save Changes</button>
+              <button onClick={handleSave} className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300">
+                {editing === "new" ? "Create Employee" : "Save Changes"}
+              </button>
             </div>
           </div>
         </div>

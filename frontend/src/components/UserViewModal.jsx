@@ -329,7 +329,7 @@ const UserViewModal = ({ isOpen, onClose, userId }) => {
                     <div className="flex justify-between items-center border-b border-gray-50 pb-2">
                       <h4 className="text-base font-bold text-primary">Salary Configuration & Credits</h4>
                       <div className="text-right">
-                        <span className="text-[10px] font-black text-secondary uppercase block">Base Monthly CTC</span>
+                        <span className="text-[10px] font-black text-secondary uppercase block">Annual CTC</span>
                         <span className="text-base font-black text-primary">₹ {data.user.salary?.toLocaleString("en-IN") || 0}</span>
                       </div>
                     </div>

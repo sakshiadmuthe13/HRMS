@@ -12,6 +12,7 @@ import Tasks from "./Tasks";
 import Projects from "./Projects";
 import Profile from "./Profile";
 import ContactEmployeePage from "./ContactEmployee";
+import AdminWorkLogsPage from "../admin/AdminWorkLogsPage";
 import DashboardSkeleton from "../../components/DashboardSkeleton";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
@@ -44,6 +45,7 @@ const TABS = [
   { id: "Dashboard", label: "Dashboard", icon: Layout },
   { id: "Profile", label: "Profile", icon: User },
   { id: "Attendance", label: "Attendance", icon: Calendar },
+  { id: "Work Activity Logs", label: "Work Activity Logs", icon: Clock },
   { id: "My Tasks", label: "My Tasks", icon: CheckSquare },
   { id: "My Teams", label: "My Teams", icon: Layers },
   { id: "My Projects", label: "My Projects", icon: FolderOpen },
@@ -374,6 +376,7 @@ const EmployeeDashboard = () => {
         )}
 
         {active === "Attendance" && <Attendance />}
+        {active === "Work Activity Logs" && <AdminWorkLogsPage />}
         {active === "Apply Leave" && <Leaves />}
         {active === "My Teams" && <Teams />}
         {active === "My Tasks" && <Tasks />}

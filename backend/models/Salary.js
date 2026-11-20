@@ -13,6 +13,7 @@ const salarySchema = new mongoose.Schema({
   month: { type: String }, // e.g., "October"
   year: { type: Number }, // e.g., 2025
   creditedOn: { type: Date },
+  paymentDate: { type: Date },
   isCredited: { type: Boolean, default: false },
 });
 

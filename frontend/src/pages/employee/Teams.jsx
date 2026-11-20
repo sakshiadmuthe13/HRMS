@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Users, Crown, User, Shield, ArrowRight, UserCheck, Search, Layout, MoreHorizontal } from "lucide-react";
 
+import ProjectLogsModal from "../../components/ProjectLogsModal";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const fetchJson = async (path, opts = {}) => {
@@ -25,6 +27,7 @@ const fetchJson = async (path, opts = {}) => {
 const Teams = () => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   useEffect(() => {
     const fetchMyTeams = async () => {
@@ -98,7 +101,10 @@ const Teams = () => {
 
             <div className="mt-auto p-6 bg-gray-50/30 border-t border-gray-200 flex justify-between items-center px-8">
               <span className="text-[10px] font-black uppercase tracking-widest">{team.members?.length || 0} active members</span>
-              <button className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest group-hover:gap-4 transition-all">
+              <button 
+                onClick={() => setSelectedProject({ _id: team._id || team.project?._id, name: team.name })}
+                className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest group-hover:gap-4 transition-all hover:text-blue-600"
+              >
                 Project Logs <ArrowRight size={12} />
               </button>
             </div>
@@ -111,6 +117,12 @@ const Teams = () => {
           </div>
         )}
       </div>
+
+      <ProjectLogsModal
+        isOpen={!!selectedProject}
+        onClose={() => setSelectedProject(null)}
+        project={selectedProject}
+      />
     </div>
   );
 };

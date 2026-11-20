@@ -113,7 +113,7 @@ const ProfileVerificationPage = () => {
       }
     } catch (error) {
       console.error("Verify document error:", error);
-      toast.error("Failed to update verification");
+      toast.error(error.message || "Failed to update verification");
     } finally {
       setVerifying(false);
     }

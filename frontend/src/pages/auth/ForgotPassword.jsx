@@ -43,7 +43,7 @@ const ForgotPassword = () => {
       <div className="absolute top-[-200px] right-[10%] md:right-[15%] w-[300px] h-[300px] rounded-full bg-[#1A9DC2] opacity-10 z-0 pointer-events-none"></div>
       <div className="absolute bottom-[-200px] left-[10%] md:left-[15%] w-[300px] h-[300px] rounded-full bg-[#12637E] opacity-10 z-0 pointer-events-none"></div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
@@ -53,9 +53,9 @@ const ForgotPassword = () => {
         {/* Left Decorative Section */}
         <div className="hidden md:flex md:w-[45%] relative overflow-hidden flex-col justify-center z-0">
           {/* Company Image Background */}
-          <img 
-            src="/company-img.webp" 
-            alt="Company Facility" 
+          <img
+            src="/company-img.webp"
+            alt="Company Facility"
             className="absolute inset-0 w-full h-full object-cover z-0"
           />
           {/* Thematic Overlays for color consistency */}
@@ -64,12 +64,12 @@ const ForgotPassword = () => {
 
           {/* Toggle buttons overlay */}
           <div className="absolute right-0 top-1/2 -translate-y-1/2 flex flex-col items-end z-20">
-             <Link to="/login" className="py-2.5 pr-10 text-[13px] font-black tracking-wide text-white/70 hover:text-white transition">
-               LOGIN
-             </Link>
-             <div className="bg-white rounded-l-full py-2.5 pl-8 pr-10 text-[13px] font-black tracking-wide shadow-lg text-[#12637E] relative z-10 flex items-center mt-2">
-               RECOVER
-             </div>
+            <Link to="/login" className="py-2.5 pr-10 text-[13px] font-black tracking-wide text-white/70 hover:text-white transition">
+              LOGIN
+            </Link>
+            <div className="bg-white rounded-l-full py-2.5 pl-8 pr-10 text-[13px] font-black tracking-wide shadow-lg text-[#12637E] relative z-10 flex items-center mt-2">
+              RECOVER
+            </div>
           </div>
         </div>
 
@@ -77,8 +77,8 @@ const ForgotPassword = () => {
         <div className="w-full md:w-[55%] p-10 lg:p-12 flex flex-col justify-center relative bg-white z-10">
           <div className="flex flex-col items-center mb-10">
             <div className="w-[72px] h-[72px] rounded-full bg-gradient-to-b from-[#1A9DC2] to-[#12637E] flex items-center justify-center mb-4 shadow-[0_10px_20px_rgba(18,99,126,0.3)] border-4 border-gray-200 relative">
-               <div className="absolute inset-0 rounded-full border border-gray-200/20"></div>
-               <ShieldCheck className="text-white" size={32} strokeWidth={2} />
+              <div className="absolute inset-0 rounded-full border border-gray-200/20"></div>
+              <ShieldCheck className="text-white" size={32} strokeWidth={2} />
             </div>
             <h2 className="text-[20px] font-black text-[#12637E] tracking-widest uppercase">
               Recovery
@@ -109,7 +109,7 @@ const ForgotPassword = () => {
             </div>
 
             {message && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-center text-[11px] font-bold text-[#12637E] bg-[#12637E]/5 p-3 rounded-lg border border-[#12637E]/10"
@@ -119,12 +119,12 @@ const ForgotPassword = () => {
             )}
           </form>
           <div className="mt-12 w-full max-w-[300px] mx-auto flex items-center justify-center text-[11px] font-bold text-gray-900">
-             <span>Remembered? </span>
-             <Link to="/login" className="ml-1 text-[#12637E] hover:underline">
-               Sign In
-             </Link>
+            <span>Remembered? </span>
+            <Link to="/login" className="ml-1 text-[#12637E] hover:underline">
+              Sign In
+            </Link>
           </div>
-          
+
           <div className="pt-10 text-center text-[13px] font-black text-[#1A9DC2] hover:text-[#12637E] transition">
             <Link to="/">
               <div className="flex items-center gap-2 justify-center">

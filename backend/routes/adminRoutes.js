@@ -4,7 +4,8 @@ import {
   addCandidate,
   getCandidates,
   updateCandidate,
-  sendCandidateEmail
+  sendCandidateEmail,
+  parseResume
 } from "../controllers/hiringCandidateController.js";
 import { uploadSingleFile, uploadToImageKit, uploadArray } from "../middleware/uploadMiddleware.js";
 import {
@@ -20,6 +21,7 @@ import {
   getTaskReport,
   getDelayReport,
   getUserReportData,
+  getDailyWorkLogsAdmin,
   getAllTasksAdmin,
   searchEmployeesForAdmin,
   getUserFullView,
@@ -141,6 +143,7 @@ router.get("/reports/attendance", getAttendanceReport);
 router.get("/reports/tasks", getTaskReport);
 router.get("/reports/delays", getDelayReport);
 router.get("/reports/user-data", getUserReportData);
+router.get("/work-logs", getDailyWorkLogsAdmin);
 
 // Letters and Emails
 router.get("/users", getAllUsersForEmails);
@@ -151,5 +154,6 @@ router.post("/hiring/candidates", uploadSingleFile, uploadToImageKit, addCandida
 router.get("/hiring/candidates", getCandidates);
 router.put("/hiring/candidates/:id", updateCandidate);
 router.post("/hiring/candidates/:id/email", uploadArray, sendCandidateEmail);
+router.post("/hiring/parse-resume", uploadSingleFile, parseResume);
 
 export default router;

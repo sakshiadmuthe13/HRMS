@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Folder, Plus, Edit2, Trash2, Users, Calendar, Info, AlertCircle } from "lucide-react";
 import DatePicker from "../../components/DatePicker";
 
+import ProjectLogsModal from "../../components/ProjectLogsModal";
+
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const fetchJson = async (path, opts = {}) => {
@@ -85,8 +87,10 @@ const ProjectsPage = ({ isLeader = false }) => {
   const [editing, setEditing] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [teamsLoading, setTeamsLoading] = useState(false);
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [selectedProjectLogs, setSelectedProjectLogs] = useState(null);
 
   const prefix = isLeader ? "/leader" : "/admin";
   const getProjectsPath = isLeader ? "/leader/all-projects" : "/admin/projects";
@@ -118,7 +122,22 @@ const ProjectsPage = ({ isLeader = false }) => {
     setDisplayStartDate("");
     setDisplayEndDate("");
     setEditing(null);
+    setError("");
     setIsModalOpen(true);
+    refreshTeams();
+  };
+
+  const refreshTeams = async () => {
+    setTeamsLoading(true);
+    try {
+      const availableTeams = await apiGet(getTeamsPath);
+      setTeams(Array.isArray(availableTeams) ? availableTeams : []);
+    } catch (err) {
+      console.error("Error fetching teams for project assignment:", err);
+      setError(err.message || "Failed to load teams");
+    } finally {
+      setTeamsLoading(false);
+    }
   };
 
   const handleEdit = (project) => {
@@ -133,7 +152,9 @@ const ProjectsPage = ({ isLeader = false }) => {
     setDisplayStartDate(convertYMDtoDMY(startDateYMD));
     setDisplayEndDate(convertYMDtoDMY(endDateYMD));
     setEditing(project._id);
+    setError("");
     setIsModalOpen(true);
+    refreshTeams();
   };
 
   const handleSave = async () => {
@@ -303,7 +324,7 @@ const ProjectsPage = ({ isLeader = false }) => {
                       </div>
                     </td>
                     <td className="p-5 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-2">
                         <button onClick={() => handleEdit(p)} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all">
                           <Edit2 size={18} />
                         </button>
@@ -330,102 +351,135 @@ const ProjectsPage = ({ isLeader = false }) => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white p-8 rounded-[2.5rem] w-full max-w-2xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar"
+              className="bg-white p-8 rounded-[2rem] w-full max-w-xl shadow-2xl border border-gray-200 animate-fadeIn max-h-[90vh] overflow-y-auto no-scrollbar"
             >
               <h3 className="text-3xl font-black mb-8 text-primary tracking-tight">
-                {editing ? "Edit Project Details" : "Initiate New Project"}
+                {editing ? "Refine Project Details" : "Initiate Project"}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="sm:col-span-2 space-y-1.5">
+              <div className="space-y-6">
+                <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Project Name</label>
                   <input
                     type="text"
                     name="name"
                     value={form.name}
                     onChange={handleInputChange}
-                    placeholder="Enter project name"
+                    placeholder="e.g. NextGen Mobile Banking"
                     className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
                   />
                 </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Description</label>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Project Description</label>
                   <textarea
                     name="description"
+                    rows={3}
                     value={form.description}
                     onChange={handleInputChange}
-                    placeholder="Brief overview of the project..."
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all h-24 resize-none"
+                    placeholder="Brief architectural overview..."
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all resize-none"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Start Date</label>
-                  <DatePicker 
-                    value={displayStartDate} 
-                    onChange={(val) => {
-                      setDisplayStartDate(val);
-                      setForm((prev) => ({ ...prev, startDate: convertDMYtoYMD(val) }));
-                    }} 
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">End Date</label>
-                  <DatePicker 
-                    value={displayEndDate} 
-                    onChange={(val) => {
-                      setDisplayEndDate(val);
-                      setForm((prev) => ({ ...prev, endDate: convertDMYtoYMD(val) }));
-                    }} 
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Current Status</label>
-                  <select
-                    name="status"
-                    value={form.status}
-                    onChange={handleInputChange}
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                  >
-                    {["Planning", "In Progress", "Completed", "On Hold"].map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Completion %</label>
-                  <input
-                    type="number"
-                    name="completion"
-                    value={form.completion}
-                    onChange={handleInputChange}
-                    min="0" max="100"
-                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
-                  />
-                </div>
-                <div className="sm:col-span-2 space-y-3">
-                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Assign Teams</label>
-                  <div className="flex flex-wrap gap-2">
-                    {teams.map((team) => (
-                      <button
-                        key={team._id}
-                        type="button"
-                        onClick={() => toggleTeam(team._id)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                          form.assignedTeams.includes(team._id)
-                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                            : "bg-gray-50 text-secondary border-gray-200 hover:bg-gray-50"
-                        }`}
-                      >
-                        {team.name}
-                      </button>
-                    ))}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Start Date</label>
+                    <DatePicker
+                      value={displayStartDate}
+                      onChange={(d) => {
+                        setDisplayStartDate(d);
+                        setForm((prev) => ({ ...prev, startDate: convertDMYtoYMD(d) }));
+                      }}
+                      placeholder="DD/MM/YYYY"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Target End Date</label>
+                    <DatePicker
+                      value={displayEndDate}
+                      onChange={(d) => {
+                        setDisplayEndDate(d);
+                        setForm((prev) => ({ ...prev, endDate: convertDMYtoYMD(d) }));
+                      }}
+                      placeholder="DD/MM/YYYY"
+                    />
                   </div>
                 </div>
-              </div>
-              <div className="mt-10 flex justify-end gap-4">
-                <button onClick={() => setIsModalOpen(false)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
-                <button onClick={handleSave} className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300">
-                  {editing ? "Update Project" : "Create Project"}
-                </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Lifecycle Status</label>
+                    <select
+                      name="status"
+                      value={form.status}
+                      onChange={handleInputChange}
+                      className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl text-primary font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all"
+                    >
+                      <option value="Planning">Planning</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Completed">Completed</option>
+                      <option value="On Hold">On Hold</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Completion (%): {form.completion}</label>
+                    <input
+                      type="range"
+                      name="completion"
+                      min="0"
+                      max="100"
+                      value={form.completion}
+                      onChange={handleInputChange}
+                      className="w-full h-3 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-primary mt-4"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-primary/70 uppercase tracking-widest ml-1">Assigned Operational Teams</label>
+                  <div className="bg-gray-50 border border-gray-200 rounded-[1.5rem] p-4 max-h-48 overflow-y-auto no-scrollbar">
+                    {teamsLoading ? (
+                      <p className="py-2 text-sm text-secondary">Loading teams...</p>
+                    ) : teams.length === 0 ? (
+                      <p className="py-2 text-sm text-secondary">
+                        {error || "No teams found. Create a team first, then reopen this form."}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {teams.map((t) => (
+                        <button
+                          key={t._id}
+                          type="button"
+                          onClick={() => toggleTeam(t._id)}
+                          className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${
+                            form.assignedTeams.includes(t._id)
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/10"
+                              : "bg-white text-secondary border-gray-200 hover:border-primary/30"
+                          }`}
+                        >
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${
+                            form.assignedTeams.includes(t._id) ? "border-white bg-white/20" : "border-gray-300"
+                          }`}>
+                            {form.assignedTeams.includes(t._id) && <Info size={12} />}
+                          </div>
+                          <span className="text-sm font-bold truncate">{t.name}</span>
+                        </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-4 pt-6 border-t border-gray-100">
+                  <button onClick={() => setIsModalOpen(false)} className="px-8 py-4 font-bold text-secondary hover:text-primary transition-all">Discard</button>
+                  <button
+                    onClick={handleSave}
+                    className="bg-primary hover:bg-secondary text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-primary/20 transition-all duration-300"
+                  >
+                    {editing ? "Update Matrix" : "Deploy Project"}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -455,6 +509,12 @@ const ProjectsPage = ({ isLeader = false }) => {
           </div>
         )}
       </AnimatePresence>
+
+      <ProjectLogsModal
+        isOpen={!!selectedProjectLogs}
+        onClose={() => setSelectedProjectLogs(null)}
+        project={selectedProjectLogs}
+      />
     </div>
   );
 };
